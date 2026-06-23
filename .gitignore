@@ -1,0 +1,22 @@
+# Data files (too large for GitHub)
+dataset/
+
+# Experiment outputs (reproducible)
+missing_ts_exp/results/
+missing_ts_exp/logs/
+
+# External reference repos
+missing_ts_exp/external/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Archives
+*.tar.gz
