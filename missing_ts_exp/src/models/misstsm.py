@@ -133,8 +133,10 @@ class MissTSMModel(nn.Module):
         time_feat_dim: int = 0,
         patch_len: int = 16,
         stride: int = 8,
+        skip: bool = True,
     ):
         super().__init__()
+        self.skip = skip
         self.mtsm = MissTSMLayer(n_channels, q_dim=q_dim, num_heads=num_heads, out_dim=n_channels)
         backbone = backbone.lower()
         if backbone == "itransformer":
@@ -159,4 +161,6 @@ class MissTSMModel(nn.Module):
         if mask is None:
             mask = torch.ones_like(x)
         feat = self.mtsm(x, mask)  # (B, L, C)
+        if self.skip:
+            feat = mask * x + (1 - mask) * feat
         return self.backbone(feat, x_mark)

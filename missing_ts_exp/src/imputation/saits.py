@@ -148,6 +148,7 @@ class SAITS(nn.Module):
             for _ in range(self.n_group_inner):
                 h, _ = layer(h)
         Xt1 = self.reduce_z(h)
+        Xt1 = Xt1.clamp(-10, 10)
         Xp = mask * X + (1 - mask) * Xt1
 
         # 2nd DMSA
@@ -158,6 +159,7 @@ class SAITS(nn.Module):
             for _ in range(self.n_group_inner):
                 h, attn_w = layer(h)
         Xt2 = self.reduce_gamma(F.relu(self.reduce_beta(h)))
+        Xt2 = Xt2.clamp(-10, 10)
 
         # combination：attn_w 形状 (B, n_head, L, L)
         if attn_w is not None:
@@ -168,6 +170,7 @@ class SAITS(nn.Module):
             self.weight_combine(torch.cat([mask, aw], dim=-1))
         )
         Xt3 = (1 - combine) * Xt2 + combine * Xt1
+        Xt3 = Xt3.clamp(-10, 10)
         imputed = mask * X + (1 - mask) * Xt3
         return imputed, Xt1, Xt2, Xt3
 

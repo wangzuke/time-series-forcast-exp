@@ -24,6 +24,13 @@ SEEDS = [2024, 2025, 2026]
 PRED_MODELS = ["DLinear", "PatchTST", "iTransformer"]
 SIMPLE_IMPUTERS = ["linear"]
 
+# 第二轮实验设置
+R2_DATASETS = ["Weather", "Electricity", "Traffic"]
+R2_SEEDS = [2024, 2025]
+R2_AWARE_METHODS = ["misstsm", "crib", "coifnet"]
+R2_EPOCHS = 20
+R2_PATIENCE = 5
+
 
 @dataclass
 class Cmd:
@@ -39,8 +46,8 @@ class Cmd:
 
 
 def _common(dataset, seq_len, pred_len, missing_type, missing_rate, seed,
-            epochs, batch_size, lr):
-    return [
+            epochs, batch_size, lr, patience=None):
+    args = [
         f"--dataset {dataset}",
         f"--seq_len {seq_len}",
         f"--pred_len {pred_len}",
@@ -51,6 +58,9 @@ def _common(dataset, seq_len, pred_len, missing_type, missing_rate, seed,
         f"--batch_size {batch_size}",
         f"--lr {lr}",
     ]
+    if patience is not None:
+        args.append(f"--patience {patience}")
+    return args
 
 
 def gen_baseline_no_missing(seq_len=96, epochs=10, batch_size=32, lr=1e-3):
@@ -249,11 +259,160 @@ def gen_ablation_predictor_complexity(seq_len=96, epochs=10, batch_size=32, lr=1
         rates=[0.1, 0.3], preds=[96])
 
 
+# ====================== 第二轮实验命令生成 ======================
+
+def gen_r2_a(seq_len=96, batch_size=32, lr=1e-3):
+    """组 A：主对比（144 条）—— 完整版缺失感知方法 vs 两阶段基准。"""
+    cmds = []
+    for ds, mt, r, H, seed, m in itertools.product(
+        R2_DATASETS, MAIN_MISSING_TYPES, MISSING_RATES, PRED_LENS_MAIN,
+        R2_SEEDS, R2_AWARE_METHODS
+    ):
+        args = _common(ds, seq_len, H, mt, r, seed, R2_EPOCHS, batch_size, lr,
+                       patience=R2_PATIENCE) + [
+            f"--method {m}", "--predictor iTransformer", "--impute none",
+        ]
+        tag = f"r2_a/{m}/{ds}/{mt}_{int(r*100)}/h{H}_s{seed}"
+        cmds.append(Cmd(tag, args + [f"--tag {tag.replace('/', '__')}"]))
+    return cmds
+
+
+def gen_r2_b(seq_len=96, batch_size=32, lr=1e-3):
+    """组 B：高缺失率探测（64 条）—— 极端缺失下谁更鲁棒。"""
+    cmds = []
+    high_rates = [0.5, 0.7]
+    datasets_b = ["Weather", "Traffic"]
+    methods_b = [
+        ("simple", "iTransformer", "linear"),
+        ("misstsm", "iTransformer", "none"),
+        ("crib", "iTransformer", "none"),
+        ("coifnet", "iTransformer", "none"),
+    ]
+    for ds, mt, r, seed in itertools.product(
+        datasets_b, MAIN_MISSING_TYPES, high_rates, R2_SEEDS
+    ):
+        for method, predictor, imp in methods_b:
+            args = _common(ds, seq_len, 96, mt, r, seed, R2_EPOCHS, batch_size, lr,
+                           patience=R2_PATIENCE) + [
+                f"--method {method}", f"--predictor {predictor}", f"--impute {imp}",
+            ]
+            tag = f"r2_b/{method}/{ds}/{mt}_{int(r*100)}/h96_s{seed}"
+            cmds.append(Cmd(tag, args + [f"--tag {tag.replace('/', '__')}"]))
+    return cmds
+
+
+def gen_r2_c(seq_len=96, batch_size=32, lr=1e-3):
+    """组 C：SAITS+PatchTST 溢出修复（48 条）—— 补全第一轮空白。"""
+    cmds = []
+    datasets_c = ["Weather", "Electricity"]
+    seeds_c = [2024, 2025, 2026]
+    for ds, mt, r, H, seed in itertools.product(
+        datasets_c, MAIN_MISSING_TYPES, MISSING_RATES, PRED_LENS_MAIN, seeds_c
+    ):
+        args = _common(ds, seq_len, H, mt, r, seed, R2_EPOCHS, batch_size, lr,
+                       patience=R2_PATIENCE) + [
+            "--method saits", "--predictor PatchTST", "--impute none",
+            "--saits_pretrain_epochs 2",
+        ]
+        tag = f"r2_c/saits_PatchTST/{ds}/{mt}_{int(r*100)}/h{H}_s{seed}"
+        cmds.append(Cmd(tag, args + [f"--tag {tag.replace('/', '__')}"]))
+    return cmds
+
+
+def gen_r2_d(seq_len=96, batch_size=32, lr=1e-3):
+    """组 D：掩码消融重验证（24 条）—— 掩码对完整版方法是否有效。"""
+    cmds = []
+    datasets_d = ["Weather", "Traffic"]
+    rates_d = [0.3, 0.5]
+    methods_d = [
+        ("simple", "iTransformer", "linear"),
+        ("misstsm", "iTransformer", "none"),
+        ("crib", "iTransformer", "none"),
+    ]
+    for ds, r, seed in itertools.product(datasets_d, rates_d, R2_SEEDS):
+        for method, predictor, imp in methods_d:
+            args = _common(ds, seq_len, 96, "continuous_segment", r, seed,
+                           R2_EPOCHS, batch_size, lr, patience=R2_PATIENCE) + [
+                f"--method {method}", f"--predictor {predictor}", f"--impute {imp}",
+            ]
+            tag = f"r2_d/{method}/{ds}/cs_{int(r*100)}/h96_s{seed}"
+            cmds.append(Cmd(tag, args + [f"--tag {tag.replace('/', '__')}"]))
+    return cmds
+
+
+def gen_r2_e(seq_len=96, batch_size=32, lr=1e-3):
+    """组 E：扩展场景验证（64 条）—— 变量通道缺失和混合缺失。"""
+    cmds = []
+    datasets_e = ["Electricity", "Traffic"]
+    methods_e = [
+        ("simple", "iTransformer", "linear"),
+        ("misstsm", "iTransformer", "none"),
+        ("crib", "iTransformer", "none"),
+        ("coifnet", "iTransformer", "none"),
+    ]
+    for ds, mt, H, seed in itertools.product(
+        datasets_e, EXT_MISSING_TYPES, PRED_LENS_MAIN, R2_SEEDS
+    ):
+        for method, predictor, imp in methods_e:
+            args = _common(ds, seq_len, H, mt, 0.3, seed, R2_EPOCHS, batch_size, lr,
+                           patience=R2_PATIENCE) + [
+                f"--method {method}", f"--predictor {predictor}", f"--impute {imp}",
+            ]
+            tag = f"r2_e/{method}/{ds}/{mt}_30/h{H}_s{seed}"
+            cmds.append(Cmd(tag, args + [f"--tag {tag.replace('/', '__')}"]))
+    return cmds
+
+
+def gen_r2_f(seq_len=96, batch_size=32, lr=1e-3):
+    """组 F：误差传播补充（12 条）—— 完整版方法补值误差与预测的关系。"""
+    cmds = []
+    datasets_f = ["Weather", "Electricity"]
+    for ds, r, m in itertools.product(datasets_f, MISSING_RATES, R2_AWARE_METHODS):
+        args = _common(ds, seq_len, 96, "random_point", r, 2024,
+                       R2_EPOCHS, batch_size, lr, patience=R2_PATIENCE) + [
+            f"--method {m}", "--predictor iTransformer", "--impute none",
+        ]
+        tag = f"r2_f/{m}/{ds}/rp_{int(r*100)}/h96_s2024"
+        cmds.append(Cmd(tag, args + [f"--tag {tag.replace('/', '__')}"]))
+    return cmds
+
+
+def gen_r2_all(batch_size=32, lr=1e-3):
+    """第二轮全部实验（356 条）。"""
+    return (gen_r2_a(batch_size=batch_size, lr=lr)
+            + gen_r2_b(batch_size=batch_size, lr=lr)
+            + gen_r2_c(batch_size=batch_size, lr=lr)
+            + gen_r2_d(batch_size=batch_size, lr=lr)
+            + gen_r2_e(batch_size=batch_size, lr=lr)
+            + gen_r2_f(batch_size=batch_size, lr=lr))
+
+
+def gen_r2_smoke():
+    """第二轮烟测：各方法 × Weather × 1 epoch。"""
+    cmds = []
+    for m, pm, imp in [
+        ("simple", "iTransformer", "linear"),
+        ("saits", "PatchTST", "none"),
+        ("misstsm", "iTransformer", "none"),
+        ("crib", "iTransformer", "none"),
+        ("coifnet", "iTransformer", "none"),
+    ]:
+        extra = ["--saits_pretrain_epochs 1"] if m == "saits" else []
+        args = _common("Weather", 96, 96, "random_point", 0.3, 2024, 1, 64, 1e-3) + [
+            f"--method {m}", f"--predictor {pm}", f"--impute {imp}",
+        ] + extra
+        tag = f"r2_smoke/{m}_{pm}_{imp}"
+        cmds.append(Cmd(tag, args + [f"--tag {tag.replace('/', '__')}"]))
+    return cmds
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--group", default="all",
                     choices=["all", "baseline", "simple", "saits", "aware", "extension",
-                             "ablation_mask", "ablation_err", "ablation_gen", "ablation_pred", "smoke"])
+                             "ablation_mask", "ablation_err", "ablation_gen", "ablation_pred",
+                             "smoke", "r2", "r2_a", "r2_b", "r2_c", "r2_d", "r2_e", "r2_f",
+                             "r2_smoke"])
     ap.add_argument("--out", default="scripts/cmds.txt")
     ap.add_argument("--epochs", type=int, default=10)
     ap.add_argument("--batch_size", type=int, default=32)
@@ -293,6 +452,21 @@ def main():
             ]
             tag = f"smoke/{m}_{pm}_{imp}"
             all_cmds.append(Cmd(tag, args2 + [f"--tag {tag.replace('/', '__')}"]))
+    # 第二轮实验
+    if args.group in ("r2", "r2_a"):
+        all_cmds += gen_r2_a(args.seq_len, args.batch_size, args.lr)
+    if args.group in ("r2", "r2_b"):
+        all_cmds += gen_r2_b(args.seq_len, args.batch_size, args.lr)
+    if args.group in ("r2", "r2_c"):
+        all_cmds += gen_r2_c(args.seq_len, args.batch_size, args.lr)
+    if args.group in ("r2", "r2_d"):
+        all_cmds += gen_r2_d(args.seq_len, args.batch_size, args.lr)
+    if args.group in ("r2", "r2_e"):
+        all_cmds += gen_r2_e(args.seq_len, args.batch_size, args.lr)
+    if args.group in ("r2", "r2_f"):
+        all_cmds += gen_r2_f(args.seq_len, args.batch_size, args.lr)
+    if args.group == "r2_smoke":
+        all_cmds += gen_r2_smoke()
 
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     with open(args.out, "w") as f:

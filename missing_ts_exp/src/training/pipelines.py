@@ -72,6 +72,15 @@ class PipelineConfig:
     aware_num_heads: int = 4
     aware_kl_weight: float = 1e-3
     aware_impute_weight: float = 0.5
+    # CRIB 完整版
+    crib_patch_len: int = 12
+    crib_consistency_weight: float = 0.1
+    # CoIFNet 完整版
+    coifnet_intra_type: str = "TSBlock"
+    coifnet_inter_type: str = "AttentionBlock"
+    coifnet_n_heads: int = 4
+    coifnet_use_time_feat: bool = True
+    coifnet_time_feat_proj: int = 8
     # 训练超参
     d_model: int = 128
     n_heads: int = 8
@@ -198,6 +207,8 @@ class CribPipeline(BasePipeline):
             cfg.seq_len, cfg.pred_len, cfg.n_channels,
             d_model=cfg.d_model, n_heads=cfg.n_heads, e_layers=cfg.e_layers,
             d_ff=cfg.d_ff, dropout=cfg.dropout, kl_weight=cfg.aware_kl_weight,
+            patch_len=cfg.crib_patch_len,
+            consistency_weight=cfg.crib_consistency_weight,
         )
 
     def forward(self, batch):
@@ -215,6 +226,12 @@ class CoifnetPipeline(BasePipeline):
             cfg.seq_len, cfg.pred_len, cfg.n_channels,
             hidden=cfg.d_model, n_layers=cfg.e_layers, dropout=cfg.dropout,
             impute_weight=cfg.aware_impute_weight,
+            intra_type=cfg.coifnet_intra_type,
+            inter_type=cfg.coifnet_inter_type,
+            n_heads=cfg.coifnet_n_heads,
+            use_time_feat=cfg.coifnet_use_time_feat,
+            time_feat_proj=cfg.coifnet_time_feat_proj,
+            time_feat_dim=cfg.time_feat_dim,
         )
 
     def forward(self, batch):

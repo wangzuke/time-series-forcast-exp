@@ -84,3 +84,8 @@ MAIN_PRED_LENS = [96, 336]
 # 扩展实验
 EXT_SEQ_LENS = [96, 336]
 EXT_PRED_LENS = [96, 192, 336, 720]
+
+# 第二轮实验设置
+R2_DATASETS = ["Weather", "Electricity", "Traffic"]
+R2_SEEDS = [2024, 2025]
+HIGH_MISSING_RATES = [0.5, 0.7]
