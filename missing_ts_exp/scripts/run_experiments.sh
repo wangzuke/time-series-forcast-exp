@@ -4,7 +4,7 @@
 #   bash scripts/run_experiments.sh scripts/cmds.txt 0,1,2,3,4,5,6,7 2
 # 第二个参数是 GPU id 列表（逗号分隔），第三个参数是每张卡并发任务数。
 
-set -euo pipefail
+set -uo pipefail
 
 CMD_FILE=${1:-scripts/cmds.txt}
 GPU_LIST=${2:-0}
@@ -42,7 +42,7 @@ for i in "${!CMDS[@]}"; do
     run_one $gpu $i "$cmd" &
     active=$((active+1))
     if (( active >= TOTAL_SLOTS )); then
-        wait -n
+        wait -n || true
         active=$((active-1))
     fi
 done
