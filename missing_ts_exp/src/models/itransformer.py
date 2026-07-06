@@ -10,24 +10,32 @@ import torch.nn as nn
 
 
 class _DataEmbeddingInverted(nn.Module):
-    def __init__(self, seq_len: int, d_model: int, time_feat_dim: int = 0, dropout: float = 0.1):
+    def __init__(self, seq_len: int, d_model: int, time_feat_dim: int = 0,
+                 dropout: float = 0.1, mask_mode: str = "none"):
         super().__init__()
-        in_dim = seq_len  # 每个变量是一个 token，其特征是它的历史长度
+        self.mask_mode = mask_mode
+        in_dim = seq_len * 2 if mask_mode == "concat" else seq_len
         self.value_embedding = nn.Linear(in_dim, d_model)
         self.time_feat_dim = time_feat_dim
         if time_feat_dim > 0:
-            # 时间协变量也作为额外 token（覆盖 seq_len 的时序），先做 Linear
             self.time_embedding = nn.Linear(seq_len, d_model)
+        if mask_mode == "add":
+            self.mask_embedding = nn.Linear(seq_len, d_model)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x: torch.Tensor, x_mark=None) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, x_mark=None, mask=None) -> torch.Tensor:
         # x: (B, L, C) -> (B, C, L)
         x_inv = x.permute(0, 2, 1)
+        if self.mask_mode == "concat" and mask is not None:
+            m_inv = mask.permute(0, 2, 1)  # (B, C, L)
+            x_inv = torch.cat([x_inv, m_inv], dim=-1)  # (B, C, 2L)
         var_tokens = self.value_embedding(x_inv)  # (B, C, d_model)
+        if self.mask_mode == "add" and mask is not None:
+            m_inv = mask.permute(0, 2, 1)
+            var_tokens = var_tokens + self.mask_embedding(m_inv)
         if self.time_feat_dim > 0 and x_mark is not None:
-            # x_mark: (B, L, T_feat) -> (B, T_feat, L)
             tm = x_mark.permute(0, 2, 1)
-            time_tokens = self.time_embedding(tm)  # (B, T_feat, d_model)
+            time_tokens = self.time_embedding(tm)
             var_tokens = torch.cat([var_tokens, time_tokens], dim=1)
         return self.dropout(var_tokens)
 
@@ -90,13 +98,16 @@ class iTransformer(nn.Module):
         dropout: float = 0.1,
         time_feat_dim: int = 0,
         use_norm: bool = True,
+        mask_mode: str = "none",
     ):
         super().__init__()
         self.seq_len = seq_len
         self.pred_len = pred_len
         self.n_channels = n_channels
         self.use_norm = use_norm
-        self.embed = _DataEmbeddingInverted(seq_len, d_model, time_feat_dim, dropout)
+        self.mask_mode = mask_mode
+        self.embed = _DataEmbeddingInverted(seq_len, d_model, time_feat_dim, dropout,
+                                            mask_mode=mask_mode)
         self.encoder = nn.ModuleList(
             [_EncoderLayer(d_model, n_heads, d_ff, dropout) for _ in range(e_layers)]
         )
@@ -105,13 +116,20 @@ class iTransformer(nn.Module):
 
     def forward(self, x: torch.Tensor, x_mark=None, mask=None) -> torch.Tensor:
         if self.use_norm:
-            means = x.mean(1, keepdim=True).detach()
-            x_n = x - means
-            stdev = torch.sqrt(x_n.var(1, keepdim=True, unbiased=False) + 1e-5)
+            if self.mask_mode != "none" and mask is not None:
+                m_sum = mask.sum(1, keepdim=True).clamp(min=1.0)
+                means = (x * mask).sum(1, keepdim=True) / m_sum
+                x_n = x - means
+                var = ((x_n * mask) ** 2).sum(1, keepdim=True) / m_sum + 1e-5
+                stdev = torch.sqrt(var)
+            else:
+                means = x.mean(1, keepdim=True).detach()
+                x_n = x - means
+                stdev = torch.sqrt(x_n.var(1, keepdim=True, unbiased=False) + 1e-5)
             x_n = x_n / stdev
         else:
             x_n = x
-        h = self.embed(x_n, x_mark)
+        h = self.embed(x_n, x_mark, mask=mask)
         for layer in self.encoder:
             h = layer(h)
         h = self.norm(h)
