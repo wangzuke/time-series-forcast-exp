@@ -124,6 +124,12 @@ def main():
                         help="如果 method=saits 且 >0，则先单独预训练 SAITS")
     # 用更小数据集做快速烟测
     parser.add_argument("--max_train_batches", type=int, default=-1)
+    # C 组: MissTSM 变体
+    parser.add_argument("--misstsm_variant", default="full",
+                        choices=["full", "cond_q", "multi_q", "soft_skip"])
+    # D 组: Mask-aware predictor
+    parser.add_argument("--mask_aware", default="none",
+                        choices=["none", "concat", "add"])
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -141,6 +147,8 @@ def main():
         pred_len=args.pred_len,
         n_channels=n_channels,
         time_feat_dim=t_feat_dim,
+        misstsm_variant=args.misstsm_variant,
+        mask_aware=args.mask_aware,
     )
 
     train_loader, _ = get_loader(args.dataset, "train", args.seq_len, args.pred_len,

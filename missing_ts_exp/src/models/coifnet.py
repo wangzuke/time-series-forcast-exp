@@ -3,12 +3,17 @@
 Full implementation based on: K. Tang et al., arXiv:2506.13064, 2025.
 Reference repo: github.com/KaiTang-eng/CoIFNet
 
-Architecture: dual-pathway SharedModule (intra=temporal, inter=channel) with
-mask-aware RevON normalization. A single backbone outputs both history imputation
-and future forecast simultaneously.
+Architecture: single-layer dual-pathway SharedModule (intra=temporal, inter=channel)
+with mask-aware RevON normalization. The inter_model handles dimension compression
+from 2C+feat_dim to C using GEGLU-gated TSBlock (hidden=256).
+
+Original training flow (CoIFNetTask.py):
+  - Input: x (B, seq_len, C), mask (B, seq_len, C)
+  - SharedModule: intra_model maps seq_len→hidden, inter_model maps 2C+feat→C
+  - aux_head: Linear(hidden, seq_len+pred_len) → output (B, seq_len+pred_len, C)
+  - Split output[:, :seq_len] = imputation, output[:, seq_len:] = forecast
 """
 from __future__ import annotations
-import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -18,21 +23,26 @@ import torch.nn.functional as F
 # Building blocks
 # ---------------------------------------------------------------------------
 
+class GEGLU(nn.Module):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x, gate = x.chunk(2, dim=-1)
+        return x * F.gelu(gate)
+
+
 class TSBlock(nn.Module):
-    """Token-mixing MLP with GEGLU gating."""
+    """Token-mixing MLP with GEGLU gating (matches original CoIFNet repo)."""
 
     def __init__(self, input_dim: int, output_dim: int, mid_hidden: int, dropout: float):
         super().__init__()
-        self.fc1 = nn.Linear(input_dim, mid_hidden * 2)
-        self.drop = nn.Dropout(dropout)
-        self.fc2 = nn.Linear(mid_hidden, output_dim)
+        self.block = nn.Sequential(
+            nn.Linear(input_dim, mid_hidden * 2),
+            GEGLU(),
+            nn.Dropout(dropout),
+            nn.Linear(mid_hidden, output_dim),
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.fc1(x)
-        x, gate = x.chunk(2, dim=-1)
-        x = x * F.gelu(gate)
-        x = self.drop(x)
-        return self.fc2(x)
+        return self.block(x)
 
 
 class AttentionBlock(nn.Module):
@@ -53,41 +63,35 @@ class AttentionBlock(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (B, N, dim_in)
         B, N, _ = x.shape
         h, d = self.heads, self.dim_head
 
-        qkv = self.to_qkv(x)  # (B, N, 3*h*d)
-        q, k, v = qkv.chunk(3, dim=-1)  # each (B, N, h*d)
+        qkv = self.to_qkv(x)
+        q, k, v = qkv.chunk(3, dim=-1)
 
-        # reshape to (B, h, N, d)
         q = q.reshape(B, N, h, d).permute(0, 2, 1, 3)
         k = k.reshape(B, N, h, d).permute(0, 2, 1, 3)
         v = v.reshape(B, N, h, d).permute(0, 2, 1, 3)
 
-        # gates: (B, N, h) -> sigmoid -> (B, h, N, 1)
-        gates = torch.sigmoid(self.to_v_gates(x))  # (B, N, h)
-        gates = gates.permute(0, 2, 1).unsqueeze(-1)  # (B, h, N, 1)
+        gates = torch.sigmoid(self.to_v_gates(x))
+        gates = gates.permute(0, 2, 1).unsqueeze(-1)
 
-        # scaled dot-product attention in float32
         attn = torch.matmul(q.float(), k.float().transpose(-2, -1)) * self.scale
         attn = attn.softmax(dim=-1).to(v.dtype)
 
-        out = torch.matmul(attn, v)  # (B, h, N, d)
+        out = torch.matmul(attn, v)
         out = out * gates
 
-        # merge heads: (B, h, N, d) -> (B, N, h*d)
         out = out.permute(0, 2, 1, 3).reshape(B, N, h * d)
         return self.to_out(out)
 
 
 def _make_block(block_type: str, input_dim: int, output_dim: int,
-                heads: int, dropout: float) -> nn.Module:
+                mid_hidden: int, dropout: float) -> nn.Module:
     if block_type == "TSBlock":
-        mid = max(input_dim, output_dim)
-        return TSBlock(input_dim, output_dim, mid, dropout)
+        return TSBlock(input_dim, output_dim, mid_hidden, dropout)
     elif block_type == "AttentionBlock":
-        return AttentionBlock(input_dim, output_dim, heads=heads, dropout=dropout)
+        return AttentionBlock(input_dim, output_dim, dropout=dropout)
     else:
         raise ValueError(f"Unknown block type: {block_type}")
 
@@ -97,13 +101,7 @@ def _make_block(block_type: str, input_dim: int, output_dim: int,
 # ---------------------------------------------------------------------------
 
 class RevON(nn.Module):
-    """3-mode mask-aware reversible normalization.
-
-    Modes:
-        "norm"      — mask-aware stats, normalize, zero out missing positions
-        "norm-fore" — normalize with stored stats (no recompute)
-        "denorm"    — reverse normalization with stored stats
-    """
+    """3-mode mask-aware reversible normalization."""
 
     def __init__(self, num_features: int, eps: float = 1e-5, affine: bool = True):
         super().__init__()
@@ -134,12 +132,6 @@ class RevON(nn.Module):
                 x_normed = x_normed * mask
             return x_normed
 
-        elif mode == "norm-fore":
-            x_normed = (x - self.mean_) / self.std_
-            if self.affine:
-                x_normed = x_normed * self.weight + self.bias
-            return x_normed
-
         elif mode == "denorm":
             if self.affine:
                 x = (x - self.bias) / (self.weight + self.eps)
@@ -150,63 +142,30 @@ class RevON(nn.Module):
 
 
 # ---------------------------------------------------------------------------
-# Shared dual-pathway module
+# Shared dual-pathway module (single layer, matching original repo)
 # ---------------------------------------------------------------------------
 
-class _SharedLayer(nn.Module):
-    """One layer of the shared module: temporal (intra) + channel (inter) mixing."""
-
-    def __init__(self, total_len: int, in_channel_dim: int, out_channel_dim: int,
-                 intra_type: str, inter_type: str, heads: int, dropout: float):
-        super().__init__()
-        self.intra_norm = nn.LayerNorm(total_len)
-        self.inter_norm = nn.LayerNorm(in_channel_dim)
-
-        self.intra_model = _make_block(intra_type, total_len, total_len, heads, dropout)
-        self.inter_model = _make_block(inter_type, in_channel_dim, out_channel_dim, heads, dropout)
-
-        self.same_channel_dim = (in_channel_dim == out_channel_dim)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (B, total_len, C)
-        # --- temporal mixing ---
-        x_t = x.permute(0, 2, 1)          # (B, C, total_len)
-        x_t = self.intra_norm(x_t)
-        x_t = self.intra_model(x_t)        # (B, C, total_len)
-        x_t = x_t.permute(0, 2, 1)         # (B, total_len, C)
-        if self.same_channel_dim:
-            x = x + x_t
-        else:
-            x = x_t
-
-        # --- channel mixing ---
-        x_c = self.inter_norm(x)
-        x_c = self.inter_model(x_c)
-        if self.same_channel_dim:
-            x = x + x_c
-        else:
-            x = x_c
-
-        return x
-
-
 class SharedModule(nn.Module):
-    def __init__(self, total_len: int, in_channel_dim: int, out_channel_dim: int,
-                 n_layers: int, intra_type: str, inter_type: str,
-                 heads: int, dropout: float):
+    """Single-layer dual-pathway: temporal (intra) + channel (inter) mixing.
+
+    Matches the original CoIFNet repo architecture exactly:
+    - intra_model: temporal mixing (in_seq → out_seq) operating on channel dim
+    - inter_model: channel mixing (2C+feat_dim → C) using GEGLU compression
+    """
+
+    def __init__(self, in_seq: int, out_seq: int, n_channels: int,
+                 in_channel_dim: int, hidden: int,
+                 intra_type: str, inter_type: str, dropout: float):
         super().__init__()
-        layers = []
-        for i in range(n_layers):
-            in_dim = in_channel_dim if i == 0 else out_channel_dim
-            layers.append(_SharedLayer(
-                total_len, in_dim, out_channel_dim,
-                intra_type, inter_type, heads, dropout,
-            ))
-        self.layers = nn.ModuleList(layers)
+        self.intra_model = _make_block(intra_type, in_seq, out_seq, hidden, dropout)
+        self.inter_model = _make_block(inter_type, in_channel_dim, n_channels, hidden, dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        for layer in self.layers:
-            x = layer(x)
+        # x: (B, in_seq, in_channel_dim)
+        # temporal mixing: (B, in_channel_dim, in_seq) → (B, in_channel_dim, out_seq)
+        x = self.intra_model(x.permute(0, 2, 1)).permute(0, 2, 1)
+        # channel mixing: (B, out_seq, in_channel_dim) → (B, out_seq, C)
+        x = self.inter_model(x)
         return x
 
 
@@ -217,8 +176,15 @@ class SharedModule(nn.Module):
 class CoIFNet(nn.Module):
     """Joint imputation-forecasting network.
 
+    Matches the original repo (github.com/KaiTang-eng/CoIFNet) architecture:
+    - Single SharedModule: intra maps seq_len→hidden, inter maps 2C+feat→C
+    - aux_head: Linear(hidden, seq_len+pred_len) maps to full horizon
+    - Output split: [:seq_len] = imputation, [seq_len:] = forecast
+    - Input: cat([x, mask], dim=-1), NO x*mask
+    - hidden=256 (original config), inter_type=TSBlock (original config)
+
     Inputs : x     (B, L, C)  — observed values (0 at missing positions)
-             x_mark (B, L, F) — optional time features (history segment only)
+             x_mark (B, L, F) — optional time features
              mask  (B, L, C)  — 1=observed, 0=missing
     Outputs: {"forecast": (B, H, C), "impute": (B, L, C)}
     """
@@ -230,13 +196,13 @@ class CoIFNet(nn.Module):
         seq_len: int,
         pred_len: int,
         n_channels: int,
-        hidden: int = 128,
+        hidden: int = 256,
         n_layers: int = 3,
         dropout: float = 0.1,
         use_revin: bool = True,
         impute_weight: float = 0.5,
         intra_type: str = "TSBlock",
-        inter_type: str = "AttentionBlock",
+        inter_type: str = "TSBlock",
         n_heads: int = 4,
         use_time_feat: bool = True,
         time_feat_proj: int = 8,
@@ -245,39 +211,33 @@ class CoIFNet(nn.Module):
         super().__init__()
         self.seq_len = seq_len
         self.pred_len = pred_len
-        self.total_len = seq_len + pred_len
         self.n_channels = n_channels
         self.hidden = hidden
         self.impute_weight = impute_weight
         self.use_revin = use_revin
         self.use_time_feat = use_time_feat
         self.time_feat_proj = time_feat_proj
+        self.horizon_len = seq_len + pred_len
 
         if use_revin:
             self.revin = RevON(n_channels)
 
-        in_dim = n_channels * 2
-
-        # embedding + positional
-        embed_in_dim = in_dim + (time_feat_proj if use_time_feat else 0)
-        self.embed = nn.Linear(embed_in_dim, hidden)
-        self.pos = nn.Parameter(torch.randn(1, self.total_len, hidden) * 0.02)
-
+        in_channel_dim = n_channels * 2
         if use_time_feat:
+            in_channel_dim += time_feat_proj
             self.time_proj = nn.Linear(time_feat_dim, time_feat_proj)
 
-        self.backbone = SharedModule(
-            total_len=self.total_len,
-            in_channel_dim=hidden,
-            out_channel_dim=hidden,
-            n_layers=n_layers,
+        self.shared_model = SharedModule(
+            in_seq=seq_len,
+            out_seq=hidden,
+            n_channels=n_channels,
+            in_channel_dim=in_channel_dim,
+            hidden=hidden,
             intra_type=intra_type,
             inter_type=inter_type,
-            heads=n_heads,
             dropout=dropout,
         )
-        self.norm_out = nn.LayerNorm(hidden)
-        self.head = nn.Linear(hidden, n_channels)
+        self.aux_head = nn.Linear(hidden, self.horizon_len)
 
     def forward(self, x: torch.Tensor, x_mark=None, mask: torch.Tensor = None):
         if mask is None:
@@ -286,47 +246,38 @@ class CoIFNet(nn.Module):
         B, L, C = x.shape
         x_orig = x
 
-        # 1. Mask-aware normalization (history segment only)
+        # 1. Mask-aware RevON normalization
         if self.use_revin:
             x_normed = self.revin(x, mode="norm", mask=mask)
         else:
             x_normed = x
 
-        # 2. Build full-length input: [obs*mask | mask] for history, zeros for forecast
-        pad_x = torch.zeros(B, self.pred_len, C, device=x.device, dtype=x.dtype)
-        pad_m = torch.zeros(B, self.pred_len, C, device=x.device, dtype=x.dtype)
+        # 2. Build input: cat([x_normed, mask]) — matching original (no x*mask)
+        inp = torch.cat([x_normed, mask], dim=-1)  # (B, L, 2C)
 
-        x_full = torch.cat([x_normed * mask, pad_x], dim=1)  # (B, total, C)
-        m_full = torch.cat([mask, pad_m], dim=1)              # (B, total, C)
-        inp = torch.cat([x_full, m_full], dim=-1)             # (B, total, 2C)
+        # 3. Optional time features (zero-pad if x_mark unavailable)
+        if self.use_time_feat:
+            if x_mark is not None:
+                t_feat = self.time_proj(x_mark)
+            else:
+                t_feat = torch.zeros(B, L, self.time_feat_proj, device=x.device, dtype=x.dtype)
+            inp = torch.cat([inp, t_feat], dim=-1)  # (B, L, 2C+tfp)
 
-        # 3. Optional time features
-        if self.use_time_feat and x_mark is not None:
-            t_hist = self.time_proj(x_mark)                     # (B, L, time_feat_proj)
-            t_pad = torch.zeros(B, self.pred_len, self.time_feat_proj,
-                                device=x.device, dtype=x.dtype)
-            t_full = torch.cat([t_hist, t_pad], dim=1)         # (B, total, time_feat_proj)
-            inp = torch.cat([inp, t_full], dim=-1)              # (B, total, 2C+tfp)
+        # 4. SharedModule: (B, seq_len, 2C+feat) → (B, hidden, C)
+        h = self.shared_model(inp)
 
-        # 4. Embed + positional
-        h = self.embed(inp) + self.pos                           # (B, total, hidden)
+        # 5. aux_head: (B, C, hidden) → (B, C, horizon_len) → (B, horizon_len, C)
+        out_full = self.aux_head(h.permute(0, 2, 1)).permute(0, 2, 1)
 
-        # 5. Backbone
-        h = self.backbone(h)
-
-        # 6. Output head
-        h = self.norm_out(h)
-        out_full = self.head(h)                               # (B, total, C)
-
-        # 7. Denormalize
+        # 6. Denormalize
         if self.use_revin:
             out_full = self.revin(out_full, mode="denorm")
 
-        # 8. Split history / forecast
+        # 7. Split: imputation (first seq_len) and forecast (last pred_len)
         impute_raw = out_full[:, :self.seq_len, :]
         forecast = out_full[:, self.seq_len:, :]
 
-        # 9. Preserve observed values in impute
+        # 8. Preserve observed values in imputation
         impute = mask * x_orig + (1.0 - mask) * impute_raw
 
         return {"forecast": forecast, "impute": impute}
@@ -339,7 +290,6 @@ class CoIFNet(nn.Module):
         y_true: torch.Tensor,
         criterion=None,
     ):
-        """Compute combined forecast + imputation loss (backward compatibility)."""
         if criterion is None:
             criterion = nn.L1Loss(reduction="none")
         impute = out["impute"]

@@ -105,8 +105,8 @@ class PositionalEmbedding(nn.Module):
         self.register_buffer("pe", pe.unsqueeze(0))  # (1, max_len, d_model)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (B, seq, d_model)
-        return x + self.pe[:, : x.size(1)]
+        # x: (B, seq, d_model) — return pe slice (caller adds to x)
+        return self.pe[:, : x.size(1), : x.size(2)]
 
 
 # ---------------------------------------------------------------------------
@@ -292,7 +292,7 @@ class CRIB(nn.Module):
         L_padded = seq_len + pad
         self.patch_num = L_padded // patch_len
 
-        self.pos_embed = PositionalEmbedding(patch_len)
+        self.pos_embed = PositionalEmbedding(d_model=(patch_len + 1) // 2 * 2, max_len=10000)
 
         self.encoder = CRIBEncoder(
             patch_len=patch_len,
@@ -366,13 +366,12 @@ class CRIB(nn.Module):
         # Patch
         x1 = self._to_patches(x_n, mask)             # (B, P, C, patch_len)
 
-        # Add sinusoidal positional bias over the patch_len axis (within-patch positions).
-        # self.pos_embed.pe: (1, max_len, patch_len); pe[0, i, i] gives the i-th diagonal
-        # element. We use pe[0, :PL, 0] — one scalar per position — broadcast over (B,P,C).
+        # Positional encoding: reshape to (B, P*C, PL), apply full 2D PE slice, reshape back.
+        # Matches original: x = x.reshape(B, P*N, L); x = x + self.enc_pos_emded(x)
         B, P, C, PL = x1.shape
-        # Take the first feature column of the sinusoidal table as a position scalar
-        pos_bias = self.pos_embed.pe[0, :PL, 0]        # (PL,)
-        x1 = x1 + pos_bias.view(1, 1, 1, PL)          # broadcast to (B, P, C, PL)
+        x1_flat = x1.reshape(B, P * C, PL)
+        x1_flat = x1_flat + self.pos_embed(x1_flat)
+        x1 = x1_flat.reshape(B, P, C, PL)
 
         if self.training:
             x2 = x1 + 0.01 * torch.randn_like(x1)

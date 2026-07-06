@@ -60,20 +60,36 @@ class MissTSMLayer(nn.Module):
 
     输入: x (B, L, C), mask (B, L, C) — 1=有观测，0=缺失
     输出: y (B, L, C_out)
+
+    variant:
+      - "full": 原始单 query
+      - "cond_q": 时间步条件化 query (C1)
+      - "multi_q": 多 query K=8 + mean pooling (C2)
     """
 
-    def __init__(self, n_channels: int, q_dim: int = 64, num_heads: int = 4, out_dim: int = None):
+    def __init__(self, n_channels: int, q_dim: int = 64, num_heads: int = 4,
+                 out_dim: int = None, variant: str = "full", n_queries: int = 8):
         super().__init__()
         self.q_dim = q_dim
         self.n_channels = n_channels
         self.out_dim = out_dim if out_dim else n_channels
-        self.var_query = nn.Parameter(torch.zeros(1, 1, q_dim))
+        self.variant = variant
+
+        if variant == "multi_q":
+            self.var_query = nn.Parameter(torch.zeros(1, n_queries, q_dim))
+        else:
+            self.var_query = nn.Parameter(torch.zeros(1, 1, q_dim))
+
         self.mask_embed = _LinearEmbed(q_dim)
         self.pos_embed = _PE2D(q_dim)
         self.mhca = nn.MultiheadAttention(embed_dim=q_dim, num_heads=num_heads, batch_first=True)
         self.layernorm = nn.LayerNorm(q_dim)
         self.projection = nn.Linear(q_dim, self.out_dim)
         nn.init.trunc_normal_(self.var_query, std=0.02)
+
+        if variant == "cond_q":
+            pe_dim = q_dim // 2
+            self.time_proj = nn.Linear(pe_dim, q_dim)
 
     def _revin(self, x: torch.Tensor, mask: torch.Tensor):
         m_sum = mask.sum(dim=1).clamp(min=1.0)
@@ -86,27 +102,42 @@ class MissTSMLayer(nn.Module):
         return x, means, std
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        # 用 mask 做 RevIN（仅在有观测的位置计算统计量）
         x_n, means, std = self._revin(x * mask, mask)
-        # 嵌入每个标量
         emb = self.mask_embed(x_n)  # (B, L, C, q_dim)
         emb = emb + self.pos_embed(emb)
         B, L, C, D = emb.shape
         emb = emb.reshape(B * L, C, D)
-        # query (B*L, 1, D)
-        q = self.var_query.expand(B * L, 1, D)
-        # key_padding_mask: True 表示该位置应被忽略；mask=0 -> 缺失 -> True
+
+        # Build query based on variant
+        if self.variant == "cond_q":
+            half = D // 2
+            pos = torch.arange(L, device=x.device).float().unsqueeze(1)
+            div = torch.exp(torch.arange(0, half, 2, device=x.device).float() * -(math.log(10000.0) / half))
+            pe_time = torch.zeros(L, half, device=x.device)
+            pe_time[:, 0::2] = torch.sin(pos * div)
+            pe_time[:, 1::2] = torch.cos(pos * div)
+            time_bias = self.time_proj(pe_time)  # (L, q_dim)
+            q = self.var_query + time_bias.unsqueeze(0)  # (1, L, q_dim)
+            q = q.expand(B, L, D).reshape(B * L, 1, D)
+        elif self.variant == "multi_q":
+            K = self.var_query.size(1)
+            q = self.var_query.expand(B * L, K, D)
+        else:
+            q = self.var_query.expand(B * L, 1, D)
+
         pad_mask = (mask.reshape(B * L, C) < 0.5)
-        # 防止某个时间步全是缺失，attention 会 NaN：给至少一个位置允许参与（用 var_query 自身做 self-attend）
         all_missing = pad_mask.all(dim=1)
         if all_missing.any():
             pad_mask = pad_mask.clone()
             pad_mask[all_missing, 0] = False
         attn_out, _ = self.mhca(q, emb, emb, key_padding_mask=pad_mask)
+
+        if self.variant == "multi_q":
+            attn_out = attn_out.mean(dim=1, keepdim=True)  # (B*L, 1, D)
+
         out = attn_out.reshape(B, L, D)
         out = self.layernorm(out)
         out = self.projection(out)  # (B, L, out_dim)
-        # 反 RevIN（按 out_dim==n_channels 时简单还原）
         if self.out_dim == self.n_channels:
             out = out * std + means
         return out
@@ -134,10 +165,18 @@ class MissTSMModel(nn.Module):
         patch_len: int = 16,
         stride: int = 8,
         skip: bool = True,
+        variant: str = "full",
     ):
         super().__init__()
         self.skip = skip
-        self.mtsm = MissTSMLayer(n_channels, q_dim=q_dim, num_heads=num_heads, out_dim=n_channels)
+        self.variant = variant
+
+        mtsm_variant = variant if variant in ("cond_q", "multi_q") else "full"
+        self.mtsm = MissTSMLayer(n_channels, q_dim=q_dim, num_heads=num_heads,
+                                 out_dim=n_channels, variant=mtsm_variant)
+
+        if variant == "soft_skip":
+            self.skip_gate = nn.Linear(n_channels, n_channels)
         backbone = backbone.lower()
         if backbone == "itransformer":
             self.backbone = iTransformer(
@@ -161,6 +200,9 @@ class MissTSMModel(nn.Module):
         if mask is None:
             mask = torch.ones_like(x)
         feat = self.mtsm(x, mask)  # (B, L, C)
-        if self.skip:
+        if self.variant == "soft_skip":
+            alpha = torch.sigmoid(self.skip_gate(feat))
+            feat = mask * (alpha * x + (1 - alpha) * feat) + (1 - mask) * feat
+        elif self.skip:
             feat = mask * x + (1 - mask) * feat
         return self.backbone(feat, x_mark)

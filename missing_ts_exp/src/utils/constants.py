@@ -15,10 +15,24 @@ DATASETS = {
         "split": "ett_hourly",
         "n_features": 7,
     },
+    "ETTh2": {
+        "path": os.path.join(DATA_ROOT, "ETT-small/ETTh2.csv"),
+        "date_col": "date",
+        "freq": "h",
+        "split": "ett_hourly",
+        "n_features": 7,
+    },
     "ETTm1": {
         "path": os.path.join(DATA_ROOT, "ETT-small/ETTm1.csv"),
         "date_col": "date",
         "freq": "t",  # 15 分钟
+        "split": "ett_minutely",
+        "n_features": 7,
+    },
+    "ETTm2": {
+        "path": os.path.join(DATA_ROOT, "ETT-small/ETTm2.csv"),
+        "date_col": "date",
+        "freq": "t",
         "split": "ett_minutely",
         "n_features": 7,
     },

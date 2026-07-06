@@ -37,13 +37,15 @@ PREDICTOR_REGISTRY = {
 }
 
 
-def build_predictor(name: str, seq_len: int, pred_len: int, n_channels: int, time_feat_dim: int = 0, **kwargs):
+def build_predictor(name: str, seq_len: int, pred_len: int, n_channels: int,
+                    time_feat_dim: int = 0, mask_mode: str = "none", **kwargs):
     if name == "DLinear":
         return DLinear(seq_len, pred_len, n_channels, **kwargs)
     if name == "PatchTST":
         return PatchTST(seq_len, pred_len, n_channels, **kwargs)
     if name == "iTransformer":
-        return iTransformer(seq_len, pred_len, n_channels, time_feat_dim=time_feat_dim, **kwargs)
+        return iTransformer(seq_len, pred_len, n_channels, time_feat_dim=time_feat_dim,
+                           mask_mode=mask_mode, **kwargs)
     raise ValueError(name)
 
 
@@ -76,11 +78,16 @@ class PipelineConfig:
     crib_patch_len: int = 12
     crib_consistency_weight: float = 0.1
     # CoIFNet 完整版
+    coifnet_hidden: int = 256
     coifnet_intra_type: str = "TSBlock"
-    coifnet_inter_type: str = "AttentionBlock"
+    coifnet_inter_type: str = "TSBlock"
     coifnet_n_heads: int = 4
     coifnet_use_time_feat: bool = True
     coifnet_time_feat_proj: int = 8
+    # MissTSM 变体
+    misstsm_variant: str = "full"  # full|cond_q|multi_q|soft_skip
+    # Mask-aware predictor
+    mask_aware: str = "none"  # none|concat|add
     # 训练超参
     d_model: int = 128
     n_heads: int = 8
@@ -115,12 +122,13 @@ class TwoStagePipeline(BasePipeline):
 
     def __init__(self, cfg: PipelineConfig):
         super().__init__(cfg)
+        mask_mode = cfg.mask_aware if cfg.predictor == "iTransformer" else "none"
         self.predictor = build_predictor(
             cfg.predictor, cfg.seq_len, cfg.pred_len, cfg.n_channels,
-            time_feat_dim=cfg.time_feat_dim,
+            time_feat_dim=cfg.time_feat_dim, mask_mode=mask_mode,
             d_model=cfg.d_model, n_heads=cfg.n_heads, e_layers=cfg.e_layers,
             d_ff=cfg.d_ff, dropout=cfg.dropout,
-        ) if cfg.predictor == "iTransformer" else build_predictor(
+        ) if cfg.predictor in ("iTransformer",) else build_predictor(
             cfg.predictor, cfg.seq_len, cfg.pred_len, cfg.n_channels,
             **({"d_model": cfg.d_model, "n_heads": cfg.n_heads, "e_layers": cfg.e_layers,
                 "d_ff": cfg.d_ff, "dropout": cfg.dropout} if cfg.predictor == "PatchTST" else {})
@@ -192,6 +200,7 @@ class MissTSMPipeline(BasePipeline):
             d_model=cfg.d_model, n_heads=cfg.n_heads, e_layers=cfg.e_layers,
             d_ff=cfg.d_ff, dropout=cfg.dropout,
             time_feat_dim=cfg.time_feat_dim,
+            variant=cfg.misstsm_variant,
         )
 
     def forward(self, batch):
@@ -224,7 +233,7 @@ class CoifnetPipeline(BasePipeline):
         super().__init__(cfg)
         self.model = CoIFNet(
             cfg.seq_len, cfg.pred_len, cfg.n_channels,
-            hidden=cfg.d_model, n_layers=cfg.e_layers, dropout=cfg.dropout,
+            hidden=cfg.coifnet_hidden, n_layers=cfg.e_layers, dropout=cfg.dropout,
             impute_weight=cfg.aware_impute_weight,
             intra_type=cfg.coifnet_intra_type,
             inter_type=cfg.coifnet_inter_type,
