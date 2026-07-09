@@ -207,6 +207,8 @@ class CoIFNet(nn.Module):
         use_time_feat: bool = True,
         time_feat_proj: int = 8,
         time_feat_dim: int = 4,
+        input_form: str = "x_cat_mask",
+        embed_type: str = "shared",
     ):
         super().__init__()
         self.seq_len = seq_len
@@ -218,6 +220,8 @@ class CoIFNet(nn.Module):
         self.use_time_feat = use_time_feat
         self.time_feat_proj = time_feat_proj
         self.horizon_len = seq_len + pred_len
+        self.input_form = input_form
+        self.embed_type = embed_type
 
         if use_revin:
             self.revin = RevON(n_channels)
@@ -227,16 +231,20 @@ class CoIFNet(nn.Module):
             in_channel_dim += time_feat_proj
             self.time_proj = nn.Linear(time_feat_dim, time_feat_proj)
 
-        self.shared_model = SharedModule(
-            in_seq=seq_len,
-            out_seq=hidden,
-            n_channels=n_channels,
-            in_channel_dim=in_channel_dim,
-            hidden=hidden,
-            intra_type=intra_type,
-            inter_type=inter_type,
-            dropout=dropout,
-        )
+        if embed_type == "independent":
+            self.embed_proj = nn.Linear(in_channel_dim, n_channels)
+            self.intra_model = _make_block(intra_type, seq_len, hidden, hidden, dropout)
+        else:
+            self.shared_model = SharedModule(
+                in_seq=seq_len,
+                out_seq=hidden,
+                n_channels=n_channels,
+                in_channel_dim=in_channel_dim,
+                hidden=hidden,
+                intra_type=intra_type,
+                inter_type=inter_type,
+                dropout=dropout,
+            )
         self.aux_head = nn.Linear(hidden, self.horizon_len)
 
     def forward(self, x: torch.Tensor, x_mark=None, mask: torch.Tensor = None):
@@ -252,8 +260,11 @@ class CoIFNet(nn.Module):
         else:
             x_normed = x
 
-        # 2. Build input: cat([x_normed, mask]) — matching original (no x*mask)
-        inp = torch.cat([x_normed, mask], dim=-1)  # (B, L, 2C)
+        # 2. Build input
+        if self.input_form == "xmask_cat_mask":
+            inp = torch.cat([x_normed * mask, mask], dim=-1)  # (B, L, 2C)
+        else:
+            inp = torch.cat([x_normed, mask], dim=-1)  # (B, L, 2C)
 
         # 3. Optional time features (zero-pad if x_mark unavailable)
         if self.use_time_feat:
@@ -263,8 +274,12 @@ class CoIFNet(nn.Module):
                 t_feat = torch.zeros(B, L, self.time_feat_proj, device=x.device, dtype=x.dtype)
             inp = torch.cat([inp, t_feat], dim=-1)  # (B, L, 2C+tfp)
 
-        # 4. SharedModule: (B, seq_len, 2C+feat) → (B, hidden, C)
-        h = self.shared_model(inp)
+        # 4. Encode: SharedModule or independent embedding path
+        if self.embed_type == "independent":
+            h = self.embed_proj(inp)  # (B, seq_len, C)
+            h = self.intra_model(h.permute(0, 2, 1)).permute(0, 2, 1)  # (B, hidden, C)
+        else:
+            h = self.shared_model(inp)
 
         # 5. aux_head: (B, C, hidden) → (B, C, horizon_len) → (B, horizon_len, C)
         out_full = self.aux_head(h.permute(0, 2, 1)).permute(0, 2, 1)
