@@ -19,11 +19,19 @@ class _RevIN(nn.Module):
             self.gamma = nn.Parameter(torch.ones(n_channels))
             self.beta = nn.Parameter(torch.zeros(n_channels))
 
-    def forward(self, x: torch.Tensor, mode: str):
+    def forward(self, x: torch.Tensor, mode: str, mask=None):
         # x: (B, L, C)
         if mode == "norm":
-            self.mean = x.mean(dim=1, keepdim=True).detach()
-            self.std = torch.sqrt(x.var(dim=1, keepdim=True, unbiased=False) + self.eps).detach()
+            if mask is not None:
+                m_sum = mask.sum(dim=1, keepdim=True).clamp(min=1.0)
+                self.mean = ((x * mask).sum(dim=1, keepdim=True) / m_sum).detach()
+                x_centered = x - self.mean
+                self.std = torch.sqrt(
+                    ((x_centered * mask) ** 2).sum(dim=1, keepdim=True) / m_sum + self.eps
+                ).detach()
+            else:
+                self.mean = x.mean(dim=1, keepdim=True).detach()
+                self.std = torch.sqrt(x.var(dim=1, keepdim=True, unbiased=False) + self.eps).detach()
             x = (x - self.mean) / self.std
             if self.affine:
                 x = x * self.gamma + self.beta
@@ -71,6 +79,7 @@ class PatchTST(nn.Module):
         dropout: float = 0.1,
         use_revin: bool = True,
         time_feat_dim: int = 0,
+        mask_mode: str = "none",
     ):
         super().__init__()
         self.seq_len = seq_len
@@ -79,6 +88,7 @@ class PatchTST(nn.Module):
         self.patch_len = patch_len
         self.stride = stride
         self.use_revin = use_revin
+        self.mask_mode = mask_mode
         if use_revin:
             self.revin = _RevIN(n_channels)
         # 计算 patch 数：与原论文一致，先在序列起始处复制 stride 个值再切
@@ -91,6 +101,8 @@ class PatchTST(nn.Module):
         )
         self.norm = nn.LayerNorm(d_model)
         self.head = nn.Linear(self.patch_num * d_model, pred_len)
+        if mask_mode == "add":
+            self.mask_proj = nn.Linear(seq_len, self.patch_num * d_model)
 
     def _patchify(self, x):
         # x: (B*C, L) -> (B*C, n_patch, patch_len)
@@ -101,10 +113,14 @@ class PatchTST(nn.Module):
     def forward(self, x: torch.Tensor, x_mark=None, mask=None) -> torch.Tensor:
         B, L, C = x.shape
         if self.use_revin:
-            x = self.revin(x, "norm")
+            x = self.revin(x, "norm", mask=mask if self.mask_mode != "none" else None)
         x_t = x.permute(0, 2, 1).contiguous().view(B * C, L)  # (B*C, L)
         patches = self._patchify(x_t)  # (B*C, n_patch, patch_len)
         h = self.embed(patches) + self.pos
+        if self.mask_mode == "add" and mask is not None:
+            m_t = mask.permute(0, 2, 1).contiguous().view(B * C, L)  # (B*C, L)
+            m_emb = self.mask_proj(m_t).view(B * C, self.patch_num, -1)  # (B*C, n_patch, d_model)
+            h = h + m_emb
         for blk in self.blocks:
             h = blk(h)
         h = self.norm(h)

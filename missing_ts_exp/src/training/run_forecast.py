@@ -126,10 +126,16 @@ def main():
     parser.add_argument("--max_train_batches", type=int, default=-1)
     # C 组: MissTSM 变体
     parser.add_argument("--misstsm_variant", default="full",
-                        choices=["full", "cond_q", "multi_q", "soft_skip"])
+                        choices=["full", "cond_q", "multi_q", "soft_skip", "grouped_q4", "grouped_q8"])
     # D 组: Mask-aware predictor
     parser.add_argument("--mask_aware", default="none",
                         choices=["none", "concat", "add"])
+    # CoIFNet 变体
+    parser.add_argument("--coifnet_hidden", type=int, default=256)
+    parser.add_argument("--coifnet_input_form", default="x_cat_mask",
+                        choices=["x_cat_mask", "xmask_cat_mask"])
+    parser.add_argument("--coifnet_embed_type", default="shared",
+                        choices=["shared", "independent"])
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -149,6 +155,9 @@ def main():
         time_feat_dim=t_feat_dim,
         misstsm_variant=args.misstsm_variant,
         mask_aware=args.mask_aware,
+        coifnet_hidden=args.coifnet_hidden,
+        coifnet_input_form=args.coifnet_input_form,
+        coifnet_embed_type=args.coifnet_embed_type,
     )
 
     train_loader, _ = get_loader(args.dataset, "train", args.seq_len, args.pred_len,

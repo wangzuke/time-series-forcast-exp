@@ -42,7 +42,7 @@ def build_predictor(name: str, seq_len: int, pred_len: int, n_channels: int,
     if name == "DLinear":
         return DLinear(seq_len, pred_len, n_channels, **kwargs)
     if name == "PatchTST":
-        return PatchTST(seq_len, pred_len, n_channels, **kwargs)
+        return PatchTST(seq_len, pred_len, n_channels, mask_mode=mask_mode, **kwargs)
     if name == "iTransformer":
         return iTransformer(seq_len, pred_len, n_channels, time_feat_dim=time_feat_dim,
                            mask_mode=mask_mode, **kwargs)
@@ -85,9 +85,12 @@ class PipelineConfig:
     coifnet_use_time_feat: bool = True
     coifnet_time_feat_proj: int = 8
     # MissTSM 变体
-    misstsm_variant: str = "full"  # full|cond_q|multi_q|soft_skip
+    misstsm_variant: str = "full"  # full|cond_q|multi_q|soft_skip|grouped_q4
     # Mask-aware predictor
     mask_aware: str = "none"  # none|concat|add
+    # CoIFNet 变体
+    coifnet_input_form: str = "x_cat_mask"
+    coifnet_embed_type: str = "shared"
     # 训练超参
     d_model: int = 128
     n_heads: int = 8
@@ -122,17 +125,18 @@ class TwoStagePipeline(BasePipeline):
 
     def __init__(self, cfg: PipelineConfig):
         super().__init__(cfg)
-        mask_mode = cfg.mask_aware if cfg.predictor == "iTransformer" else "none"
-        self.predictor = build_predictor(
-            cfg.predictor, cfg.seq_len, cfg.pred_len, cfg.n_channels,
-            time_feat_dim=cfg.time_feat_dim, mask_mode=mask_mode,
-            d_model=cfg.d_model, n_heads=cfg.n_heads, e_layers=cfg.e_layers,
-            d_ff=cfg.d_ff, dropout=cfg.dropout,
-        ) if cfg.predictor in ("iTransformer",) else build_predictor(
-            cfg.predictor, cfg.seq_len, cfg.pred_len, cfg.n_channels,
-            **({"d_model": cfg.d_model, "n_heads": cfg.n_heads, "e_layers": cfg.e_layers,
-                "d_ff": cfg.d_ff, "dropout": cfg.dropout} if cfg.predictor == "PatchTST" else {})
-        )
+        mask_mode = cfg.mask_aware if cfg.predictor in ("iTransformer", "PatchTST") else "none"
+        if cfg.predictor == "DLinear":
+            self.predictor = build_predictor(
+                cfg.predictor, cfg.seq_len, cfg.pred_len, cfg.n_channels,
+            )
+        else:
+            self.predictor = build_predictor(
+                cfg.predictor, cfg.seq_len, cfg.pred_len, cfg.n_channels,
+                time_feat_dim=cfg.time_feat_dim, mask_mode=mask_mode,
+                d_model=cfg.d_model, n_heads=cfg.n_heads, e_layers=cfg.e_layers,
+                d_ff=cfg.d_ff, dropout=cfg.dropout,
+            )
 
     def _impute(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         st = self.cfg.impute_strategy
@@ -241,6 +245,8 @@ class CoifnetPipeline(BasePipeline):
             use_time_feat=cfg.coifnet_use_time_feat,
             time_feat_proj=cfg.coifnet_time_feat_proj,
             time_feat_dim=cfg.time_feat_dim,
+            input_form=cfg.coifnet_input_form,
+            embed_type=cfg.coifnet_embed_type,
         )
 
     def forward(self, batch):
