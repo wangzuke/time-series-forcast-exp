@@ -126,7 +126,10 @@ def main():
     parser.add_argument("--max_train_batches", type=int, default=-1)
     # C 组: MissTSM 变体
     parser.add_argument("--misstsm_variant", default="full",
-                        choices=["full", "cond_q", "multi_q", "soft_skip", "grouped_q4", "grouped_q8"])
+                        choices=["full", "cond_q", "multi_q", "soft_skip", "grouped_q4", "grouped_q8",
+                                 "grouped_q4_corr", "grouped_q8_corr", "grouped_q4_soft"])
+    parser.add_argument("--group_entropy_weight", type=float, default=0.0,
+                        help="仅 grouped_q_soft 变体：路由熵正则权重，0 为不开启")
     # D 组: Mask-aware predictor
     parser.add_argument("--mask_aware", default="none",
                         choices=["none", "concat", "add"])
@@ -149,11 +152,13 @@ def main():
         method=args.method,
         predictor=args.predictor,
         impute_strategy=args.impute,
+        dataset=args.dataset,
         seq_len=args.seq_len,
         pred_len=args.pred_len,
         n_channels=n_channels,
         time_feat_dim=t_feat_dim,
         misstsm_variant=args.misstsm_variant,
+        group_entropy_weight=args.group_entropy_weight,
         mask_aware=args.mask_aware,
         coifnet_hidden=args.coifnet_hidden,
         coifnet_input_form=args.coifnet_input_form,

@@ -65,12 +65,15 @@ class MissTSMLayer(nn.Module):
       - "full": 原始单 query
       - "cond_q": 时间步条件化 query (C1)
       - "multi_q": 多 query K=8 + mean pooling (C2)
-      - "grouped_q": 将 C 通道分为 G 组，每组独立 query + cross-attention
+      - "grouped_q": 将 C 通道分为 G 组，每组独立 query + cross-attention；
+                     若传入 group_order，先按该顺序重排通道再连续切片（方案 A：相关性预分组）
+      - "grouped_q_soft": 不做硬切分，每组学一个通道路由权重（softmax），软门控后各组独立
+                          query + cross-attention（方案 B：可学习软路由）
     """
 
     def __init__(self, n_channels: int, q_dim: int = 64, num_heads: int = 4,
                  out_dim: int = None, variant: str = "full", n_queries: int = 8,
-                 n_groups: int = 4):
+                 n_groups: int = 4, group_order: list[int] | None = None):
         super().__init__()
         self.q_dim = q_dim
         self.n_channels = n_channels
@@ -80,14 +83,24 @@ class MissTSMLayer(nn.Module):
 
         if variant == "multi_q":
             self.var_query = nn.Parameter(torch.zeros(1, n_queries, q_dim))
-        elif variant == "grouped_q":
+        elif variant in ("grouped_q", "grouped_q_soft"):
             self.var_query = nn.Parameter(torch.zeros(1, n_groups, q_dim))
         else:
             self.var_query = nn.Parameter(torch.zeros(1, 1, q_dim))
 
+        if variant == "grouped_q" and group_order is not None:
+            assert len(group_order) == n_channels
+            self.register_buffer("group_order", torch.tensor(group_order, dtype=torch.long))
+        else:
+            self.group_order = None
+
+        if variant == "grouped_q_soft":
+            self.channel_embed = nn.Parameter(torch.randn(n_channels, q_dim) * 0.02)
+            self.group_proto = nn.Parameter(torch.randn(n_groups, q_dim) * 0.02)
+
         self.mask_embed = _LinearEmbed(q_dim)
         self.pos_embed = _PE2D(q_dim)
-        if variant == "grouped_q":
+        if variant in ("grouped_q", "grouped_q_soft"):
             self.mhca_groups = nn.ModuleList([
                 nn.MultiheadAttention(embed_dim=q_dim, num_heads=num_heads, batch_first=True)
                 for _ in range(n_groups)
@@ -134,7 +147,7 @@ class MissTSMLayer(nn.Module):
         elif self.variant == "multi_q":
             K = self.var_query.size(1)
             q = self.var_query.expand(B * L, K, D)
-        elif self.variant != "grouped_q":
+        elif self.variant not in ("grouped_q", "grouped_q_soft"):
             q = self.var_query.expand(B * L, 1, D)
 
         pad_mask = (mask.reshape(B * L, C) < 0.5)
@@ -144,6 +157,9 @@ class MissTSMLayer(nn.Module):
             pad_mask[all_missing, 0] = False
 
         if self.variant == "grouped_q":
+            if self.group_order is not None:
+                emb = emb.index_select(1, self.group_order)
+                pad_mask = pad_mask.index_select(1, self.group_order)
             G = self.n_groups
             group_size = (C + G - 1) // G
             group_outs = []
@@ -160,6 +176,17 @@ class MissTSMLayer(nn.Module):
                 ao, _ = self.mhca_groups[g](q_g, emb_g, emb_g, key_padding_mask=pad_g)
                 group_outs.append(ao.squeeze(1))
             attn_out = self.group_proj(torch.cat(group_outs, dim=-1)).unsqueeze(1)
+        elif self.variant == "grouped_q_soft":
+            G = self.n_groups
+            route_weights = self.route_weights()  # (C, G)
+            group_outs = []
+            for g in range(G):
+                w_g = route_weights[:, g].view(1, C, 1)
+                emb_g = emb * w_g
+                q_g = self.var_query[:, g:g+1, :].expand(B * L, 1, D)
+                ao, _ = self.mhca_groups[g](q_g, emb_g, emb_g, key_padding_mask=pad_mask)
+                group_outs.append(ao.squeeze(1))
+            attn_out = self.group_proj(torch.cat(group_outs, dim=-1)).unsqueeze(1)
         else:
             attn_out, _ = self.mhca(q, emb, emb, key_padding_mask=pad_mask)
 
@@ -172,6 +199,16 @@ class MissTSMLayer(nn.Module):
         if self.out_dim == self.n_channels:
             out = out * std + means
         return out
+
+    def route_weights(self) -> torch.Tensor:
+        """仅 grouped_q_soft 使用：(C, G) 通道->组路由权重。"""
+        logits = self.channel_embed @ self.group_proto.T
+        return torch.softmax(logits, dim=1)
+
+    def route_entropy(self) -> torch.Tensor:
+        """路由权重的平均熵（越小越"尖锐"，log(G) 为完全均匀退化）。仅 grouped_q_soft 有意义。"""
+        w = self.route_weights().clamp(min=1e-8)
+        return -(w * w.log()).sum(dim=1).mean()
 
 
 class MissTSMModel(nn.Module):
@@ -197,21 +234,30 @@ class MissTSMModel(nn.Module):
         stride: int = 8,
         skip: bool = True,
         variant: str = "full",
+        group_order: list[int] | None = None,
     ):
         super().__init__()
         self.skip = skip
         self.variant = variant
 
-        mtsm_variant = variant if variant in ("cond_q", "multi_q", "grouped_q") else "full"
+        mtsm_variant = variant if variant in ("cond_q", "multi_q") else "full"
         n_groups = 4
         if variant.startswith("grouped_q"):
-            mtsm_variant = "grouped_q"
-            parts = variant.split("_q")
+            base = variant
+            suffix = None
+            for s in ("_corr", "_soft"):
+                if base.endswith(s):
+                    suffix = s[1:]
+                    base = base[: -len(s)]
+                    break
+            parts = base.split("_q")
             if len(parts) == 2 and parts[1].isdigit():
                 n_groups = int(parts[1])
+            mtsm_variant = "grouped_q_soft" if suffix == "soft" else "grouped_q"
         self.mtsm = MissTSMLayer(n_channels, q_dim=q_dim, num_heads=num_heads,
                                  out_dim=n_channels, variant=mtsm_variant,
-                                 n_groups=n_groups)
+                                 n_groups=n_groups,
+                                 group_order=group_order if mtsm_variant == "grouped_q" else None)
 
         if variant == "soft_skip":
             self.skip_gate = nn.Linear(n_channels, n_channels)
@@ -244,3 +290,6 @@ class MissTSMModel(nn.Module):
         elif self.skip:
             feat = mask * x + (1 - mask) * feat
         return self.backbone(feat, x_mark)
+
+    def route_entropy(self) -> torch.Tensor:
+        return self.mtsm.route_entropy()
