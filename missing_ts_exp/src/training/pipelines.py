@@ -54,6 +54,7 @@ class PipelineConfig:
     method: str = "baseline"
     predictor: str = "iTransformer"
     impute_strategy: str = "zero"  # zero|mean|forward|linear|saits
+    dataset: str = ""
     seq_len: int = 96
     pred_len: int = 96
     n_channels: int = 7
@@ -85,7 +86,8 @@ class PipelineConfig:
     coifnet_use_time_feat: bool = True
     coifnet_time_feat_proj: int = 8
     # MissTSM 变体
-    misstsm_variant: str = "full"  # full|cond_q|multi_q|soft_skip|grouped_q4
+    misstsm_variant: str = "full"  # full|cond_q|multi_q|soft_skip|grouped_q4|grouped_q4_corr|grouped_q4_soft
+    group_entropy_weight: float = 0.0  # 仅 grouped_q_soft 变体：路由熵正则权重，0 为不开启
     # Mask-aware predictor
     mask_aware: str = "none"  # none|concat|add
     # CoIFNet 变体
@@ -196,6 +198,10 @@ class SaitsPipeline(BasePipeline):
 class MissTSMPipeline(BasePipeline):
     def __init__(self, cfg: PipelineConfig):
         super().__init__(cfg)
+        group_order = None
+        if cfg.misstsm_variant.startswith("grouped_q") and cfg.misstsm_variant.endswith("_corr"):
+            from ..data.grouping import get_or_compute_channel_order
+            group_order = get_or_compute_channel_order(cfg.dataset)
         self.model = MissTSMModel(
             cfg.seq_len, cfg.pred_len, cfg.n_channels,
             backbone=cfg.predictor,
@@ -205,12 +211,16 @@ class MissTSMPipeline(BasePipeline):
             d_ff=cfg.d_ff, dropout=cfg.dropout,
             time_feat_dim=cfg.time_feat_dim,
             variant=cfg.misstsm_variant,
+            group_order=group_order,
         )
 
     def forward(self, batch):
         forecast = self.model(batch["x_obs"], batch.get("x_mark"), batch["mask"])
+        aux = torch.tensor(0.0, device=forecast.device)
+        if self.cfg.misstsm_variant.endswith("_soft") and self.cfg.group_entropy_weight > 0:
+            aux = self.cfg.group_entropy_weight * self.model.route_entropy()
         return {"forecast": forecast, "impute": batch["x_obs"] * batch["mask"],
-                "aux_loss": torch.tensor(0.0, device=forecast.device)}
+                "aux_loss": aux}
 
 
 class CribPipeline(BasePipeline):
