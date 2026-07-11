@@ -86,7 +86,7 @@ class PipelineConfig:
     coifnet_use_time_feat: bool = True
     coifnet_time_feat_proj: int = 8
     # MissTSM 变体
-    misstsm_variant: str = "full"  # full|cond_q|multi_q|soft_skip|grouped_q4|grouped_q4_corr|grouped_q4_soft|grouped_q4_corrobs|grouped_q4_fuse|grouped_q4_fuseobs
+    misstsm_variant: str = "full"  # full|cond_q|multi_q|soft_skip|grouped_q4|grouped_q4_corr|grouped_q4_soft|grouped_q4_corrobs|grouped_q4_fuse|grouped_q4_fuseobs|grouped_q4_fuse_*gate
     group_entropy_weight: float = 0.0  # 仅 grouped_q_soft / grouped_q_fuse* 变体：路由熵正则权重，0 为不开启
     # 方案 D（0710）：观测相关性分组需要知道当前缺失条件
     missing_type: str = "none"
@@ -204,12 +204,12 @@ class MissTSMPipeline(BasePipeline):
         group_order = None
         variant = cfg.misstsm_variant
         if variant.startswith("grouped_q"):
-            if variant.endswith("_corrobs") or variant.endswith("_fuseobs"):
+            if ("_fuseobs" in variant) or variant.endswith("_corrobs"):
                 from ..data.grouping import get_or_compute_channel_order_observed
                 group_order = get_or_compute_channel_order_observed(
                     cfg.dataset, cfg.missing_type, cfg.missing_rate,
                 )
-            elif variant.endswith("_corr") or variant.endswith("_fuse"):
+            elif variant.endswith("_corr") or ("_fuse" in variant):
                 from ..data.grouping import get_or_compute_channel_order
                 group_order = get_or_compute_channel_order(cfg.dataset)
         self.model = MissTSMModel(

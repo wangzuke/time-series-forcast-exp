@@ -72,18 +72,23 @@ class MissTSMLayer(nn.Module):
                           query + cross-attention（方案 B：可学习软路由）
       - "grouped_q_fuse": 硬切分路径（同 grouped_q）与软路由路径（同 grouped_q_soft）并行
                           计算，各自独立投影后相加融合（方案 E：对应 GinAR/IBN 的
-                          A_pre·X·W1 + A_adap·X·W2 预定义图+自适应图融合公式）
+                          A_pre·X·W1 + A_adap·X·W2 预定义图+自适应图融合公式）；
+                          gate_mode 可进一步控制 0711 的可靠性门控融合。
     """
 
     def __init__(self, n_channels: int, q_dim: int = 64, num_heads: int = 4,
                  out_dim: int = None, variant: str = "full", n_queries: int = 8,
-                 n_groups: int = 4, group_order: list[int] | None = None):
+                 n_groups: int = 4, group_order: list[int] | None = None,
+                 gate_mode: str = "none"):
         super().__init__()
         self.q_dim = q_dim
         self.n_channels = n_channels
         self.out_dim = out_dim if out_dim else n_channels
         self.variant = variant
         self.n_groups = n_groups
+        self.gate_mode = gate_mode
+        self.record_diagnostics = False
+        self.last_diagnostics: dict[str, torch.Tensor] = {}
 
         if variant == "multi_q":
             self.var_query = nn.Parameter(torch.zeros(1, n_queries, q_dim))
@@ -119,8 +124,23 @@ class MissTSMLayer(nn.Module):
                 nn.MultiheadAttention(embed_dim=q_dim, num_heads=num_heads, batch_first=True)
                 for _ in range(n_groups)
             ])
-            self.group_proj_a = nn.Linear(n_groups * q_dim, q_dim)
-            self.group_proj_b = nn.Linear(n_groups * q_dim, q_dim)
+            if gate_mode == "none":
+                self.group_proj_a = nn.Linear(n_groups * q_dim, q_dim)
+                self.group_proj_b = nn.Linear(n_groups * q_dim, q_dim)
+            else:
+                self.group_proj_mix = nn.Linear(n_groups * q_dim, q_dim)
+                if gate_mode == "scalar":
+                    self.path_gate = nn.Parameter(torch.zeros(()))
+                elif gate_mode == "group":
+                    self.group_gate = nn.Parameter(torch.zeros(n_groups))
+                elif gate_mode == "mask":
+                    self.gate_mlp = nn.Sequential(
+                        nn.Linear(3, 16),
+                        nn.GELU(),
+                        nn.Linear(16, 1),
+                    )
+                else:
+                    raise ValueError(f"unknown gate_mode: {gate_mode}")
         else:
             self.mhca = nn.MultiheadAttention(embed_dim=q_dim, num_heads=num_heads, batch_first=True)
         self.layernorm = nn.LayerNorm(q_dim)
@@ -202,6 +222,8 @@ class MissTSMLayer(nn.Module):
                 ao, _ = self.mhca_groups[g](q_g, emb_g, emb_g, key_padding_mask=pad_mask)
                 group_outs.append(ao.squeeze(1))
             attn_out = self.group_proj(torch.cat(group_outs, dim=-1)).unsqueeze(1)
+            if self.record_diagnostics:
+                self._store_route_diagnostics(route_weights)
         elif self.variant == "grouped_q_fuse":
             G = self.n_groups
             # 路径 A（预定义图，硬切分）：同 grouped_q
@@ -224,7 +246,6 @@ class MissTSMLayer(nn.Module):
                 q_g = self.var_query[:, g:g+1, :].expand(B * L, 1, D)
                 ao, _ = self.mhca_groups_a[g](q_g, emb_g, emb_g, key_padding_mask=pad_g)
                 group_outs_a.append(ao.squeeze(1))
-            attn_out_a = self.group_proj_a(torch.cat(group_outs_a, dim=-1))
             # 路径 B（自适应图，软路由）：同 grouped_q_soft，attends over 全部通道
             route_weights = self.route_weights()  # (C, G)
             group_outs_b = []
@@ -234,9 +255,47 @@ class MissTSMLayer(nn.Module):
                 q_g = self.var_query[:, g:g+1, :].expand(B * L, 1, D)
                 ao, _ = self.mhca_groups_b[g](q_g, emb_g, emb_g, key_padding_mask=pad_mask)
                 group_outs_b.append(ao.squeeze(1))
-            attn_out_b = self.group_proj_b(torch.cat(group_outs_b, dim=-1))
             # 融合：对应 GinAR/IBN 的 A_pre·X·W1 + A_adap·X·W2
-            attn_out = (attn_out_a + attn_out_b).unsqueeze(1)
+            if self.gate_mode == "none":
+                attn_out_a = self.group_proj_a(torch.cat(group_outs_a, dim=-1))
+                attn_out_b = self.group_proj_b(torch.cat(group_outs_b, dim=-1))
+                attn_out = (attn_out_a + attn_out_b).unsqueeze(1)
+                if self.record_diagnostics:
+                    self._store_fuse_diagnostics(attn_out_a, attn_out_b, route_weights)
+            else:
+                mixed_groups = []
+                gate_values = []
+                if self.gate_mode == "scalar":
+                    gate = torch.sigmoid(self.path_gate).view(1, 1)
+                    for out_a_g, out_b_g in zip(group_outs_a, group_outs_b):
+                        mixed_groups.append(gate * out_a_g + (1.0 - gate) * out_b_g)
+                        gate_values.append(gate.expand(out_a_g.size(0), 1))
+                elif self.gate_mode == "group":
+                    gates = torch.sigmoid(self.group_gate)
+                    for g, (out_a_g, out_b_g) in enumerate(zip(group_outs_a, group_outs_b)):
+                        gate = gates[g].view(1, 1)
+                        mixed_groups.append(gate * out_a_g + (1.0 - gate) * out_b_g)
+                        gate_values.append(gate.expand(out_a_g.size(0), 1))
+                elif self.gate_mode == "mask":
+                    global_obs = 1.0 - pad_mask.float().mean(dim=1, keepdim=True)
+                    for g, (out_a_g, out_b_g) in enumerate(zip(group_outs_a, group_outs_b)):
+                        c_start = g * group_size
+                        c_end = min((g + 1) * group_size, C)
+                        pad_g = pad_a[:, c_start:c_end]
+                        group_obs = 1.0 - pad_g.float().mean(dim=1, keepdim=True)
+                        all_missing_g = pad_g.all(dim=1).float().unsqueeze(1)
+                        gate_input = torch.cat([global_obs, group_obs, all_missing_g], dim=-1)
+                        gate = torch.sigmoid(self.gate_mlp(gate_input))
+                        mixed_groups.append(gate * out_a_g + (1.0 - gate) * out_b_g)
+                        gate_values.append(gate)
+                else:
+                    raise ValueError(f"unknown gate_mode: {self.gate_mode}")
+                raw_a = torch.cat(group_outs_a, dim=-1)
+                raw_b = torch.cat(group_outs_b, dim=-1)
+                attn_out = self.group_proj_mix(torch.cat(mixed_groups, dim=-1)).unsqueeze(1)
+                if self.record_diagnostics:
+                    gates = torch.cat(gate_values, dim=1)
+                    self._store_fuse_diagnostics(raw_a, raw_b, route_weights, gates)
         else:
             attn_out, _ = self.mhca(q, emb, emb, key_padding_mask=pad_mask)
 
@@ -259,6 +318,53 @@ class MissTSMLayer(nn.Module):
         """路由权重的平均熵（越小越"尖锐"，log(G) 为完全均匀退化）。仅 grouped_q_soft 有意义。"""
         w = self.route_weights().clamp(min=1e-8)
         return -(w * w.log()).sum(dim=1).mean()
+
+    def enable_diagnostics(self, enabled: bool = True):
+        self.record_diagnostics = enabled
+        self.last_diagnostics = {}
+
+    def _store_fuse_diagnostics(
+        self,
+        out_a: torch.Tensor,
+        out_b: torch.Tensor,
+        route_weights: torch.Tensor | None = None,
+        gates: torch.Tensor | None = None,
+    ):
+        with torch.no_grad():
+            diag = {
+                "out_a_norm": out_a.norm(dim=-1).mean().detach().cpu(),
+                "out_b_norm": out_b.norm(dim=-1).mean().detach().cpu(),
+                "out_ab_cosine": nn.functional.cosine_similarity(out_a, out_b, dim=-1).mean().detach().cpu(),
+            }
+            if hasattr(self, "group_proj_a"):
+                diag["proj_a_weight_norm"] = self.group_proj_a.weight.norm().detach().cpu()
+            if hasattr(self, "group_proj_b"):
+                diag["proj_b_weight_norm"] = self.group_proj_b.weight.norm().detach().cpu()
+            if route_weights is not None:
+                w = route_weights.clamp(min=1e-8)
+                entropy = -(w * w.log()).sum(dim=1)
+                diag["route_entropy"] = entropy.mean().detach().cpu()
+                diag["route_effective_groups"] = (1.0 / (w.pow(2).sum(dim=1).clamp(min=1e-8))).mean().detach().cpu()
+                diag["route_top1_counts"] = torch.bincount(
+                    route_weights.argmax(dim=1), minlength=self.n_groups
+                ).detach().cpu()
+            if gates is not None:
+                diag["gate_mean"] = gates.mean().detach().cpu()
+                diag["gate_std"] = gates.std(unbiased=False).detach().cpu()
+                diag["gate_group_mean"] = gates.mean(dim=0).detach().cpu()
+            self.last_diagnostics = diag
+
+    def _store_route_diagnostics(self, route_weights: torch.Tensor):
+        with torch.no_grad():
+            w = route_weights.clamp(min=1e-8)
+            entropy = -(w * w.log()).sum(dim=1)
+            self.last_diagnostics = {
+                "route_entropy": entropy.mean().detach().cpu(),
+                "route_effective_groups": (1.0 / (w.pow(2).sum(dim=1).clamp(min=1e-8))).mean().detach().cpu(),
+                "route_top1_counts": torch.bincount(
+                    route_weights.argmax(dim=1), minlength=self.n_groups
+                ).detach().cpu(),
+            }
 
 
 class MissTSMModel(nn.Module):
@@ -285,6 +391,7 @@ class MissTSMModel(nn.Module):
         skip: bool = True,
         variant: str = "full",
         group_order: list[int] | None = None,
+        gate_mode: str = "none",
     ):
         super().__init__()
         self.skip = skip
@@ -295,7 +402,9 @@ class MissTSMModel(nn.Module):
         if variant.startswith("grouped_q"):
             base = variant
             suffix = None
-            for s in ("_corrobs", "_corr", "_fuseobs", "_fuse", "_soft"):
+            for s in ("_fuseobs_mgate", "_fuseobs_ggate", "_fuseobs_sgate",
+                      "_fuse_mgate", "_fuse_ggate", "_fuse_sgate",
+                      "_corrobs", "_corr", "_fuseobs", "_fuse", "_soft"):
                 if base.endswith(s):
                     suffix = s[1:]
                     base = base[: -len(s)]
@@ -305,14 +414,22 @@ class MissTSMModel(nn.Module):
                 n_groups = int(parts[1])
             if suffix == "soft":
                 mtsm_variant = "grouped_q_soft"
-            elif suffix in ("fuse", "fuseobs"):
+            elif suffix in ("fuse", "fuseobs", "fuse_sgate", "fuse_ggate", "fuse_mgate",
+                            "fuseobs_sgate", "fuseobs_ggate", "fuseobs_mgate"):
                 mtsm_variant = "grouped_q_fuse"
+                if suffix.endswith("sgate"):
+                    gate_mode = "scalar"
+                elif suffix.endswith("ggate"):
+                    gate_mode = "group"
+                elif suffix.endswith("mgate"):
+                    gate_mode = "mask"
             else:
                 mtsm_variant = "grouped_q"
         self.mtsm = MissTSMLayer(n_channels, q_dim=q_dim, num_heads=num_heads,
                                  out_dim=n_channels, variant=mtsm_variant,
                                  n_groups=n_groups,
-                                 group_order=group_order if mtsm_variant in ("grouped_q", "grouped_q_fuse") else None)
+                                 group_order=group_order if mtsm_variant in ("grouped_q", "grouped_q_fuse") else None,
+                                 gate_mode=gate_mode)
 
         if variant == "soft_skip":
             self.skip_gate = nn.Linear(n_channels, n_channels)
@@ -348,3 +465,9 @@ class MissTSMModel(nn.Module):
 
     def route_entropy(self) -> torch.Tensor:
         return self.mtsm.route_entropy()
+
+    def enable_diagnostics(self, enabled: bool = True):
+        self.mtsm.enable_diagnostics(enabled)
+
+    def diagnostics(self) -> dict[str, torch.Tensor]:
+        return self.mtsm.last_diagnostics
