@@ -86,8 +86,11 @@ class PipelineConfig:
     coifnet_use_time_feat: bool = True
     coifnet_time_feat_proj: int = 8
     # MissTSM 变体
-    misstsm_variant: str = "full"  # full|cond_q|multi_q|soft_skip|grouped_q4|grouped_q4_corr|grouped_q4_soft
-    group_entropy_weight: float = 0.0  # 仅 grouped_q_soft 变体：路由熵正则权重，0 为不开启
+    misstsm_variant: str = "full"  # full|cond_q|multi_q|soft_skip|grouped_q4|grouped_q4_corr|grouped_q4_soft|grouped_q4_corrobs|grouped_q4_fuse|grouped_q4_fuseobs
+    group_entropy_weight: float = 0.0  # 仅 grouped_q_soft / grouped_q_fuse* 变体：路由熵正则权重，0 为不开启
+    # 方案 D（0710）：观测相关性分组需要知道当前缺失条件
+    missing_type: str = "none"
+    missing_rate: float = 0.0
     # Mask-aware predictor
     mask_aware: str = "none"  # none|concat|add
     # CoIFNet 变体
@@ -199,9 +202,16 @@ class MissTSMPipeline(BasePipeline):
     def __init__(self, cfg: PipelineConfig):
         super().__init__(cfg)
         group_order = None
-        if cfg.misstsm_variant.startswith("grouped_q") and cfg.misstsm_variant.endswith("_corr"):
-            from ..data.grouping import get_or_compute_channel_order
-            group_order = get_or_compute_channel_order(cfg.dataset)
+        variant = cfg.misstsm_variant
+        if variant.startswith("grouped_q"):
+            if variant.endswith("_corrobs") or variant.endswith("_fuseobs"):
+                from ..data.grouping import get_or_compute_channel_order_observed
+                group_order = get_or_compute_channel_order_observed(
+                    cfg.dataset, cfg.missing_type, cfg.missing_rate,
+                )
+            elif variant.endswith("_corr") or variant.endswith("_fuse"):
+                from ..data.grouping import get_or_compute_channel_order
+                group_order = get_or_compute_channel_order(cfg.dataset)
         self.model = MissTSMModel(
             cfg.seq_len, cfg.pred_len, cfg.n_channels,
             backbone=cfg.predictor,
@@ -217,7 +227,9 @@ class MissTSMPipeline(BasePipeline):
     def forward(self, batch):
         forecast = self.model(batch["x_obs"], batch.get("x_mark"), batch["mask"])
         aux = torch.tensor(0.0, device=forecast.device)
-        if self.cfg.misstsm_variant.endswith("_soft") and self.cfg.group_entropy_weight > 0:
+        variant = self.cfg.misstsm_variant
+        has_route = variant.endswith("_soft") or "_fuse" in variant
+        if has_route and self.cfg.group_entropy_weight > 0:
             aux = self.cfg.group_entropy_weight * self.model.route_entropy()
         return {"forecast": forecast, "impute": batch["x_obs"] * batch["mask"],
                 "aux_loss": aux}

@@ -1,0 +1,1 @@
+{"dataset": "Weather", "missing_type": "random_point", "missing_rate": 0.7, "mask_seed": 0, "order": [10, 2, 14, 15, 8, 6, 9, 3, 1, 5, 19, 7, 16, 17, 18, 4, 11, 12, 13, 20, 0]}
