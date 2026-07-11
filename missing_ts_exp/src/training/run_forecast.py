@@ -118,6 +118,8 @@ def main():
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--out_dir", default="results")
     parser.add_argument("--tag", default="")
+    parser.add_argument("--save_checkpoint_dir", default="",
+                        help="若非空，保存最佳 checkpoint 到该目录，供路由/融合诊断使用")
     parser.add_argument("--aux_weight", type=float, default=1.0)
     # SAITS 预训练
     parser.add_argument("--saits_pretrain_epochs", type=int, default=0,
@@ -128,7 +130,10 @@ def main():
     parser.add_argument("--misstsm_variant", default="full",
                         choices=["full", "cond_q", "multi_q", "soft_skip", "grouped_q4", "grouped_q8",
                                  "grouped_q4_corr", "grouped_q8_corr", "grouped_q4_soft",
-                                 "grouped_q4_corrobs", "grouped_q4_fuse", "grouped_q4_fuseobs"])
+                                 "grouped_q4_corrobs", "grouped_q4_fuse", "grouped_q4_fuseobs",
+                                 "grouped_q4_fuse_sgate", "grouped_q4_fuse_ggate", "grouped_q4_fuse_mgate",
+                                 "grouped_q4_fuseobs_sgate", "grouped_q4_fuseobs_ggate",
+                                 "grouped_q4_fuseobs_mgate"])
     parser.add_argument("--group_entropy_weight", type=float, default=0.0,
                         help="仅 grouped_q_soft / grouped_q_fuse* 变体：路由熵正则权重，0 为不开启")
     # D 组: Mask-aware predictor
@@ -246,7 +251,19 @@ def main():
         f"{args.dataset}_{args.method}_{args.predictor}_{args.impute}_"
         f"{args.missing_type}_{int(args.missing_rate*100)}_h{args.pred_len}_s{args.seed}"
     )
+    checkpoint_path = ""
+    if args.save_checkpoint_dir and best_state is not None:
+        os.makedirs(args.save_checkpoint_dir, exist_ok=True)
+        checkpoint_path = os.path.join(args.save_checkpoint_dir, f"{tag}.pt")
+        torch.save({
+            "state_dict": best_state,
+            "config": vars(args),
+            "best_val_mse": best_val,
+            "n_params": n_params,
+        }, checkpoint_path)
     out_path = os.path.join(args.out_dir, f"{tag}.json")
+    if checkpoint_path:
+        out["checkpoint_path"] = checkpoint_path
     with open(out_path, "w") as f:
         json.dump(out, f, indent=2)
     print("saved", out_path)
