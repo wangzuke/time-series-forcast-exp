@@ -35,15 +35,34 @@
 
 CRIB 的贡献首先不是模型，而是对“imputation-then-prediction”范式的系统质疑。论文用实验说明：两阶段插补预测和端到端插补预测都可能把错误插补传给预测器。CRIB 因此选择绕开插补，直接从部分观测序列中预测未来。
 
-方法上，CRIB 使用信息瓶颈思想，让表示尽量压缩掉缺失引入的噪声，同时保留和预测目标有关的信息。它包含三个关键设计：
+**这个模型具体怎么做**：CRIB 是一个“直接预测模型”，输入是不完整历史序列和缺失 mask，但模型不输出历史缺失值的补全结果，而是直接输出未来预测。它的核心思想来自 Information Bottleneck：学到的中间表示既不能把缺失噪声全带进去，又不能把预测所需的变量关系丢掉。
 
 | 模块 | 作用 |
 |---|---|
-| patch embedding | 把稀疏点级输入转成更稳定的片段级表示 |
-| unified-variate attention | 同时建模不同变量和时间片段之间的关系 |
-| consistency regularization | 让不同缺失扰动下的表示保持一致 |
+| Patching Embedding | 把点级稀疏序列切成 patch，再用 TCN 提取局部模式。这样即使单个点缺失，模型仍能从一个局部片段中提取语义 |
+| Unified-Variate Attention | 把变量和时间 patch 放到统一注意力空间里建模，避免只看单变量时间模式而忽略变量间相关性 |
+| Information Bottleneck | 约束中间表示，压缩和预测无关的缺失噪声，保留对未来预测有用的信息 |
+| Consistency Regularization | 对同一序列构造不同缺失扰动，要求模型输出/表示保持一致，提高高缺失率下稳定性 |
 
-实验覆盖 11 个数据集，包括 PEMS-BAY、Metr-LA、ETT、Weather、Exchange、Electricity、AQI 等。论文报告 CRIB 相比强基线平均提升约 18%，并在自然缺失 AQI 上显示直接使用稀疏原始数据优于先全量插补。
+可以把 CRIB 的流程理解为：
+
+```text
+不完整历史序列 + mask
+        ↓
+切成 patch，用 TCN 得到局部表示
+        ↓
+统一变量注意力建模跨变量、跨时间关系
+        ↓
+信息瓶颈过滤缺失噪声
+        ↓
+一致性正则让不同缺失扰动下预测稳定
+        ↓
+直接预测未来序列
+```
+
+**为什么有效**：它没有要求模型“猜出”缺失值本身，而是让模型学习“缺失情况下仍然能预测未来的表示”。这避开了一个关键风险：缺失值没有真实监督时，补出来的值可能破坏分布。
+
+**取得的效果**：实验覆盖 11 个数据集，包括 PEMS-BAY、Metr-LA、ETT、Weather、Exchange、Electricity、AQI 等。论文报告 CRIB 相比强基线平均提升约 18%；在 ETTh1 上 MAE 相比最强基线降低超过 18%，在 PEMS-BAY 上降低超过 13%。在自然缺失 AQI 数据上，CRIB 也优于先把数据全量插补再预测的方法，说明直接预测在真实缺失场景下也有优势。
 
 **适合记住的结论**：如果缺失值没有可靠监督，不要默认“补全数据”一定有益；直接学习缺失鲁棒表示可能更稳。
 
@@ -53,7 +72,28 @@ CRIB 的贡献首先不是模型，而是对“imputation-then-prediction”范�
 
 MissTSM 面向的是 IMTS，即不同变量在不同时间点可能缺失。常规 Transformer 把一个时间步的所有变量当成 token，iTransformer 把一个变量的整段时间当成 token；但只要某些值缺失，这两种 token 组织方式都会变得尴尬。
 
-MissTSM 的做法是把每个“时间-变量”组合独立嵌入，即 Time-Feature Independent embedding。缺失位置不插补，而是在后续 Missing Feature-aware Attention 中通过 mask 排除或聚合可观测信息。这样它可以作为一层适配器，接到 MAE、PatchTST、iTransformer 等模型前面。
+**这个方法具体怎么做**：MissTSM 不是一个固定预测器，而是一个放在 backbone 前面的缺失适配层。它先把每个“时间-变量”组合当成一个独立 token，而不是把整个时间步或整个变量当 token。这样某个值缺失时，只影响这个 token，不会迫使模型丢掉整个时间步或整个变量。
+
+| 模块 | 作用 |
+|---|---|
+| TFI Embedding | Time-Feature Independent Embedding，把每个观测值 `x(t,d)` 独立映射成向量 |
+| 2D Positional Encoding | 同时编码时间位置和变量位置，让模型知道这个 token 来自哪个时刻、哪个变量 |
+| MFAA | Missing Feature-aware Attention，只在观测 token 上做 masked cross-attention，聚合当前时间步可用变量信息 |
+| Backbone Adapter | 把聚合后的表示投回常规 MTS 模型可接受的输入格式，例如 MAE、PatchTST、iTransformer |
+
+流程可以理解为：
+
+```text
+不规则多变量序列
+        ↓
+每个 时间-变量 值独立变成 token
+        ↓
+缺失 token 被 mask 掉，不显式插补
+        ↓
+MFAA 聚合同一时间步附近可观测变量的信息
+        ↓
+输出给任意下游时间序列模型
+```
 
 实验很全面，既有预测也有分类：
 
@@ -62,6 +102,10 @@ MissTSM 的做法是把每个“时间-变量”组合独立嵌入，即 Time-Fe
 | 预测 | ETTh2、ETTm2、Weather、Solar-Energy、Lake 数据 |
 | 分类 | Epilepsy、EMG、Gesture、PhysioNet、P12、P19 |
 | 缺失方式 | MCAR、周期缺失、真实缺失 |
+
+**为什么有效**：它解决的是“token 化方式不适合缺失数据”的问题。传统 token 化会被缺失值卡住，而 TFI token 化让模型最大限度保留所有可观测信息。
+
+**取得的效果**：在 ETTh2、ETTm2 等预测任务中，当缺失比例从 60% 增加到 90% 时，MissTSM 的 MSE 上升幅度明显小于 SAITS 插补后再接预测模型的基线。在 PhysioNet 分类任务中，MissTSM 的 F1-score 达到 57.84%，相比最好插补基线约提升 15%。在 P19、P12 医疗分类数据上，MissTSM 达到或超过多个专门 IMTS 模型；在与 Latent ODE 的长预测比较中，ETTh2 60% 至 90% 缺失下 MissTSM 的 MSE 约为 0.243 至 0.316，而 Latent ODE 为 4.25 至 2.624，差距非常明显。
 
 论文的关键发现很实际：当缺失比例很高、数据周期性不明显时，MissTSM 比很多先插补再预测的方法更稳；但在低维、强周期数据上，简单的 Spline + backbone 有时也很有竞争力。
 
@@ -78,7 +122,32 @@ S4M 关注点缺失和变量缺失，尤其强调块状缺失场景。它认为�
 | ATPM | Adaptive Temporal Prototype Mapper，用历史模式原型库为缺失场景提供更稳的潜在表示 |
 | MDS-S4 | Missing-aware Dual Stream S4，把时间序列表示和缺失 mask 作为双流输入建模 |
 
-实验在 Electricity、ETTh1、Weather、Traffic 上进行，设置不同 lookback 长度和不同缺失比例。结果显示 S4M 在多数设置下达到最好或次好表现，并且训练时间和内存相对可控。
+**这个模型具体怎么做**：S4M 先不用原始缺失序列直接进 S4，而是先通过 ATPM 查询历史原型模式，得到对当前缺失片段更稳的潜在表示。然后 MDS-S4 用双流结构同时处理“数据表示流”和“缺失 mask 流”。换句话说，模型不仅看数值是什么，也看哪些地方缺了。
+
+ATPM 更具体地说，是一个动态原型库：
+
+1. 从当前时间附近提取局部统计信息，例如前一个非缺失值、距离上次观测的时间间隔等。
+2. 用这些局部统计去查询 prototype bank，找历史上相似的模式。
+3. 把查询到的历史原型和当前局部信息融合，形成更稳的输入表示。
+4. 训练过程中 prototype bank 会持续更新，因此能适应数据分布。
+
+MDS-S4 则把数据表示和 mask 送入 S4 的双流结构中，使模型显式学习缺失模式对动态系统状态的影响。
+
+```text
+缺失历史序列 + mask
+        ↓
+ATPM 从历史原型库查询相似模式
+        ↓
+得到缺失鲁棒的潜在表示
+        ↓
+MDS-S4 同时建模 表示流 + mask 流
+        ↓
+输出未来预测
+```
+
+**为什么有效**：S4 擅长高效建模长程依赖，ATPM 弥补缺失输入的信息不足，mask 流告诉模型缺失模式本身。三者结合后，比简单均值填充、前向填充或 SAITS 插补后接 S4 更稳。
+
+**取得的效果**：实验在 Electricity、ETTh1、Weather、Traffic 上进行，设置不同 lookback 长度和不同缺失比例。在点缺失和变量缺失两类场景中，S4M 在大多数设置达到最好或次好结果。例如在 Weather 点缺失、lookback 为 192 时，S4M 的 MSE 为 0.225，优于 Transformer、Autoformer、BiTGraph 和多种 S4 插补变体；在变量缺失场景下，S4M 同样在 Weather 各 lookback 设置中保持最优或接近最优。效率上，论文在 Electricity 上报告 S4M 约 1071 MB 显存、110 秒训练时间，相比 CRUs 等 ODE 类方法显著更省资源。
 
 **适合记住的结论**：缺失 mask 不只是辅助标记，它本身就是有信息的输入；在高效序列模型里显式建模 mask 可以带来稳定收益。
 
@@ -95,7 +164,24 @@ Merlin 有两个核心训练信号：
 | offline knowledge distillation | 用完整数据训练 teacher，再让 student 在缺失数据上模仿 teacher 的表示和预测 |
 | multi-view contrastive learning | 同一时间段不同缺失率的样本作为正样本，不同时间段作为负样本，使缺失率变化下的语义对齐 |
 
-实验在 METR-LA、PEMS04、China AQI、Global Wind 上进行，缺失率为 25%、50%、75%、90%。论文显示 STID+Merlin 在多个缺失率和数据集上优于 raw STID、两阶段插补模型和其他组合，并且在非固定缺失率测试中只训练一次就能适应不同缺失强度。
+**这个方法具体怎么做**：Merlin 是训练框架，不是替换 backbone 的新预测网络。它通常选一个已有预测模型作为 student，例如 STID、TimeMixer、DUET、MTGNN。训练时有一个 teacher 和一个 student：
+
+1. Teacher 用完整数据训练，学习“没有缺失时”的时间序列语义。
+2. Student 输入带缺失的数据，学习在缺失情况下预测。
+3. 知识蒸馏要求 student 的隐藏表示和预测结果尽量接近 teacher。
+4. 多视图对比学习把同一时间段、不同缺失率的样本拉近，把不同时间段样本拉远。
+5. 测试时只保留 student，不需要 teacher，也不需要插补模型。
+
+```text
+完整数据 → teacher → 完整语义表示/预测
+缺失数据 → student → 缺失语义表示/预测
+              ↑
+      蒸馏损失 + 多视图对比损失 + 预测损失
+```
+
+**为什么有效**：它不是要求 student 恢复每个缺失点，而是要求 student 在缺失输入下学到接近完整数据的语义表示；同时，不同缺失率的同一时间段应该语义接近，所以模型能适应缺失率变化。
+
+**取得的效果**：实验在 METR-LA、PEMS04、China AQI、Global Wind 上进行，缺失率为 25%、50%、75%、90%。STID+Merlin 在所有数据集和所有缺失率下取得最好结果。例如 PEMS04 上，STID+Merlin 的 MAE 从 25% 到 90% 缺失分别为 19.84、20.31、21.43、22.96，优于 STID+GATGPT、STID+SPIN、STID+GPT2、STID+TI-MAE 以及多个 forecasting+imputation 组合。在非固定缺失率测试中，STID+Merlin 只训练一次即可超过为不同缺失率分别训练的基线，说明它更适合线上缺失率变化场景。
 
 **适合记住的结论**：Merlin 把缺失问题从“恢复值”转成“对齐语义”。这对生产场景很有启发，因为线上缺失率通常不会固定。
 
@@ -114,7 +200,27 @@ CoIFNet 站在 CRIB 的“反插补”对面，但不是回到传统两阶段插
 | CVF | Cross-Variate Fusion，融合跨变量信息 |
 | joint loss | 同时包含 imputation loss 和 forecasting loss |
 
-实验在 ETTh1、ETTh2、ETTm1、ETTm2、Weather、Exchange 上进行，考虑点缺失和块缺失，缺失率 0.3 和 0.6。论文报告 CoIFNet 在这些设置下稳定优于 BiTGraph 等方法，尤其在 0.6 缺失率下有明显提升，并且时间和内存效率也更好。
+**这个模型具体怎么做**：CoIFNet 的输入包括三个部分：观测值、mask 矩阵、时间戳嵌入。它先用 RevON 对观测值做可逆归一化，降低不同时间步、不同窗口之间的分布漂移。然后通过 CTF 和 CVF 依次融合时间维度和变量维度的信息。最后模型同时输出两类结果：历史窗口中缺失部分的重建，以及未来窗口的预测。
+
+```text
+观测值 + mask + 时间戳
+        ↓
+RevON 归一化观测值
+        ↓
+CTF 跨时间融合
+        ↓
+CVF 跨变量融合
+        ↓
+历史缺失重建 + 未来预测
+        ↓
+imputation loss + forecasting loss 联合训练
+```
+
+这里的插补不是传统的“先补好再交给预测器”，而是辅助任务。预测损失会反过来约束重建表示，使重建服务于预测。
+
+**为什么有效**：CoIFNet 同时利用了缺失重建和未来预测两个监督信号，并且在同一个网络中优化，减少了两阶段方法的目标错位和误差传播。CTF/CVF 则分别解决时间依赖和变量相关性问题。
+
+**取得的效果**：实验在 ETTh1、ETTh2、ETTm1、ETTm2、Weather、Exchange 上进行，考虑点缺失和块缺失，缺失率 0.3 和 0.6。论文报告 CoIFNet 在所有点缺失和块缺失设置下稳定优于 BiTGraph 等方法。相对 BiTGraph，CoIFNet 在点缺失率 0.3/0.6 下 MAE 分别提升 18.73%/19.36%，MSE 分别提升 22.51%/24.40%；在块缺失率 0.3/0.6 下 MAE 分别提升 20.98%/19.54%，MSE 分别提升 25.51%/23.81%。论文还报告其内存和时间效率分别提升约 4.3 倍和 2.1 倍。
 
 **如何理解它和 CRIB 的差异**：CRIB 反对的是没有可靠监督、容易污染分布的插补；CoIFNet 支持的是作为预测辅助任务、与预测目标共同优化的协作式重建。二者并不完全矛盾，它们在提醒同一件事：插补不能脱离预测目标单独优化。
 
@@ -131,7 +237,27 @@ GinAR 基于简单递归单元 SRU，但把其中的全连接层替换成两个�
 | Interpolation Attention | 根据正常变量和缺失变量之间的对应关系，为缺失变量生成可用表示 |
 | Adaptive Graph Convolution | 在恢复表示后重新建模变量之间的空间相关性 |
 
-实验在 METR-LA、PEMS-BAY、PEMS04、PEMS08、China AQI 上进行，变量缺失率为 25%、50%、75%、90%。结果显示 GinAR 优于 11 个基线，即使 90% 变量缺失仍能预测所有变量。消融实验表明 Interpolation Attention 是最关键组件，尤其在高缺失率下，自适应图也很重要。
+**这个模型具体怎么做**：GinAR 的基本骨架是递归网络，但它不直接用普通 SRU 处理缺失变量。因为变量整段缺失时，这个变量的时间序列几乎没有可用动态，普通 RNN 只能学到错误模式。GinAR 在每个递归单元中做两件事：
+
+1. Interpolation Attention 先计算正常变量和缺失变量之间的对应关系，用正常变量的信息生成缺失变量的表示。
+2. Adaptive Graph Convolution 再基于恢复后的所有变量表示重建动态图，学习变量之间的空间相关性。
+3. 递归单元持续沿时间推进，最后用 MLP decoder 预测所有变量未来值。
+
+```text
+变量整段缺失的历史序列
+        ↓
+IA：用正常变量恢复缺失变量表示
+        ↓
+AGCN：基于恢复后的表示重建变量图
+        ↓
+GinAR cell 递归建模时序动态
+        ↓
+预测所有变量未来值
+```
+
+**为什么有效**：变量缺失时，问题的核心不是“某个点缺了”，而是“某个节点的历史观测几乎没了”。GinAR 用其他正常变量来推断缺失变量，并重新学习变量图，因此比普通 STGNN 或两阶段插补更适合这个设定。
+
+**取得的效果**：实验在 METR-LA、PEMS-BAY、PEMS04、PEMS08、China AQI 上进行，变量缺失率为 25%、50%、75%、90%。结果显示 GinAR 在所有数据集和所有缺失率下优于 11 个基线。以 90% 变量缺失为例，GinAR 在 PEMS-BAY 上 MAE 为 2.77，优于 BiTGraph 的 2.83；在 PEMS08 上 MAE 为 24.83，优于 BiTGraph 的 25.01；在 China AQI 上 MAE 为 16.83，优于 BiTGraph 的 17.06。消融实验显示 Interpolation Attention 是最关键组件；缺失率越高，自适应图的作用越明显。
 
 **适合记住的结论**：变量缺失不是普通点缺失的放大版。它更像“图上的节点观测消失”，核心是恢复跨变量依赖。
 
@@ -149,7 +275,28 @@ IBN 的三个改进是：
 | GGCN | 用高斯核构建动态图，并结合预定义图，增强空间关系解释性和稳定性 |
 | Bi-RU | 双向递归建模，捕获更充分的时间上下文 |
 
-实验在 METR-LA、PEMS-BAY、PEMS04、PEMS08 上进行，变量缺失率为 25%、50%、75%。论文报告 IBN 相比 GinAR 在平均 MAE 上分别提升约 1.89%、2.63%、6.72%，缺失率越高优势越明显。
+**这个模型具体怎么做**：IBN 仍处理变量缺失，但比 GinAR 更强调“不确定性”和“可解释图结构”。它的主体是一个双层递归结构：第一层用双向 RU 同时看前向和后向时间上下文，第二层再用普通 RU 汇总，最后用卷积解码器输出未来序列。
+
+IBN cell 内部有两个核心模块：
+
+1. UAI 先调用类似 GinAR 的插值注意力得到候选恢复值，然后用 MC Dropout 多次前向传播估计均值和标准差。标准差越大，说明恢复越不可靠，模型就降低这个恢复值的权重。
+2. GGCN 同时使用预定义图和基于节点特征距离的高斯核动态图。相比直接学习一个黑箱自适应邻接矩阵，高斯核图更容易解释：节点特征越相似，动态图连接越强。
+
+```text
+变量缺失序列
+        ↓
+UAI：恢复缺失变量，并估计不确定性
+        ↓
+GGCN：结合静态图 + 高斯核动态图建模变量关系
+        ↓
+Bi-RU：双向建模时间依赖
+        ↓
+decoder 输出未来预测
+```
+
+**为什么有效**：GinAR 会给出恢复表示，但没有告诉模型这个恢复有多可靠。IBN 把恢复不确定性作为权重纳入后续建模，可以降低错误恢复的影响；GGCN 也让变量图结构更稳定、更可解释。
+
+**取得的效果**：实验在 METR-LA、PEMS-BAY、PEMS04、PEMS08 上进行，变量缺失率为 25%、50%、75%。论文报告 IBN 相比 GinAR 在平均 MAE 上分别提升约 1.89%、2.63%、6.72%，缺失率越高优势越明显。具体看 PEMS04，75% 缺失下 IBN 的 MAE 为 23.26，明显优于 GinAR 的 25.98；PEMS08 上 75% 缺失下 IBN 的 MAE 为 22.07，优于 GinAR 的 23.10。消融实验显示，把 UAI 换回普通 IA、把 GGCN 换回 AGCN、把 Bi-RU 换成单向 RU 都会带来性能下降。
 
 **适合记住的结论**：在高缺失率下，重建值的不确定性本身应进入模型决策，而不是只输出一个确定的“补充值”。
 
@@ -189,6 +336,27 @@ IBN 的三个改进是：
 | CoIFNet | ETT、Weather、Exchange | MAE、MSE | 点缺失和块缺失下统一插补预测 |
 | GinAR | 交通和空气质量图数据 | MAE、RMSE、MAPE | 变量整段缺失，还要预测所有变量 |
 | IBN | METR-LA、PEMS-BAY、PEMS04、PEMS08 | MAE、RMSE、MAPE | 变量缺失下的准确性和可解释性 |
+
+### 4.4 各模型报告的主要效果
+
+下表把每篇论文中最值得记住的效果汇总出来。需要注意：这些结果来自各自论文的实验设置，不能简单看成同一 benchmark 上的绝对排名。
+
+| 模型/方法 | 主要比较对象 | 论文报告的效果 | 可以怎么理解 |
+|---|---|---|---|
+| CRIB | MTSF-M 专门方法、插补方法、现代 MTSF 模型及其插补变体 | 平均提升约 18%；ETTh1 MAE 相比最强基线降低超过 18%，PEMS-BAY 降低超过 13%；自然缺失 AQI 上直接预测优于全量插补后预测 | 直接从缺失数据预测，比不可靠插补更稳 |
+| MissTSM | SAITS/Spline/BRITS 等插补后接 backbone、GRU-D、Latent ODE 等 IMTS 模型 | 高缺失率下 MSE 增长更慢；PhysioNet F1-score 57.84%，约比最好插补基线高 15%；ETTh2 长预测中明显优于 Latent ODE | 作为适配层能把普通 MTS 模型带到不规则采样场景 |
+| S4M | GRU-D、BRITS、Transformer、Autoformer、BiTGraph、S4+不同插补策略 | 在 Electricity、ETTh1、Weather、Traffic 的点缺失和变量缺失中，多数设置最好或次好；Weather 点缺失 lookback 192 的 MSE 达 0.225 | S4 的长序列效率 + mask 双流建模，适合缺失长序列 |
+| Merlin | raw backbone、backbone+插补、非固定缺失率下分别训练/一起训练的基线 | STID+Merlin 在 METR-LA、PEMS04、China AQI、Global Wind 的 25%-90% 缺失率下整体最优；非固定缺失率中一次训练即可优于多种基线 | 对缺失率变化鲁棒，适合线上缺失比例不稳定的场景 |
+| CoIFNet | BRITS、SAITS、STID、MTGNN、AGCRN、DLinear、PatchTST、iTransformer、GPT4TS、BiTGraph | 相比 BiTGraph，点缺失 0.3/0.6 下 MAE 提升 18.73%/19.36%，MSE 提升 22.51%/24.40%；块缺失 0.3/0.6 下 MAE 提升 20.98%/19.54%，MSE 提升 25.51%/23.81% | 联合插补-预测比两阶段插补更好，尤其对块缺失稳 |
+| GinAR | STID、DSformer、MegaCRN、两阶段 imputation+forecasting、LGnet、TriD-MAE、BiTGraph 等 | 在 5 个交通/空气质量数据集、25%-90% 变量缺失下均取得最优；90% 缺失时仍能预测所有变量 | 变量整段缺失时，关键是用正常变量恢复缺失变量并重建图 |
+| IBN | GinAR 及其基线 | 相比 GinAR，25%/50%/75% 缺失下平均 MAE 分别提升约 1.89%/2.63%/6.72%；高缺失率优势更明显 | 在 GinAR 基础上加入不确定性和可解释动态图，降低错误恢复影响 |
+
+如果只看“模型效果”的实际含义，可以进一步概括为：
+
+1. CRIB、MissTSM 说明：不插补也能做得很好，尤其在缺失真值不可靠或缺失率较高时。
+2. CoIFNet、S4M 说明：如果要利用重建信息，最好在端到端模型内部做，而不是先插补再预测。
+3. GinAR、IBN 说明：变量整段缺失时，跨变量图关系比单纯时间插值更关键。
+4. Merlin 说明：真实部署中缺失率会变，模型要对不同缺失率学到一致语义。
 
 ## 5. 综合观察
 
