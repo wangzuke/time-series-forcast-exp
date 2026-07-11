@@ -7,6 +7,9 @@ missing_ts_exp/logs/
 
 # External reference repos
 missing_ts_exp/external/
+/CRIB/
+/SparseTimeSeriesModeling/
+/ref_repository/
 
 # Python
 __pycache__/

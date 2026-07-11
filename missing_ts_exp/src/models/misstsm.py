@@ -66,9 +66,13 @@ class MissTSMLayer(nn.Module):
       - "cond_q": 时间步条件化 query (C1)
       - "multi_q": 多 query K=8 + mean pooling (C2)
       - "grouped_q": 将 C 通道分为 G 组，每组独立 query + cross-attention；
-                     若传入 group_order，先按该顺序重排通道再连续切片（方案 A：相关性预分组）
+                     若传入 group_order，先按该顺序重排通道再连续切片（方案 A：相关性预分组；
+                     方案 D 传入观测数据相关性算出的 group_order 时代码路径完全相同）
       - "grouped_q_soft": 不做硬切分，每组学一个通道路由权重（softmax），软门控后各组独立
                           query + cross-attention（方案 B：可学习软路由）
+      - "grouped_q_fuse": 硬切分路径（同 grouped_q）与软路由路径（同 grouped_q_soft）并行
+                          计算，各自独立投影后相加融合（方案 E：对应 GinAR/IBN 的
+                          A_pre·X·W1 + A_adap·X·W2 预定义图+自适应图融合公式）
     """
 
     def __init__(self, n_channels: int, q_dim: int = 64, num_heads: int = 4,
@@ -83,18 +87,18 @@ class MissTSMLayer(nn.Module):
 
         if variant == "multi_q":
             self.var_query = nn.Parameter(torch.zeros(1, n_queries, q_dim))
-        elif variant in ("grouped_q", "grouped_q_soft"):
+        elif variant in ("grouped_q", "grouped_q_soft", "grouped_q_fuse"):
             self.var_query = nn.Parameter(torch.zeros(1, n_groups, q_dim))
         else:
             self.var_query = nn.Parameter(torch.zeros(1, 1, q_dim))
 
-        if variant == "grouped_q" and group_order is not None:
+        if variant in ("grouped_q", "grouped_q_fuse") and group_order is not None:
             assert len(group_order) == n_channels
             self.register_buffer("group_order", torch.tensor(group_order, dtype=torch.long))
         else:
             self.group_order = None
 
-        if variant == "grouped_q_soft":
+        if variant in ("grouped_q_soft", "grouped_q_fuse"):
             self.channel_embed = nn.Parameter(torch.randn(n_channels, q_dim) * 0.02)
             self.group_proto = nn.Parameter(torch.randn(n_groups, q_dim) * 0.02)
 
@@ -106,6 +110,17 @@ class MissTSMLayer(nn.Module):
                 for _ in range(n_groups)
             ])
             self.group_proj = nn.Linear(n_groups * q_dim, q_dim)
+        elif variant == "grouped_q_fuse":
+            self.mhca_groups_a = nn.ModuleList([
+                nn.MultiheadAttention(embed_dim=q_dim, num_heads=num_heads, batch_first=True)
+                for _ in range(n_groups)
+            ])
+            self.mhca_groups_b = nn.ModuleList([
+                nn.MultiheadAttention(embed_dim=q_dim, num_heads=num_heads, batch_first=True)
+                for _ in range(n_groups)
+            ])
+            self.group_proj_a = nn.Linear(n_groups * q_dim, q_dim)
+            self.group_proj_b = nn.Linear(n_groups * q_dim, q_dim)
         else:
             self.mhca = nn.MultiheadAttention(embed_dim=q_dim, num_heads=num_heads, batch_first=True)
         self.layernorm = nn.LayerNorm(q_dim)
@@ -147,7 +162,7 @@ class MissTSMLayer(nn.Module):
         elif self.variant == "multi_q":
             K = self.var_query.size(1)
             q = self.var_query.expand(B * L, K, D)
-        elif self.variant not in ("grouped_q", "grouped_q_soft"):
+        elif self.variant not in ("grouped_q", "grouped_q_soft", "grouped_q_fuse"):
             q = self.var_query.expand(B * L, 1, D)
 
         pad_mask = (mask.reshape(B * L, C) < 0.5)
@@ -187,6 +202,41 @@ class MissTSMLayer(nn.Module):
                 ao, _ = self.mhca_groups[g](q_g, emb_g, emb_g, key_padding_mask=pad_mask)
                 group_outs.append(ao.squeeze(1))
             attn_out = self.group_proj(torch.cat(group_outs, dim=-1)).unsqueeze(1)
+        elif self.variant == "grouped_q_fuse":
+            G = self.n_groups
+            # 路径 A（预定义图，硬切分）：同 grouped_q
+            emb_a = emb
+            pad_a = pad_mask
+            if self.group_order is not None:
+                emb_a = emb_a.index_select(1, self.group_order)
+                pad_a = pad_a.index_select(1, self.group_order)
+            group_size = (C + G - 1) // G
+            group_outs_a = []
+            for g in range(G):
+                c_start = g * group_size
+                c_end = min((g + 1) * group_size, C)
+                emb_g = emb_a[:, c_start:c_end, :]
+                pad_g = pad_a[:, c_start:c_end]
+                all_miss_g = pad_g.all(dim=1)
+                if all_miss_g.any():
+                    pad_g = pad_g.clone()
+                    pad_g[all_miss_g, 0] = False
+                q_g = self.var_query[:, g:g+1, :].expand(B * L, 1, D)
+                ao, _ = self.mhca_groups_a[g](q_g, emb_g, emb_g, key_padding_mask=pad_g)
+                group_outs_a.append(ao.squeeze(1))
+            attn_out_a = self.group_proj_a(torch.cat(group_outs_a, dim=-1))
+            # 路径 B（自适应图，软路由）：同 grouped_q_soft，attends over 全部通道
+            route_weights = self.route_weights()  # (C, G)
+            group_outs_b = []
+            for g in range(G):
+                w_g = route_weights[:, g].view(1, C, 1)
+                emb_g = emb * w_g
+                q_g = self.var_query[:, g:g+1, :].expand(B * L, 1, D)
+                ao, _ = self.mhca_groups_b[g](q_g, emb_g, emb_g, key_padding_mask=pad_mask)
+                group_outs_b.append(ao.squeeze(1))
+            attn_out_b = self.group_proj_b(torch.cat(group_outs_b, dim=-1))
+            # 融合：对应 GinAR/IBN 的 A_pre·X·W1 + A_adap·X·W2
+            attn_out = (attn_out_a + attn_out_b).unsqueeze(1)
         else:
             attn_out, _ = self.mhca(q, emb, emb, key_padding_mask=pad_mask)
 
@@ -245,7 +295,7 @@ class MissTSMModel(nn.Module):
         if variant.startswith("grouped_q"):
             base = variant
             suffix = None
-            for s in ("_corr", "_soft"):
+            for s in ("_corrobs", "_corr", "_fuseobs", "_fuse", "_soft"):
                 if base.endswith(s):
                     suffix = s[1:]
                     base = base[: -len(s)]
@@ -253,11 +303,16 @@ class MissTSMModel(nn.Module):
             parts = base.split("_q")
             if len(parts) == 2 and parts[1].isdigit():
                 n_groups = int(parts[1])
-            mtsm_variant = "grouped_q_soft" if suffix == "soft" else "grouped_q"
+            if suffix == "soft":
+                mtsm_variant = "grouped_q_soft"
+            elif suffix in ("fuse", "fuseobs"):
+                mtsm_variant = "grouped_q_fuse"
+            else:
+                mtsm_variant = "grouped_q"
         self.mtsm = MissTSMLayer(n_channels, q_dim=q_dim, num_heads=num_heads,
                                  out_dim=n_channels, variant=mtsm_variant,
                                  n_groups=n_groups,
-                                 group_order=group_order if mtsm_variant == "grouped_q" else None)
+                                 group_order=group_order if mtsm_variant in ("grouped_q", "grouped_q_fuse") else None)
 
         if variant == "soft_skip":
             self.skip_gate = nn.Linear(n_channels, n_channels)
