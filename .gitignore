@@ -23,3 +23,7 @@ Thumbs.db
 
 # Archives
 *.tar.gz
+
+# Codex skills (local only)
+.codex/skills/
+report/
