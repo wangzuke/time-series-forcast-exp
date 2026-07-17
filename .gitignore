@@ -7,6 +7,7 @@ missing_ts_exp/logs/
 
 # External reference repos
 missing_ts_exp/external/
+external_repro/
 /CRIB/
 /SparseTimeSeriesModeling/
 /ref_repository/
