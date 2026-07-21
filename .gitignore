@@ -28,3 +28,6 @@ Thumbs.db
 # Codex skills (local only)
 .codex/skills/
 report/
+
+# Local assistant config with tokens
+.claude/settings.json
