@@ -1,0 +1,1863 @@
+
+
+--- PAGE 1 ---
+arXiv:2506.13064v2  [cs.LG]  20 Jun 2025
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2015 1
+CoIFNet: A Unified Framework for Multivariate
+Time Series Forecasting with Missing Values
+Kai Tang, Ji Zhang*, Hua Meng, Minbo Ma, Qi Xiong, Fengmao Lv, Jie Xu, Tianrui Li
+Abstract—Multivariate time series forecasting (MTSF) is a critical task with broad applications in domains such as meteorology,
+transportation, and economics. Nevertheless, pervasive missing values caused by sensor failures or human errors significantly
+degrade forecasting accuracy. Prior efforts usually employ an impute-then-forecast paradigm, leading to suboptimal predictions due to
+error accumulation and misaligned objectives between the two stages. To address this challenge, we propose the Collaborative
+Imputation-Forecasting Network (CoIFNet), a novel framework that unifies imputation and forecasting to achieve robust MTSF in the
+presence of missing values. Specifically, CoIFNet takes the observed values, mask matrix and timestamp embeddings as input,
+processing them sequentially through the Cross-Timestep Fusion (CTF) and Cross-Variate Fusion (CVF) modules to capture temporal
+dependencies that are robust to missing values. We provide theoretical justifications on how our CoIFNet learning objective improves
+the performance bound of MTSF with missing values. Through extensive experiments on challenging MSTF benchmarks, we
+demonstrate the effectiveness and computational efficiency of our proposed approach across diverse missing-data scenarios, e.g.,
+CoIFNet outperforms the state-of-the-art method by 24.40% (23.81%) at a point (block) missing rate of 0.6, while improving memory
+and time efficiency by 4.3× and 2.1×, respectively. Our code is available at: https://github.com/KaiTang-eng/CoIFNet.
+Index Terms—Data mining, multivariate time series forecasting, missing values, one-stage time series forecasting
+✦
+1 I NTRODUCTION
+M
+ULTIVARIATE time series forecasting (MTSF) plays an
+important role in various domains, including meteo-
+rology [1], traffic [2], economics [3] and so on. By modeling
+complex temporal dependencies and inter-variate correla-
+tions, advanced MTSF methods [4], [5], [6] have demon-
+strated significant capabilities in predicting critical metrics
+and anticipating future trends. Despite these significant ad-
+vances, the practical deployment of MTSF models encoun-
+ters a critical limitation: most existing approaches necessi-
+tate complete time series data, with observations available
+for all variates at each timestep. This assumption may not
+hold in real-world scenarios, as time series data collected
+in practical applications are often inherently incomplete,
+frequently exhibiting missing observations due to sensor
+failures, communication interruptions, data corruption, or
+limited resources [7], [8], [9], [10].
+Previous methods [11], [12] generally adopt an impute-
+then-forecast pipeline, treating imputation and forecasting
+as distinct, sequential steps. This two-stage framework leads
+to suboptimal predictions due to error propagation and
+misaligned optimization objectives. To address this limi-
+tation, various one-stage approaches have been proposed.
+One line of research formulates MTSF with missing data as
+an imputation task, where the forecasting window is treated
+• Kai Tang, Ji Zhang, Qi Xiong, Fengmao Lv and Tianrui Li are with
+the School of Computing and Artificial Intelligence, Southwest Jiaotong
+University, Chengdu, China. E-mail: jizhang.jim@gmail.com. *Ji Zhang
+is the corresponding author.
+• Hua Meng is with the School of Mathematics, Southwest Jiaotong Uni-
+versity, Chengdu, China. Email: menghua@swjtu.edu.cn.
+• Minbo Ma is with the Institute Carbon Neutrality, Tsinghua University,
+P .R. China. Email: minbo46.ma@gmail.com.
+• Jie Xu is with the White Rose Grid e-Science Centre, University of Leeds,
+England. Email: J.Xu@leeds.ac.uk.
+ETTh1
+ETTh2ETTm1
+ETTm2
+Weather Exchange Rate
+0.63
+0.550.49
+0.38
+0.26 0.43
+0.57
+0.470.45
+0.34
+0.24 0.36
+0.52
+0.400.40
+0.29
+0.22 0.28
+0.46
+0.320.35
+0.25
+0.20 0.21
+r=0.3
+ETTh1
+ETTh2ETTm1
+ETTm2
+Weather Exchange Rate
+0.65
+0.540.49
+0.40
+0.28 0.48
+0.59
+0.470.45
+0.35
+0.25 0.40
+0.53
+0.400.41
+0.31
+0.23 0.31
+0.47
+0.330.36
+0.26
+0.21 0.22
+r=0.6
+ETTh1
+ETTh2ETTm1
+ETTm2
+Weather Exchange Rate
+0.64
+0.560.51
+0.42
+0.28 0.48
+0.59
+0.480.46
+0.36
+0.25 0.40
+0.53
+0.400.42
+0.31
+0.23 0.31
+0.48
+0.330.37
+0.26
+0.21 0.22
+r=0.3
+ETTh1
+ETTh2ETTm1
+ETTm2
+Weather Exchange Rate
+0.70
+0.600.54
+0.45
+0.29 0.53
+0.63
+0.510.49
+0.39
+0.27 0.43
+0.56
+0.420.44
+0.33
+0.24 0.33
+0.49
+0.340.39
+0.26
+0.21 0.23
+r=0.6
+AGCRN
+PatchTST
+iTransformer
+GPT4TS
+BiTGraph
+CoIFNet
+Point Missing
+Block Missing
+Fig. 1: Performance comparison between our CoIFNet ap-
+proach and state-of-the-art multivariate time series fore-
+casting (MTSF) methods on six real-world datasets under
+different missing-data scenarios.
+as a block of missing values that need to be imputed [13],
+[14], [15]. In contrast, the recently proposed BiTGraph ap-
+proach [16] performs forecasting directly on incomplete
+time series by leveraging mask-informed adaptive graphs
+to address missing values. While these methods derive fully
+observed forecasting values through a single imputation or
+
+
+--- PAGE 2 ---
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2015 2
+forecasting step, they overlook the complementary roles of
+imputation and forecasting, failing to leverage their mutual
+benefits for enhanced performance. This highlights a critical
+open question in MTSF:
+Can imputation and forecasting be unified within a single
+framework to achieve robust time series forecasting in the
+presence of missing data?
+In this work, we answer the question by proposing the
+Collaborative Imputation-Forecasting Network ( CoIFNet).
+Technically, CoIFNet first develops a Reversible Observed-
+value Normalization (RevON) module to to mitigate data
+distribution shifts across time steps within the input look-
+back window. Then, the normalized observed values along
+with the corresponding mask matrix and timestamp embed-
+dings are processed by sequential Cross-Timestep Fusion
+(CTF) and Cross-Variate Fusion (CVF) modules to capture
+temporal dependencies robust to missing values. At the
+end, the output series representations of the two sequential
+modules are projected to the original data space, where an
+imputation loss LI and a forecasting loss LF are built for
+joint training. Theoretically, we provide formal justifica-
+tions grounded in the concept of mutual information [17],
+proving how the CoIFNet learning objective enhances the
+performance bound for MTSF with missing data. Empiri-
+cally, we conduct extensive experiments on six real-world
+datasets across diverse missing-data scenarios (i.e., point
+missing and block missing), demonstrating CoIFNet’s su-
+perior performance and computational efficiency compared
+with state-of-the-arts, as presented in Fig. 1 and Fig. 7.
+To summarize, the main contributions of this work are
+threefold:
+• We propose CoIFNet, which unifies imputation and
+forecasting into a single framework to achieve robust
+MTSF in the presence of missing values.
+• We theoretically demonstrate the superiority of our
+one-stage CoIFNet framework over traditional two-
+stage approaches for handling missing values in time
+series forecasting.
+• Extensive experiments on six challenging real-world
+datasets demonstrate the effectiveness and compu-
+tational efficiency of our proposed approach across
+diverse missing-data scenarios.
+The remainder of this paper is organized as follows.
+Section 2 reviews related work. Section 3 introduces our
+proposed CoIFNet method. Section 4 provides a theoretical
+analysis of CoIFNet, while Section 5 presents and discusses
+the experimental results. Section 6 concludes the paper. Ad-
+ditional experimental results are included in the Appendix.
+2 R ELATED WORK
+This section reviews existing multivariate time series fore-
+casting (MTSF) methods designed for complete data, as well
+as representative approaches for handling missing values.
+2.1 Multivariate Time Series Forecasting
+MTSF has evolved from traditional statistical methods like
+ARIMA [18], [19] to sophisticated deep learning architec-
+tures [20], [21]. Graph-based methods have emerged as
+(b) MTSF with missing values
+(a) Multivariate Time Series Forecasting (MTSF)
+Lookback window Forecasting window
+Forecasting windowLookback window
+Loss
+Loss
+Fig. 2: Illustrations of Multivariate Time Series Forecasting
+(MTSF) with complete data (a) and with missing data (b).
+The blue block and orange block represent the lookback win-
+dow and forecasting window, respectively, with gray regions
+within each block indicating missing values.
+particularly effective approaches for multivariate scenarios.
+AGCRN [22] and MTGNN [23] construct adaptive graphs
+to model complex variate dependencies, demonstrating the
+importance of capturing both temporal dynamics and inter-
+variate relationships. Recent research has revealed coun-
+terintuitive insights about architectural complexity. DLin-
+ear [24] shows that linear models with proper decompo-
+sition can outperform sophisticated methods, challenging
+assumptions about complexity and performance. Addition-
+ally, STID [25] demonstrates that auxiliary timestamp fea-
+tures significantly enhance forecasting accuracy by captur-
+ing seasonal dynamics. Transformer-based models repre-
+sent a significant breakthrough in long-sequence forecasting
+through self-attention mechanisms [26], [27]. PatchTST [28]
+introduces patching techniques that improve efficiency and
+performance, while iTransformer [5] employs inverted at-
+tention to treat variates as tokens rather than timesteps. The
+recent emergence of Large Language Models has introduced
+novel paradigms, with GPT4TS [29] exploring how pre-
+trained language models can be adapted for time series
+analysis through prompt-based forecasting approaches [30],
+[31]. Despite these advances, existing methods assume com-
+plete observations at each timestep. When facing missing
+values, most approaches resort to simple preprocessing
+strategies like mean imputation, creating suboptimal two-
+stage pipelines that fail to jointly optimize imputation and
+forecasting objectives.
+2.2 MTSF with Missing Values
+Traditional approaches follow a two-stage paradigm that
+separates imputation and forecasting into sequential tasks.
+Statistical methods perform simple interpolation before
+applying forecasting models. Learning-based imputation
+methods like BRITS [14], PriSTI [32], and SAITS [33] use
+RNNs or attention mechanisms to recover missing values by
+modeling temporal dependencies. However, this decoupled
+framework suffers from error propagation and misaligned
+optimization objectives between imputation and forecast-
+ing stages. Recent efforts have explored end-to-end solu-
+tions to address these limitations. GRU-D [34] incorporates
+decay mechanisms for missing values but was originally
+designed for classification and lacks explicit forecasting
+
+
+--- PAGE 3 ---
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2015 3
+(a) Previous Methods
+Imputation
+Network
+Forecasting
+Network
+Stage 1: Imputation Stage 2: Forecasting
+RevON
+Embed
+(b) CoIFNet (Ours)
+LinearLinear
+Dropout
+Linear
+CTF Transpose
+LinearLinear
+Dropout
+Linear
+CVF Transpose
+Variate
+Steps
+Variate
+Steps
+Projection
+De-norm.
+||
+... ...
+2018-06-06 12:00:00
+2018-06-06 13:00:00
+2018-06-11 12:00:00
+Fig. 3: Illustration of CoIFNet. Unlike previous methods that employ an input-then-forecast paradigm, CoIFNet formulates
+imputation and forecasting in a unified framework to achieve robust MTSF with missing values. First, CoIFNet introduces
+a Reversible Observed-value Normalization (RevON) module to mitigate data distribution shifts across time steps within
+the input lookback window X. Next, the normalized values together with mask matrix Mx and temporal embeddings
+Eτ are fed into the sequential Cross-Timestep Fusion (CTF) and Cross-Variate Fusion (CVF) modules to learn temporal
+dependencies along the time step and variate dimensions. Finally, the output series representations are projected to the
+original data space, where an imputation loss LI and a forecasting loss LF are developed based on the de-normalized
+representations ˆX and ˆY as well as the input lookback window X and forecasting window (ground truth) Y.
+optimization. Neural ODE approaches [35], [36] naturally
+handle irregular sampling but suffer from computational
+complexity and limited exploitation of temporal patterns.
+More recent methods attempt unified treatment of missing
+values and forecasting. CSDI [13] reformulates forecasting
+as an imputation task using diffusion models, but exhibits
+discrepancy between training and inference stages. Wang
+et al. [37] demonstrate that aligning imputation with fore-
+casting objectives can significantly improve performance.
+Although existing imputation-based approaches [13], [14],
+[15] can reconstruct complete inputs for forecasting, they
+fail to harness the full predictive potential of historical
+supervision signals. BiTGraph [16] proposes missing-aware
+adaptive graph construction but underutilizes temporal in-
+formation and incurs high computational costs. S4M [38]
+integrates missing data handling into the structured state
+space sequence (S4) model architecture, effectively captur-
+ing the underlying temporal and multivariate dependencies.
+Although many one-stage forecasting models incorporate
+additional components to better utilize observed values,
+they often overlook the complementary roles of imputation
+and forecasting, thereby failing to leverage their mutual ben-
+efits for enhanced performance. In addition, they typically
+require separate training of models for different miss rates,
+which limits their robustness [39], [40], [41].
+3 M ETHODOLOGY
+In this section, we introduce the Collaborative Imputation-
+Forecasting Network (CoIFNet), a one-stage MTSF frame-
+TABLE 1: Key notations used in this paper
+Notions Description
+fΘ Neural network with parameters Θ
+X ∈RT ×D Time series with T time steps and D variates
+M ∈ {0, 1}T ×D Mask matrix for the the time series
+X ∈ RL×D A lookback window of length L
+xt ∈ RD Observation at time step t
+Mx ∈ {0, 1}L×D Mask matrix for a lookback window
+Eτ ∈ RL×C Timestamp embed. for a lookback window
+Y ∈ RH×D A forecasting window of length H
+My ∈ {0, 1}H×D Mask matrix for a forecasting window
+work designed to overcome the challenge of missing data.
+Table 1 summarizes the notations used in this paper.
+3.1 Preliminaries
+Let X = {x1, · · ·, xT } ∈RT ×D denote a multivariate time
+series with T time steps and D variates. As shown in Fig. 2,
+each observation xt ∈ RD at time step t may contain missing
+values due to sensor malfunctions, communication failures
+and so on. We represent these missing patterns of the mul-
+tivariate time series using a mask matrix M ∈ {0, 1}T ×D:
+mt,d =
+(
+1, if xt,d is observed
+0, otherwise. (1)
+where mt,d indicates the t-row, n-column element of M. It
+has been demonstrated that incorporating the mask matrix
+to the training process is of great importance, as it allows
+
+
+--- PAGE 4 ---
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2015 4
+models to distinguish between actual zeros and missing val-
+ues [14], [33]. Given a lookback window (a.k.a. historical ob-
+servations) X = Xt−L+1:t ∈ RL×D of length L as well as its
+corresponding mask matrix Mx = Mt−L+1:t ∈ {0, 1}L×D,
+the goal of MTSF with missing values is to predict a fore-
+casting window Y = Xt+1:t+H ∈ RH×D of length H, using
+a neural network fΘ : (X, Mx) 7→ Y, where Θ denotes the
+learnable parameters.
+3.2 Overview
+Unlike most previous approaches that adopt a sequential
+input-then-forecast paradigm, CoIFNet unifies imputation
+and forecasting in a single framework for achieving robust
+MTSF in the presence of missing values.
+An overview of our proposed CoIFNet is illustrated
+in Fig. 3. Specifically, we first devise a Reversal Observed-
+value Normalization (RevON) module to reduce data distri-
+bution shifts across time steps within the input lookback
+window X, yielding the normalized input ¯X ∈ RL×D.
+Second, we concatenate ¯X ∈ RL×D with the mask matrix
+Mx and timestamp embeddings Eτ ∈ RL×C to produce
+Zin ∈ RL×(2D+C). This composite input is processed by
+the Cross-Timestep Fusion (CTF) module to obtain timestep-
+attentive representations ZCTF ∈ RH×(2D+C). Third, the
+Cross-Variate Fusion (CVF) module takes ZCTF as input to ob-
+tain variate-attentive representations ZCVF ∈ RH×D. Fourth,
+ZCVF are de-normalized in the original data space to obtain
+the imputed/reconstructed lookback window ˜X ∈ RL×D
+and the predicted forecasting window ˜Y ∈ RH×D. Finally,
+an imputation loss LI together with a forecasting loss LF are
+respectively built on ( ˆX, X) and ( ˆY, Y) to jointly update the
+network parameters.
+3.3 Reversible Observed-value Normalization (RevON)
+Real-world time series often exhibit non-stationarity, char-
+acterized by changes in statistical properties (such as mean
+and variance) across time steps. This phenomenon can lead
+to discrepancies across different time periods and affect a
+model’s ability to generalize from past data to future events.
+Instance normalization has proven critically important for
+mitigating this issue. However, existing methods such as
+Reversible Instance Normalization (RevIN) [42], which use
+affine transformations to mitigate discrepancies across his-
+torical sequences, rely on complete time series to compute
+statistics such as mean and variance.
+To tackle this limitation, we devise Reversible Observed-
+value Normalization (RevON), which calculates normaliza-
+tion statistics using (partially) observed time series values.
+Given the mask matrix Mx = {m1, · · ·, mL} of a lookback
+window X = {x1, · · ·, xL}, RevON takes the form of
+E[X] = 1
+PL
+t=1 Mx
+t
+LX
+t=1
+Mx
+t xt,
+Var[X] = 1
+PL
+t=1 Mx
+t
+LX
+t=1
+Mx
+t (Mx
+t − E[X])2.
+(2)
+Thus, the normalized representations can be expressed as
+¯X =
+ 
+γ ⊙
+ 
+X − E[X]p
+Var[X] + ϵ
+!
++ β
+!
+⊙ Mx, (3)
+where γ and β are learnable weights and ϵ is a hyperparam-
+eter controlling stability.
+3.4 Cross-Timestep Fusion (CTF)
+Temporal context is critically important for processing in-
+complete time series, as it can compensate for the infor-
+mation distortion caused by missing values. Therefore, the
+Cross-Timestep Fusion (CTF) module of CoIFNet is first
+designed to fuse information along the timestep dimension
+to capture temporal dependencies within each variate of the
+multivariate time series.
+Prior works have demonstrated the importance of lever-
+aging timestamp information in time series to capture cycli-
+cal patterns [25], [43]. Motivated by this, we first extract
+the timestamp embeddings Eτ = Embedding(τ ) using
+the methodology introduced [25], and then we concatenate
+Eτ with the normalized time series data ¯X and the cor-
+responding mask matrix Mx to obtain the input temporal
+representations:
+Zin = [ ¯X ∥ Mx ∥ Eτ ] ∈ RL×(2D+C), (4)
+where
+Eτ = [Eday ∥ Ehour] ∈ RL×C, (5)
+Eday ∈ RL×Cd and Ehour ∈ RL×Ch denote day-of-week and
+hour-of-day timestamp embeddings respectively.
+Given this composite input representation Zin, the CTF
+module learns temporal dependencies along the time step
+dimension through an adaptive gating mechanism:
+Zd = σ(WαZin + bα) ⊙ (WdZin + bd),
+ZCTF = Wp · Dropout (Zd) + bp, (6)
+where Wα, Wd ∈ RL×h, Wp ∈ Rh×h and bα, bd, bp ∈ Rh are
+learnable parameters, with h representing the hidden layer
+dimension. The function σ(·) denotes the sigmoid activation
+and ⊙ represents element-wise multiplication. The sigmoid
+gate σ(WαZin + bα) produces values between 0 and 1, con-
+trolling how much information from each temporal feature
+is preserved. Intuitively, this selective attention mechanism
+enables the model to focus on learning patterns relevant to
+observed values while reducing the influence of uncertain
+or noisy features that may result from missing data.
+3.5 Cross-Variate Fusion (CVF)
+Subsequently, the CVF module models the temporal depen-
+dencies along the variate dimension of ZCTF ∈ Rh×(2D+C).
+Formally, CVF can be expressed as
+Z ′
+d = σ(W ′
+αZCTF + b′
+α) ⊙ (W ′
+dZCTF + b′
+d),
+ZCVF = W ′
+p · Dropout (Z ′
+d) + b′
+p, (7)
+where W ′
+α, W′
+d ∈ R(2D+C)×D, W ′
+p ∈ RD×D, and b′
+α, b′
+d, b′
+p ∈
+RD are learnable parameters. Similar to the CTF module,
+CVF employs a sigmoid-gated mechanism to adaptively fo-
+cus on relevant cross-variate interactions while suppressing
+less informative ones. This adaptive approach is particularly
+beneficial when dealing with partially observed multivari-
+ate time series, as it helps mitigate the impact of missing
+values on cross-variate relationships.
+
+
+--- PAGE 5 ---
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2015 5
+Algorithm 1 Training pipeline of CoIFNet
+Input: Multivariate time series X , mask matrix M, times-
+tamp features T , hyperparameter λ
+Output: Trained model parameters Θ
+1: Initialize model parameters Θ
+2: while not converged do
+3: Sample (X, Y) ∼ X, (Mx, My) ∼ M, τ ∼ T
+4: ¯X ← RevON(X, Mx)
+5: Eτ ← Embedding(τ )
+6: Zin ← [ ˜X∥Mx∥Eτ ]
+7: ZCTF ← CTF(Zin)
+8: ZCVF ← CVF(ZCTF)
+9: [ ¯X, ˜Y] ← Projection(ZCVF)
+10: [ ˆX, ˆY] ← De-Norm.([ ˜X, ˜Y])
+11: Calculate LI and LF
+12: Update Θ by minimizing L = (1 − λ)LI + λLF
+13: end while
+14: return Θ
+Next, we project ZCVF to the original (low-dimensional)
+data space to simultaneously obtain the reconstructed his-
+torical values ˜X and the predicted future values ˜Y:
+[ ˜X, ˜Y] = WoZCVF + bo, (8)
+where Wo ∈ Rh×(L+H) and bo ∈ RL+H are learnable
+parameters, with L and H representing the historical and
+forecast horizon lengths respectively. Finally, we apply a
+de-normalization process of RevON to align the statistical
+information of [ ˜X, ˜Y] to the original data distribution:
+[ ˆX, ˆY] =
+q
+Var[X] + ϵ ⊙
+ 
+[ ˜X, ˜Y] − β
+γ
+!
++ E[X], (9)
+where ˆX = {ˆx1, ...,ˆxL}, ˆY = {ˆy1, ...,ˆyH } and γ and β are
+the learnable parameters in Eq. 2.
+3.6 Learning Objective
+The overall learning objective of the proposed CoIFNet is
+defined as a weighted combination of the imputation loss
+LI and the prediction loss LF:
+L = (1 − λ)LI + λLF, (10)
+where λ ∈ [0, 1] is a hyperparameter controling the relative
+importance of the two losses:
+LI =
+P
+t Mx
+t · |Xt − ˆXt|P
+t Mx
+t
+, t = 1, ..., L
+LF =
+P
+h My
+h · |Yh − ˆYh|P
+h My
+h
+, h = 1, ..., H.
+(11)
+In this way, CoIFNet integrates imputation and forecasting
+into a unified framework, enabling end-to-end learning of
+temporal dependencies from incomplete time series data. As
+a lightweight network architecture, CoIFNet ensures lower
+computational complexity and faster execution speeds (as
+demonstrated in Section 5.4), which makes it highly suitable
+for deployment in resource-constrained environments. The
+training pipeline for CoIFNet is detailed in Algorithm 1.
+ˆX
+X
+Mx
+g∗
+θ Z ˆYY Θ ϕ
+max I(X; ˆX)
+max I(Y; ˆY)
+(a) Traditional impute-then-forecast approaches
+Z
+X
+Mx
+Θ
+ˆX
+ˆY
+Y
+ϕI
+ϕF
+max I(X; ˆX)
+max I(Y; ˆY)
+(b) Our proposed CoIFNet framework
+Fig. 4: Qualitative comparison of information flow be-
+tween traditional impute-then-forecast approaches and
+our proposed CoIFNet framework. (a) The mask matrix Mx
+used in the imputation stage becomes inaccessible during
+forecasting, breaking the Markov chain continuity from Y
+to ˆY. (b) CoIFNet unifies imputation and forecasting in a
+single framework, enabling Markov chain continuity and
+preserving all information critical for accurate time series
+forecasting in the presence of missing data.
+4 T HEORETICAL ANALYSIS
+In this section, we provide formal justifications grounded in
+the concept of mutual information [17], demonstrating how
+the CoIFNet learning objective enhances the performance
+bound for MTSF in the presence of missing data.
+4.1 Information Loss in the Two-stage Pipeline
+Traditional approaches to missing data in time series fol-
+low a two-stage pipeline: imputing missing values then
+performing forecasting on the imputed data. As depicted
+in Fig. 4(a), the mask matrix Mx used in the imputation
+stage becomes inaccessible during forecasting, breaking the
+Markov chain continuity from Y to ˆY. According to the
+Data Processing Inequality (DPI) [44] theory, we have:
+I(Y; X, Mx) ≥ I(Y; ˆX). (12)
+where I(·) denotes the the amount of mutual information.
+The DPI Equation (12) holds with equality only if no in-
+formation about Y is lost during processing. However, the
+two-stage pipeline inherently causes information loss and
+results in a strict DPI inequality due to: 1) the imputation
+stage optimizes ˆX for reconstruction instead of forecasting,
+discarding a part of information critical for accurate fore-
+casting [37], and 2) the mask matrix Mx, which holds valu-
+able forecasting signals, is discarded after imputation [45].
+4.2 Information Preservation via Joint Optimization
+Instead of following the restrictive path(X, Mx)
+g∗
+θ
+− →ˆX
+fΘ,ϕ
+− − − →
+ˆY, we propose to learn from (X, Mx) and produce both ˆX
+and ˆY simultaneously. This preserves access to all input
+
+
+--- PAGE 6 ---
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2015 6
+information throughout the learning process while main-
+taining the benefits of both imputation and forecasting
+objectives (as illustrated in Fig. 4(b)). To formalize this in-
+tuition, we relate mutual information to the Mean Absolute
+Error (MAE) loss. The choice of MAE is motivated by its
+inherent robustness, which makes it particularly well-suited
+for time series forecasting with missing data, as highlighted
+by [46]. This robustness stems from MAE’s equivalence to
+maximizing likelihood under an assumption of Laplacian-
+distributed prediction errors, providing the theoretical foun-
+dation for our analysis. We employ a variational distribution
+q(Y| ˆY) to approximate the true conditional probability
+p(Y| ˆY), leading to the following proposition.
+Proposition 1. Under the assumption that prediction errors
+follow a Laplacian distribution, the mutual information
+I(Y; ˆY) between the ground truth values Y and predic-
+tions ˆY is lower-bounded by:
+I(Y; ˆY) ≥ C −1
+b E
+hY − ˆY
+
+1
+i
+,
+where C = H(Y) − log(2b), b >0 is the scale parameter of
+the variational Laplacian distribution q(Y| ˆY), and H(Y)
+is the entropy of Y.
+Proof: Denote the mutual information of the ground
+truth Y and prediction ˆY as:
+I(Y; ˆY) =
+X
+Y, ˆY
+p(Y, ˆY) log p(Y, ˆY)
+p(Y)p( ˆY)
+=
+X
+Y, ˆY
+p(Y, ˆY) log p(Y, ˆY)
+p( ˆY)
+−
+X
+Y, ˆY
+p(Y, ˆY) logp(Y)
+=
+X
+Y, ˆY
+p( ˆY)p(Y| ˆY) logp(Y| ˆY)
+−
+X
+Y, ˆY
+p(Y, ˆY) logp(Y)
+=H(Y) − H(Y| ˆY)
+=H(Y) + EY, ˆY[log p(Y| ˆY)]
+(13)
+Since the true conditional distribution p(Y| ˆY) is in-
+tractable, we introduce a variational distribution q(Y| ˆY)
+to approximate it. The mutual information can then be
+expressed as:
+I(Y; ˆY) =H(Y) + E ˆY[log q(Y| ˆY)]
++ E ˆY[DKL(p(Y| ˆY)∥q(Y| ˆY))]
+≥H(Y) + EY, ˆY[log q(Y| ˆY)]
+(14)
+The inequality holds due to the non-negativity of the KL
+divergence DKL(p∥q). We assume q(Y| ˆY) is a Laplacian
+distribution centered at ˆY with scale b >0, i.e.,
+q(Y| ˆY) = 1
+2b exp
+ 
+− ∥Y − ˆY∥1
+b
+!
+. (15)
+Substituting the logarithm of Eq. (15) into the lower bound:
+I(Y; ˆY) ≥H(Y) + E
+h
+log q(Y| ˆY)
+i
+=H(Y) + E
+
+log
+ 1
+2b
+
+−
+Y − ˆY
+
+1
+b
+
+
+=H(Y) − log(2b) − 1
+b E
+hY − ˆY
+
+1
+i
+=C −1
+b E
+hY − ˆY
+
+1
+i
+(16)
+where C = H(Y) − log(2b) is constant. Thus, minimiz-
+ing MAE is tantamount to maximizing a variational lower
+bound on I(Y; ˆY) under these Laplacian assumptions.
+Proposition 1 reveals that minimizing the MAE directly
+maximizes the mutual information between the predictions
+and the ground truth, leading to the following corollary:
+Corollary 1. The mutual information for the imputation
+task satisfies:
+I(X; ˆX) ≥ C′ − 1
+b′ E
+hX − ˆX
+
+1
+i
+,
+where C′ and b′ > 0 are corresponding constants for X
+This indicates that joint optimization of imputation and
+forecasting preserves information for the both tasks.
+Proposition 2. Let Z be an internal representation learned
+from input (X, Mx) through joint optimization. The total
+mutual information between Z and all relevant variables is
+lower-bounded by:
+I(X; Z)+I(Y; Z)
+≥ C′′ −
+
+
+E
+hY − ˆY
+
+1
+i
+b +
+E
+hX − ˆX
+
+1
+i
+b′
+
+
+where C′′ = C + C′ combines the entropy terms of the
+imputation and forecasting tasks.
+Proof: We first bound the mutual information
+I(Z; X, Mx, Y) by decomposing it into components related
+to imputation and forecasting tasks. Since Z is learned to
+optimize both tasks, we have:
+I(X, Mx, Y; Z) ≥ I(X; Z) + I(Y; Z)
+Thus,
+I(X; Z) + I(Y; Z) ≥ I(X; ˆX) + I(Y; ˆY)
+According to Proposition 1 and Corollary 1, we have
+I( ˆX; X) + I( ˆY; Y) ≥
+
+H(X) − log(2b′) − 1
+b′ E[|X − ˆX|]
+
++
+
+H(Y) − log(2b) − 1
+b E[|Y − ˆY|]
+
+= C′′ −
+ 
+E[|Y − ˆY|]
+b + E[|X − ˆX|]
+b′
+!
+where C′′ = H(Y) +H(X) − log(2b) − log(2b′) and b, b′ > 0
+are constants. So, minimizing imputation and forecasting
+MAE errors jointly means maximizes the lower bound on
+
+
+--- PAGE 7 ---
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2015 7
+the mutual information captured by the representation Z.
+The representation Z has direct access to both observed
+values and the mask matrix Mx, ensuring no predictive
+information is discarded. Our CoIFNet framework imple-
+ments this principle through the composite loss L = (1 −
+λ)LI +λLF, where λ ∈ [0, 1] balances the imputation loss LI
+and forecasting loss LF. This ensures that the gradients from
+both objectives directly impact the shared representation
+Z, thereby maximizing information preservation for robust
+and accurate time series forecasting.
+4.3 Discussion on the Underlying Assumption
+It is worth noting that our formal connection between
+the MAE loss and mutual information in Proposition 1 is
+established under the assumption of a Laplacian distri-
+bution for the prediction errors. This choice is motivated
+by the direct correspondence between minimizing MAE
+and maximizing the variational lower bound on mutual
+information, a common approach in information-theoretic
+analyses of robust models. However, the core principle mo-
+tivating our joint optimization framework is more general.
+A parallel argument can be formulated for other common
+loss-distribution pairs. For instance, minimizing the Mean
+Squared Error (MSE) loss is tantamount to maximizing
+the mutual information lower bound under a Gaussian
+error assumption. Thus, while our specific derivation fo-
+cuses on the empirically robust MAE/Laplacian case, the
+fundamental theoretical advantage of our unified CoIFNet
+framework—preserving predictive information by avoiding
+the information bottleneck inherent in two-stage pipelines
+(as illustrated in Fig. 4)—holds more broadly. The joint
+learning objective encourages the model to retain all features
+from both the observed data and the mask matrix that are
+pertinent to both tasks, a principle that is not confined to a
+single choice of error distribution.
+5 E XPERIMENTS
+In this section, we conduct experiments on six real-world
+time series forecasting datasets under different missing-
+data patterns to evaluate the effectiveness and efficiency of
+our CoIFNet framework. We first compare the performance
+of CoIFNet with state-of-the-art approaches in handling
+diverse missing-data scenarios. Then, we perform ablation
+studies and case analysis to investigate the impacts of dif-
+ferent model design decisions. The results under the point
+or block missing rate of 0.1 are provided at the end.
+5.1 Experiment Settings
+Datasets: We include 6 most commonly used time series
+forecasting datasets in our experiments. Table 2 provides
+basic statistics for these datasets.
+• Weather1: Meteorological data consisting of 21 indi-
+cators recorded at 10-minute intervals from 07/2020
+to 07/2021.
+• Exchange Rate: Daily exchange rates for 8 countries
+from 1990 to 2016.
+1. https://www.bgc-jena.mpg.de/wetter/
+TABLE 2: Detailed dataset descriptions.
+Datasets # Dims. # Points Interval Information
+ETTh1, ETTh2 7 17420 1 hour Electricity
+ETTm1, ETTm2 7 69680 15 mins Electricity
+Weather 21 36761 10 mins Weather
+Exchange 8 7588 1 day Economy
+TABLE 3: Hyperparameter setting in our experiments. We
+keep the hyperparameters consistent across all datasets and
+missing-data scenarios.
+Hyperparameters Values
+Hidden size 256
+Day-of-week embedding size 8
+Hour-of-day embedding size 8
+Dropout 0.1
+Learning rate 0.001
+λ (balance weight) 0.2
+Batch size 512
+Epochs 100
+• ETT (ETTh1, ETTh2, ETTm1, ETTm2) 2: Electricity
+transformer temperatures and power load features
+at 1-hour (ETTh1, ETTh2) and 15-minute (ETTm1,
+ETTm2) intervals.
+Missing Patterns: We consider two missing patterns in our
+experiments.
+• Point Missing: A certain rate of points in time series
+are randomly masked as missing values.
+• Block Missing: A certain rate of blocks Bt,c ∈ Rlt×lc
+in time series are randomly masked as missing data,
+where the maximum temporal length lt and feature
+dimension lc are set to 10 and 5, respectively.
+Comparison Methods: To evaluate the effectiveness of our
+CoIFNet, we compare it with a wide spectrum of state-
+of-the-art approaches, including imputation-based methods,
+vanilla MTSF methods, and end-to-end methods. To ensure
+a fair comparison, we use mean imputation to initialize all
+missing values for the baseline methods.
+• Traditional MTSF Methods : These methods apply
+masks in the loss function to reduce the impact of
+missing data on forecasting performance.
+– STID [25]: A spatial-temporal interaction de-
+composition model that captures complex in-
+teractions in multivariate time series data.
+– DLinear [24]: A linear forecasting model opti-
+mized for computational efficiency and scala-
+bility in handling large datasets.
+– AGCRN [22]: Combineing graph convolu-
+tional networks with recurrent architectures to
+model spatio-temporal dynamics effectively.
+– MTGNN [23]: Leveraging graph neural net-
+works to model multivariate time series, fo-
+cusing on spatial correlations and temporal
+patterns.
+– iTransformer [5]: A transformer architecture
+based model that claims the capability to per-
+form multiple tasks, including both imputa-
+2. https://github.com/zhouhaoyi/ETDataset
+
+
+--- PAGE 8 ---
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2015 8
+tion and forecasting, thereby providing a ver-
+satile solution for time series analysis.
+– GPT4TS [29]: A large-scale generative pre-
+trained transformer model that emphasizes its
+ability to handle a variety of tasks such as
+imputation and forecasting, highlighting its
+adaptability and robustness in complex time
+series scenarios.
+• Imputation-based Methods: These methods treat the
+lookback sequence and forecast horizon as a unified
+sequence, with the entire forecast horizon set as
+missing during evaluation.
+– BRITS [14]: Utilizing bidirectional recurrent
+neural networks to impute missing values,
+thereby enhancing the model’s ability to learn
+temporal dependencies from incomplete data.
+– SAITS [33]: Employing self-attention mecha-
+nisms to reconstruct missing values, leverag-
+ing temporal context and observed patterns
+for imputation.
+• End-to-End Methods:
+– BiTGraph [16]: The previous state-of-the-art
+end-to-end framework that jointly learns the
+temporal dependencies and spatial structure
+from time series with missing data.
+Implementation Details : In our experiments, each model
+is trained using the historical lookback window of length
+L = 96 to predict the future forecasting window of length
+H = 96 . Table 3 presents the hyperparameter setting in
+our experiments. Note that, we keep the hyperparameters
+consistent across all datasets and missing-data scenarios. In
+other words, there is no cherry-picking of parameters for
+each setting. Besides, the missing rates for the point/block
+missing pattern are set to {0.3, 0.6}. We employ early stop-
+ping with a patience of 10 epochs to prevent overfitting and
+select the model with the best validation performance. For
+each experiment, we conduct three independent runs with
+different random seeds and report the average MAE and
+MSE results. We have made our code publicly available at
+https://github.com/KaiTang-eng/CoIFNet.
+5.2 Comparison with State-of-the-art
+Table 4 and Table 5 report the forecasting results of CoIFNet
+and state-of-the-art methods on six real-world datasets at
+various point and block missing rates, respectively. As can
+be seen, our CoIFNet consistently outperforms all com-
+petitors under all missing-data scenarios, demonstrating its
+effectiveness and robustness. Concretely, from the results in
+Table 4, we see that CoIFNet outperforms the previous state-
+of-the-art method BiTGraph by 18.73% ( 19.36%) in MAE
+and 22.51% ( 24.40%) in MSE when the point missing rate
+is 0.3 (0.6). From the results in Table 5, we can observe that
+our CoIFNet outperforms BiTGraph by 20.98% (19.54%) in
+MAE and 25.51% (23.81%) in MSE when the block missing
+rate is 0.3 (0.6). The superior performance of our CoIFNet
+over other methods highlight CoIFNet’s superior capability
+in maintaining forecasting accuracy under severe missing
+conditions. Notably, CoIFNet yields lower standard devia-
+tions (i.e., ±.00) in both MAE and MSE compared to other
+methods, highlighting its superior stability and robustness.
+Additionally, comparing the results of Table 4 and Ta-
+ble 5, we have the following observations. Firstly, time series
+with missing blocks pose greater challenges than those
+with missing points for all methods. This is likely because
+temporal dependencies are more severely disrupted when
+consecutive observations are missing. Secondly, traditional
+imputation-based approaches like BRITS and SAITS exhibit
+suboptimal performance in both scenarios, especially at
+higher missing rates. This can be attributed to their empha-
+sis on reconstruction rather than forecasting, leading to a
+misalignment between training and evaluation objectives.
+Thirdly, transformer-based architectures (i.e., iTransformer,
+PatchTST) demonstrate competitive performance under the
+point missing pattern but exhibit significant degradation
+under the block missing pattern. This performance disparity
+likely stems from the inherent limitations of self-attention
+mechanisms: while they can effectively interpolate missing
+values through global context aggregation, their ability to
+interpolate missing blocks of time series is constrained.
+Finally, BiTGraph generally shows superior performance
+than other previous methods, which confirms the impor-
+tance of explicitly modeling missing patterns when dealing
+with structured missing values. However, the superior per-
+formance of our CoIFNet over BiTGraph also reveal that
+BiTGraph’s effectiveness is limited by its over-dependence
+on local spatial correlations and insufficient modeling of
+cross-timestep and cross-variate interactions.
+5.3 Ablation Studies
+In this part, we perform ablation studies to scrutinize the ef-
+fectiveness of the components of CoIFNet and the impact of
+other design choices on CoIFNet. We conduct experiments
+on two representative datasets ETTm2 and Weather.
+Effectiveness of the Designed Components: We investigate
+the effectiveness of each key component in our proposed
+CoIFNet by individually removing or replacing elements
+and measuring the resulting performance. Table 6 presents
+the results over the two datasets under different missing-
+data scenarios, where “Baseline” indicates that we directly
+perform vanilla forecasting on incomplete time series data,
+and “w/o CTF/CVF” denotes the CTF/CVF component is
+replaced by a linear layer.
+From the reported results in Table 6, we have the fol-
+lowing observations. Firstly, removing each component of
+CoIFNet results in performance degradation, demonstrat-
+ing the effectiveness of these components in enhancing
+overall performance. Secondly, from the results of 1⃝ 2⃝ 3⃝,
+we observe that incorporating the mask matrix and times-
+tamp embeddings with the input time series data brings
+performance gains. Possible reasons are as follows: 1) The
+mask matrix enables models to distinguish between actual
+zeros and missing values during training. 2) The times-
+tamp information in time series helps the model capture
+cyclical patterns, which is critical for improving forecasting
+performance in the presence of missing data. Thirdly, from
+the results of 4⃝ 5⃝ 6⃝, we see that both the CTF and CVF
+modules play important roles in performance enhancement.
+
+
+--- PAGE 9 ---
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2015 9
+TABLE 4: Comparison with state-of-the-arts on six real-world datasets under the Point missing rates of 0.3 and 0.6.
+Point: r = 0.3
+Dataset ETTh1 ETTh2 ETTm1 ETTm2 Weather Exchange Rate A VG
+Metric MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE
+BRITS 0.814±.01 1.207±.02 1.156±.01 2.361±.06 0.751±.02 1.027±.02 1.108±.14 2.086±.59 0.429±.06 0.410±.08 1.123±.17 1.883±.53 0.897±.07 1.496±.22
+SAITS 0.848±.00 1.271±.01 1.188±.01 2.454±.02 0.790±.00 1.098±.01 1.356±.00 3.120±.01 0.590±.00 0.615±.00 1.400±.04 2.934±.12 1.029±.01 1.915±.03
+STID 0.469±.00 0.494±.00 0.369±.01 0.297±.01 0.374±.00 0.342±.00 0.316±.00 0.233±.00 0.209±.00 0.160±.00 0.301±.01 0.166±.01 0.340±.00 0.282±.00
+MTGNN 0.498±.00 0.521±.00 0.443±.01 0.407±.03 0.417±.01 0.400±.00 0.333±.00 0.238±.01 0.226±.01 0.179±.01 0.329±.00 0.196±.00 0.374±.01 0.323±.01
+AGCRN 0.651±.02 0.846±.03 0.589±.04 0.775±.10 0.498±.00 0.515±.02 0.378±.01 0.321±.03 0.217±.00 0.170±.00 0.473±.02 0.406±.03 0.467±.02 0.506±.04
+DLinear 0.463±.00 0.490±.00 0.365±.00 0.287±.00 0.387±.00 0.369±.00 0.313±.00 0.226±.00 0.261±.00 0.212±.00 0.267±.00 0.130±.00 0.343±.00 0.286±.00
+PatchTST 0.475±.01 0.500±.01 0.369±.00 0.300±.01 0.386±.00 0.366±.00 0.307±.01 0.224±.01 0.238±.00 0.190±.00 0.259±.00 0.128±.01 0.339±.00 0.285±.01
+iTransformer0.465±.00 0.488±.00 0.362±.00 0.288±.00 0.382±.00 0.356±.00 0.308±.00 0.222±.00 0.233±.00 0.185±.00 0.276±.01 0.140±.01 0.338±.00 0.280±.00
+GPT4TS 0.481±.00 0.506±.01 0.398±.00 0.339±.01 0.385±.00 0.363±.00 0.294±.00 0.213±.00 0.232±.00 0.189±.00 0.299±.01 0.167±.01 0.348±.00 0.296±.01
+BiTGraph 0.496±.01 0.520±.01 0.408±.01 0.364±.03 0.411±.00 0.391±.00 0.323±.01 0.230±.01 0.222±.00 0.174±.00 0.320±.02 0.188±.03 0.363±.01 0.311±.01
+CoIFNet 0.452±.00 0.481±.00 0.315±.00 0.234±.00 0.351±.00 0.318±.00 0.252±.00 0.172±.00 0.195±.00 0.153±.00 0.209±.00 0.088±.00 0.295±.00 0.241±.00
+Point: r = 0.6
+Dataset ETTh1 ETTh2 ETTm1 ETTm2 Weather Exchange Rate A VG
+Metric MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE
+BRITS 0.823±.02 1.214±.04 1.001±.11 1.759±.46 0.795±.01 1.060±.02 1.014±.05 1.730±.11 0.405±.01 0.377±.02 1.199±.08 2.099±.22 0.873±.04 1.373±.15
+SAITS 0.842±.01 1.272±.01 1.187±.01 2.455±.03 0.787±.00 1.090±.01 1.356±.00 3.118±.01 0.598±.00 0.624±.00 1.400±.04 2.938±.15 1.028±.01 1.916±.04
+STID 0.497±.01 0.537±.00 0.415±.00 0.363±.00 0.395±.00 0.370±.00 0.359±.01 0.304±.01 0.222±.00 0.170±.00 0.337±.02 0.207±.03 0.371±.01 0.325±.01
+MTGNN 0.521±.01 0.558±.01 0.447±.00 0.406±.01 0.433±.01 0.425±.02 0.363±.02 0.279±.03 0.236±.01 0.187±.01 0.376±.01 0.254±.02 0.396±.01 0.352±.01
+AGCRN 0.677±.02 0.889±.02 0.578±.01 0.712±.01 0.496±.01 0.535±.03 0.408±.02 0.348±.04 0.229±.01 0.178±.01 0.541±.04 0.491±.05 0.488±.02 0.525±.03
+DLinear 0.500±.00 0.542±.00 0.403±.00 0.339±.00 0.424±.00 0.421±.00 0.355±.00 0.274±.01 0.281±.00 0.224±.00 0.306±.01 0.167±.01 0.378±.00 0.328±.00
+PatchTST 0.501±.00 0.538±.01 0.372±.01 0.304±.02 0.419±.01 0.414±.01 0.315±.00 0.234±.00 0.250±.00 0.203±.00 0.274±.01 0.145±.01 0.355±.01 0.306±.01
+iTransformer0.491±.00 0.523±.00 0.398±.00 0.335±.00 0.410±.00 0.393±.00 0.352±.00 0.270±.00 0.234±.00 0.189±.00 0.312±.01 0.175±.01 0.366±.00 0.314±.00
+GPT4TS 0.524±.01 0.568±.01 0.436±.02 0.414±.05 0.406±.00 0.391±.00 0.331±.02 0.272±.04 0.255±.00 0.212±.00 0.408±.03 0.331±.05 0.393±.01 0.365±.02
+BiTGraph 0.515±.01 0.548±.01 0.444±.01 0.419±.04 0.421±.00 0.408±.01 0.339±.01 0.256±.02 0.226±.00 0.179±.01 0.319±.00 0.184±.00 0.377±.01 0.332±.01
+CoIFNet 0.467±.00 0.499±.00 0.323±.00 0.246±.00 0.363±.00 0.337±.01 0.256±.00 0.176±.00 0.200±.00 0.157±.00 0.216±.00 0.093±.00 0.304±.00 0.251±.00
+TABLE 5: Comparison with state-of-the-arts on six real-world datasets under the Block missing rates of 0.3 and 0.6.
+Block: r = 0.3
+Dataset ETTh1 ETTh2 ETTm1 ETTm2 Weather Exchange Rate A VG
+Metric MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE
+BRITS 0.794±.02 1.173±.05 1.115±.08 2.152±.28 0.757±.01 1.034±.03 1.231±.04 2.550±.28 0.422±.08 0.402±.10 1.074±.05 1.690±.15 0.899±.05 1.500±.15
+SAITS 0.850±.00 1.283±.01 1.188±.00 2.454±.01 0.789±.00 1.096±.01 1.353±.00 3.107±.03 0.594±.00 0.618±.00 1.395±.03 2.907±.11 1.028±.01 1.911±.03
+STID 0.494±.01 0.539±.02 0.441±.01 0.436±.03 0.391±.00 0.372±.01 0.361±.02 0.319±.03 0.220±.00 0.169±.00 0.340±.00 0.223±.00 0.375±.01 0.343±.01
+MTGNN 0.518±.01 0.559±.01 0.486±.00 0.486±.02 0.432±.00 0.423±.00 0.349±.00 0.258±.00 0.231±.00 0.183±.00 0.390±.02 0.281±.04 0.401±.01 0.365±.01
+AGCRN 0.660±.01 0.867±.02 0.604±.02 0.828±.04 0.515±.01 0.563±.02 0.434±.04 0.417±.07 0.238±.00 0.187±.01 0.535±.01 0.505±.01 0.497±.02 0.561±.03
+DLinear 0.491±.00 0.542±.01 0.450±.01 0.438±.02 0.425±.00 0.424±.00 0.417±.01 0.395±.02 0.289±.00 0.232±.00 0.376±.01 0.254±.02 0.408±.00 0.381±.01
+PatchTST 0.492±.00 0.528±.01 0.417±.01 0.387±.01 0.416±.00 0.407±.00 0.360±.01 0.319±.01 0.259±.00 0.206±.00 0.343±.02 0.239±.04 0.381±.01 0.348±.01
+iTransformer0.498±.00 0.540±.01 0.465±.01 0.461±.02 0.423±.01 0.413±.01 0.416±.01 0.381±.01 0.256±.00 0.203±.00 0.396±.02 0.296±.04 0.409±.01 0.382±.01
+GPT4TS 0.496±.00 0.544±.01 0.480±.02 0.514±.05 0.407±.00 0.395±.00 0.390±.01 0.400±.02 0.254±.00 0.204±.00 0.359±.01 0.275±.01 0.398±.01 0.389±.02
+BiTGraph 0.519±.01 0.558±.01 0.430±.01 0.384±.02 0.420±.00 0.408±.00 0.336±.02 0.248±.02 0.229±.00 0.181±.01 0.381±.04 0.266±.07 0.386±.01 0.341±.02
+CoIFNet 0.467±.00 0.508±.01 0.319±.00 0.240±.00 0.369±.00 0.343±.00 0.257±.00 0.179±.00 0.201±.00 0.158±.00 0.218±.00 0.097±.00 0.305±.00 0.254±.00
+Block: r = 0.6
+Dataset ETTh1 ETTh2 ETTm1 ETTm2 Weather Exchange Rate A VG
+Metric MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE
+BRITS 0.796±.04 1.172±.07 1.031±.02 1.813±.13 0.774±.03 1.042±.04 1.199±.03 2.359±.25 0.386±.04 0.348±.04 1.077±.09 1.728±.29 0.877±.04 1.410±.14
+SAITS 0.844±.00 1.265±.00 1.183±.01 2.436±.03 0.788±.00 1.097±.00 1.362±.00 3.145±.01 0.600±.00 0.628±.00 1.399±.04 2.922±.13 2.398±.51 3.233±.53
+STID 0.539±.00 0.612±.01 0.488±.01 0.517±.03 0.419±.00 0.407±.01 0.389±.01 0.354±.02 0.234±.00 0.181±.00 0.400±.02 0.307±.03 0.412±.01 0.396±.02
+MTGNN 0.552±.01 0.625±.02 0.522±.01 0.562±.02 0.471±.03 0.485±.05 0.383±.01 0.307±.01 0.242±.00 0.192±.00 0.434±.04 0.346±.08 0.434±.02 0.420±.03
+AGCRN 0.727±.06 0.970±.09 0.651±.03 0.922±.05 0.546±.02 0.598±.04 0.478±.02 0.458±.03 0.250±.00 0.197±.00 0.598±.02 0.604±.03 0.542±.03 0.625±.04
+DLinear 0.549±.00 0.643±.01 0.524±.01 0.573±.01 0.478±.00 0.508±.01 0.506±.00 0.545±.01 0.314±.00 0.253±.00 0.450±.02 0.363±.04 0.470±.01 0.481±.01
+PatchTST 0.537±.00 0.605±.02 0.391±.01 0.328±.02 0.467±.00 0.473±.01 0.331±.00 0.259±.00 0.270±.00 0.219±.00 0.384±.02 0.311±.04 0.397±.01 0.366±.01
+iTransformer0.543±.00 0.621±.01 0.527±.01 0.580±.03 0.460±.00 0.472±.00 0.383±.00 0.320±.01 0.249±.00 0.204±.00 0.432±.03 0.360±.05 0.432±.01 0.426±.02
+GPT4TS 0.579±.01 0.661±.02 0.453±.00 0.425±.01 0.477±.01 0.480±.01 0.375±.01 0.318±.02 0.277±.00 0.236±.01 0.513±.02 0.522±.04 0.446±.01 0.441±.02
+BiTGraph 0.543±.02 0.608±.03 0.448±.01 0.417±.01 0.442±.01 0.439±.02 0.337±.01 0.249±.02 0.234±.00 0.186±.00 0.359±.02 0.243±.04 0.394±.01 0.357±.02
+CoIFNet 0.490±.00 0.552±.01 0.330±.00 0.253±.00 0.389±.01 0.377±.02 0.261±.00 0.184±.00 0.207±.00 0.163±.00 0.225±.00 0.101±.00 0.317±.00 0.272±.00
+This validates the capability of the two modules to fuse
+information along the timestep dimension and variate di-
+mension, respectively. Fourthly, from the results of 7⃝ 8⃝, we
+observe a dramatic performance decline across all settings
+after removing RevON or replacing it with RevIN [42].
+This demonstrates the advantages of RevON in reducing
+discrepancies among historical sequences in missing-data
+scenarios. The main reason may be that the data drift issue
+is more pronounced in the ETTm2 dataset compared to
+the Weather dataset. Finally, from the results of 9⃝, we
+notice that without imputing/reconstructing ˆX, the model’s
+performance degrades considerably. This underscores the
+pivotal role of the auxiliary imputation task in improving
+forecasting performance under missing data conditions.
+Ablation of Temporal Fusion Components : To further in-
+vestigate the effectiveness of our proposed Cross-Timestep
+Fusion (CTF) and Cross-Variate Fusion (CVF) modules, we
+conduct ablation experiments by replacing these compo-
+nents with two alternative networks: Linear and Attention.
+Linear employs a single-layer MLP for fusion, while Atten-
+tion utilizes a single-layer multi-head attention mechanism.
+The obtained results are reported in Fig. 5. The experimental
+results reveal several important insights. Firstly, CTF+CVF
+achieves the best results compared with other alternatives,
+demonstrating the effectiveness of our specialized fusion
+mechanisms for tackling MSTF in the presence of miss-
+ing data. Secondly, variants with CTF, CVF, and Attention
+consistently outperform that with Linear across all scenar-
+ios. This suggests that simple linear transformations are
+insufficient for effectively modeling the intricate relation-
+ships in multivariate time series with missing. Thirdly, we
+observe that Attention+CVF achieves comparable results
+
+
+--- PAGE 10 ---
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2015 10
+TABLE 6: Ablation study of the devised components of CoIFNet on the ETTm2 and Weather datasets at the point/block
+missing rates of 0.3 and 0.6. “w/o CTF/CVF” indicates the CTF/CVF component is replaced by a linear layer.
+Setting
+ETTm2 Weather
+r = 0.3 r = 0.6 r = 0.3 r = 0.6
+MAE MSE MAE MSE MAE MSE MAE MSE
+Point
+CoIFNet 0.252±.00 0.172±.00 0.258±.00 0.179±.00 0.200±.00 0.157±.00 0.204±.00 0.161±.00
+1⃝ w/o Mx 0.254±.00 0.174±.00 0.260±.00 0.181±.00 0.200±.00 0.157±.00 0.206±.00 0.163±.00
+2⃝ w/o Eτ 0.253±.00 0.173±.00 0.262±.00 0.183±.00 0.203±.00 0.159±.00 0.208±.00 0.164±.00
+3⃝ w/o Mx & Eτ 0.256±.00 0.175±.00 0.265±.00 0.186±.00 0.201±.00 0.158±.00 0.209±.00 0.164±.00
+4⃝ w/o CTF 0.260±.00 0.183±.00 0.266±.00 0.190±.00 0.204±.00 0.160±.00 0.210±.00 0.166±.00
+5⃝ w/o CVF 0.256±.00 0.176±.00 0.264±.00 0.185±.00 0.210±.00 0.169±.01 0.214±.00 0.169±.00
+6⃝ w/o CTF & CVF 0.264±.00 0.187±.00 0.271±.00 0.194±.00 0.233±.00 0.197±.00 0.236±.00 0.198±.00
+7⃝ w/o RevON 0.374±.04 0.389±.11 0.403±.06 0.445±.21 0.206±.01 0.156±.01 0.213±.00 0.161±.00
+8⃝ Replace RevON by RevIN [42] 0.369±.01 0.316±.02 0.473±.04 0.514±.09 0.217±.00 0.163±.00 0.242±.00 0.189±.00
+9⃝ Predict ˆY only, rather than[ ˆX, ˆY] 0.263±.00 0.189±.00 0.271±.00 0.200±.00 0.212±.01 0.169±.00 0.218±.01 0.174±.01
+Block
+CoIFNet 0.258±.00 0.179±.00 0.263±.00 0.186±.00 0.203±.00 0.159±.00 0.213±.00 0.168±.00
+1⃝ w/o Mx 0.262±.00 0.185±.00 0.267±.00 0.191±.00 0.207±.00 0.163±.00 0.217±.00 0.173±.00
+2⃝ w/o Eτ 0.261±.00 0.182±.00 0.269±.00 0.192±.00 0.208±.00 0.163±.00 0.218±.00 0.173±.00
+3⃝ w/o Mx & Eτ 0.263±.00 0.184±.00 0.271±.00 0.195±.00 0.210±.00 0.163±.00 0.217±.00 0.171±.00
+4⃝ w/o CTF 0.265±.00 0.190±.01 0.268±.00 0.191±.00 0.212±.00 0.167±.00 0.221±.00 0.177±.00
+5⃝ w/o CVF 0.263±.00 0.186±.00 0.270±.00 0.194±.00 0.209±.00 0.164±.00 0.219±.00 0.173±.00
+6⃝ w/o CTF & CVF 0.268±.00 0.193±.00 0.277±.00 0.201±.00 0.236±.00 0.196±.00 0.240±.00 0.200±.00
+7⃝ w/o RevON 0.405±.06 0.485±.20 0.441±.02 0.471±.06 0.220±.01 0.168±.00 0.224±.00 0.173±.01
+8⃝ Replace RevON by RevIN [42] 0.372±.01 0.334±.01 0.498±.03 0.567±.06 0.227±.00 0.168±.00 0.240±.00 0.181±.00
+9⃝ Predict ˆY only, rather than[ ˆX, ˆY] 0.269±.00 0.196±.00 0.271±.00 0.196±.00 0.224±.01 0.178±.01 0.227±.01 0.182±.01
+CTF
++
+CVF
+Linear
++
+Linear
+Linear
++
+CVF
+CTF
++
+Linear
+Attn
++
+CVF
+CTF
++
+Attn
+Attn
++
+Attn
+Attn
++
+Linear
+Linear
++
+Attn
+0.245
+0.250
+0.255
+0.260
+0.265
+0.270
+0.275MAE
+ETTm2, r = 0.3
+Point
+Block
+CTF
++
+CVF
+Linear
++
+Linear
+Linear
++
+CVF
+CTF
++
+Linear
+Attn
++
+CVF
+CTF
++
+Attn
+Attn
++
+Attn
+Attn
++
+Linear
+Linear
++
+Attn
+0.250
+0.255
+0.260
+0.265
+0.270
+0.275
+0.280
+0.285
+ETTm2, r = 0.6
+Point
+Block
+CTF
++
+CVF
+Linear
++
+Linear
+Linear
++
+CVF
+CTF
++
+Linear
+Attn
++
+CVF
+CTF
++
+Attn
+Attn
++
+Attn
+Attn
++
+Linear
+Linear
++
+Attn
+0.19
+0.20
+0.21
+0.22
+0.23
+0.24
+Weather, r = 0.3
+Point
+Block
+CTF
++
+CVF
+Linear
++
+Linear
+Linear
++
+CVF
+CTF
++
+Linear
+Attn
++
+CVF
+CTF
++
+Attn
+Attn
++
+Attn
+Attn
++
+Linear
+Linear
++
+Attn
+0.20
+0.21
+0.22
+0.23
+0.24
+Weather, r = 0.6
+Point
+Block
+Fig. 5: Ablation study of the CTF and CVF modules on ETTm2 and Weather datasets across diverse missing-data scenarios.
+0.2 0.4 0.6 0.8 1.0
+0.252
+0.253
+0.254
+0.255
+0.256MAE
+0.253 0.252
+0.252
+0.253
+0.254 0.254
+0.257
+0.255
+0.256
+Point: r = 0.3
+0.2 0.4 0.6 0.8 1.0
+0.258
+0.259
+0.260
+0.261
+0.262
+0.259
+0.258
+0.257
+0.257
+0.259
+0.2590.259
+0.260
+0.262
+Point: r = 0.6
+0.2 0.4 0.6 0.8 1.0
+0.258
+0.259
+0.260
+0.261
+0.262
+0.263
+0.259
+0.258
+0.258 0.258
+0.259
+0.260
+0.260
+0.262
+0.263
+Block: r = 0.3
+0.2 0.4 0.6 0.8 1.0
+0.263
+0.264
+0.265
+0.266
+0.267
+0.268
+0.269
+0.263 0.263
+0.263
+0.264
+0.265
+0.267
+0.268
+0.269
+0.269
+Block: r = 0.6
+Fig. 6: Ablation study of the balance parameter λ on the ETTm2 dataset across diverse missing-data scenarios.
+to CTF+CVF in the point missing pattern but it exhibits
+significant performance degradation in the block missing
+pattern, which highlights the effectiveness and efficiency of
+our proposed CoIFNet framework.
+Impact of the Balance Weight λ. In the proposed CoIFNet,
+we employ the balance weight λ to control the relative
+importance of the imputation and forecasting losses. It is
+necessary to investigate the impact of λ on the perfor-
+mance of CoIFNet. To this end, we set λ to the values
+of {0.1, 0.2, ...,1.0}, and report the average testing results
+on the 6 datasets in Fig. 6. Overall, the performance of
+CoIFNet gradually increases as the λ value grows from
+0.1 to 0.3, after which the performance of DePT gradually
+decreases and reaches the lowest value when λ = 1 .0.
+In particular, when λ = 0 .3 CoIFNet establishes the best
+performance across all those settings. What is noteworthy
+is that when λ = 1 .0, i.e., only the forecasting loss is used
+for training, the performance of CoIFNet sharply decreases,
+which suggests that joint optimization of imputation and
+forecasting objectives is of great importance for achieving
+better MTSF performance in the presence of missing values.
+5.4 Computational Efficiency Analysis
+Beyond forecasting accuracy, computational efficiency plays
+a crucial role in practical applications of time series models.
+We conduct a comprehensive efficiency analysis compar-
+ing CoIFNet with mainstream baselines in terms of model
+parameters and training time. The results are summarized
+in Fig. 7. As demonstrated, the efficiency advantages of
+CoIFNet manifest through three key aspects. Firstly, com-
+pared to BiTGraph, the previous state-of-the-art model
+
+
+--- PAGE 11 ---
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2015 11
+1.00
+1.20
+1.40 SAITS
+8.97M, 41.49s
+BRITS
+560.86K, 46.73s
+Training Time vs Errors (with Params Count)
+0 10 20 30 40 50
+Training Time (s/epoch)
+0.25
+0.30
+0.35
+0.40
+0.45MAE
+AGCRN
+6.24K, 39.33s
+GPT4TS
+908.64K, 21.39s
+DLinear
+18.62K, 1.81s
+MTGNN 752.82K, 7.36s
+PatchTST
+8.67M, 35.44s
+STID
+8.99M, 3.46s
+iTransformer 6.37M, 4.44s
+BiTGraph
+758.59K, 8.4s
+CoIFNet 176.33K, 4.08s
+Fig. 7: Comparison of forecasting performance and com-
+putational efficiency for different methods on the ETTm2
+dataset, under the block missing rate of 0.3.
+for MTSF with missing values, CoIFNet achieves a 4.3×
+improvement in memory efficiency and a 2.1× gain in
+time efficiency. This efficiency stems from our carefully
+designed CTF and CVF module, which captures temporal
+dependencies through lightweight linear operations rather
+than quadratic-complexity attention mechanisms. Secondly,
+CoIFNet demonstrates significant computational efficiency
+advantages over Transformer-based architectures such as
+PatchTST, iTransformer, and GPT4TS. Although these mod-
+els achieve improved predictive performance by leveraging
+self-attention mechanisms, their reliance on such opera-
+tions results in substantial computational overhead. Thirdly,
+even compared to Linear-based models like STID, CoIFNet
+demonstrates comparable or superior computational effi-
+ciency. The main reason is that these rivals require more
+computational resources due to their relying on complex
+temporal dependence modeling modules. The lightweight
+architecture enables faster training and inference while
+maintaining robust performance across various missing pat-
+terns and missing rates. Those advantages render CoIFNet
+especially suitable for real-world deployments where both
+computational efficiency and forecasting accuracy are criti-
+cal considerations.
+5.5 Case Study
+To provide deeper insights into model behavior, we con-
+duct detailed case studies on the ETTm2 dataset under
+different missing scenarios. Fig. 8 presents the forecasting
+results of our proposed CoIFNet and three representative
+paradigms: BiTGraph, iTransformer, and BRITS. At a point
+missing rate of 0.3, we observe that while iTransformer
+captures the general trend of the time series, it struggles
+to accurately predict the magnitude of peaks and troughs.
+BiTGraph demonstrates improved performance over iTrans-
+former, confirming the value of explicitly modeling missing
+patterns. However, CoIFNet achieves the closest alignment
+with the ground truth, particularly in capturing the am-
+plitude variations and temporal dynamics. BRITS, despite
+being designed for handling missing values, shows sig-
+nificant deviations from the ground truth, indicating that
+imputation-focused approaches without explicit forecasting
+optimization fail to adapt well to the forecasting task. As
+the missing rate increases to 0.6, the performance gap
+between different models widens. BRITS exhibits substan-
+tial prediction errors, iTransformer maintains reasonable
+trend prediction but misses important fluctuations in the
+time series. BiTGraph performs better than iTransformer,
+demonstrating the importance of specialized modeling for
+missing values scenarios. CoIFNet continues to provide the
+most accurate forecasts, with predictions that closely follow
+the ground truth curve even under this challenging high-
+missing-rate condition. At a block missing rate of 0.3, BRITS
+and iTransformer struggle significantly, failing to capture
+the temporal dynamics after extended missing segments.
+BiTGraph shows improved performance but still exhibits
+noticeable deviations from the ground truth. CoIFNet main-
+tains superior prediction accuracy, effectively reconstructing
+the underlying patterns despite the presence of large miss-
+ing blocks in the input data. As the missing rate increases to
+0.6, the performance difference becomes most pronounced.
+BRITS produces forecasts that bear little resemblance to
+the actual time series, while iTransformer captures only
+the most basic trend. BiTGraph manages to approximate
+some features of the time series but misses critical temporal
+transitions. In contrast, CoIFNet continues to generate fore-
+casts that closely align with the ground truth, demonstrating
+CoIFNet’s robustness against missing values.
+5.6 Additional Results
+Table 7 compares the time series forecasting performance of
+our CoIFNet approach with state-of-the-art methods on six
+real-world datasets, at a point/block missing rate of 0.1. As
+can be observed, CoIFNet achieves the best or comparable
+results across the six datasets demonstrating its effectiveness
+and robustness. On average, CoIFNet outperforms the pre-
+vious state-of-the-art method BiTGraph by 15.56% (17.36%)
+in MAE and 17.96% (21.36%) in MSE when the point (block)
+missing rate is 0.1.
+6 C ONCLUSION
+In this work, we propose CoIFNet, a unified and end-
+to-end framework for achieving robust multivariate time
+series forecasting (MTSF) in the presence of missing val-
+ues. CoIFNet integrates the observed values, mask matrix,
+and timestamp embeddings, and processes them through
+sequential Cross-Timestep Fusion (CTF) and Cross-Variate
+Fusion (CVF) modules to capture temporal dependencies
+resilient to incomplete observations. We further provide the-
+oretical justifications based on mutual information, proving
+the superiority of our one-stage CoIFNet framework over
+traditional two-stage approaches for handling missing val-
+ues in time series forecasting. Extensive experiments on six
+
+
+--- PAGE 12 ---
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2015 12
+1.50
+1.25
+1.00
+0.75
+0.50
+0.25
+0.00
+Value
+Point: r = 0.3
+Input
+MAE: 0.05
+CoIFNet
+Truth
+Predict
+MAE: 0.09
+BiTGraph
+Truth
+Predict
+MAE: 0.10
+iTransformer
+Truth
+Predict
+MAE: 0.97
+BRITS
+Truth
+Predict
+1.50
+1.25
+1.00
+0.75
+0.50
+0.25
+0.00
+Value
+Point: r = 0.6 MAE: 0.06
+Truth
+Predict
+MAE: 0.07
+Truth
+Predict
+MAE: 0.08
+Truth
+Predict
+MAE: 0.25
+Truth
+Predict
+1.50
+1.25
+1.00
+0.75
+0.50
+0.25
+0.00
+Value
+Block: r = 0.3 MAE: 0.07
+Truth
+Predict
+MAE: 0.14
+Truth
+Predict
+MAE: 0.19
+Truth
+Predict
+MAE: 0.27
+Truth
+Predict
+0 24 48 72 96
+Timestamp
+1.50
+1.25
+1.00
+0.75
+0.50
+0.25
+0.00
+Value
+Block: r = 0.6
+96 120 144 168 192
+Timestamp
+MAE: 0.05
+Truth
+Predict
+96 120 144 168 192
+Timestamp
+MAE: 0.12
+Truth
+Predict
+96 120 144 168 192
+Timestamp
+MAE: 0.26
+Truth
+Predict
+96 120 144 168 192
+Timestamp
+MAE: 0.52
+Truth
+Predict
+Fig. 8: Forecasting curves of BiTGraph, iTransformer, BRITS and our CoIFNet on the ETTm2 dataset.
+TABLE 7: Comparison with state-of-the-arts on six real-world datasets under the Point/Block missing rate of 0.1.
+Point, r = 0.1
+Dataset ETTh1 ETTh2 ETTm1 ETTm2 Weather Exchange Rate A VG
+Metric MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE
+BRITS 0.811±.01 1.203±.02 1.169±.04 2.364±.08 0.779±.03 1.070±.02 1.168±.11 2.276±.49 0.476±.07 0.472±.09 1.367±.03 2.776±.10 0.962±.05 1.693±.13
+SAITS 0.841±.00 1.268±.00 1.187±.01 2.437±.03 0.789±.00 1.097±.01 1.353±.00 3.108±.02 0.587±.00 0.611±.00 1.397±.04 2.916±.13 1.026±.01 1.906±.03
+STID 0.450±.00 0.475±.00 0.338±.00 0.258±.00 0.360±.00 0.330±.00 0.280±.00 0.193±.00 0.204±.00 0.158±.00 0.262±.02 0.128±.02 0.316±.00 0.257±.00
+MTGNN 0.491±.01 0.514±.01 0.438±.01 0.395±.04 0.406±.01 0.385±.01 0.319±.01 0.228±.01 0.222±.00 0.174±.00 0.315±.01 0.178±.01 0.365±.01 0.312±.02
+AGCRN 0.660±.03 0.851±.04 0.592±.01 0.770±.04 0.492±.01 0.498±.02 0.350±.01 0.277±.01 0.218±.01 0.171±.01 0.424±.03 0.325±.05 0.456±.02 0.482±.03
+DLinear 0.445±.00 0.469±.00 0.338±.00 0.256±.00 0.365±.00 0.346±.00 0.288±.00 0.203±.00 0.247±.00 0.207±.00 0.233±.00 0.101±.00 0.319±.00 0.264±.00
+PatchTST 0.454±.00 0.476±.00 0.333±.00 0.257±.00 0.363±.00 0.342±.00 0.276±.00 0.196±.00 0.222±.00 0.181±.00 0.229±.01 0.100±.01 0.313±.00 0.259±.00
+iTransformer0.470±.00 0.488±.01 0.368±.00 0.296±.01 0.384±.00 0.349±.00 0.301±.00 0.218±.00 0.236±.00 0.183±.00 0.287±.01 0.163±.01 0.341±.00 0.283±.00
+GPT4TS 0.448±.00 0.475±.01 0.351±.01 0.274±.01 0.362±.00 0.340±.00 0.278±.00 0.197±.00 0.228±.00 0.188±.00 0.234±.01 0.104±.00 0.317±.00 0.263±.00
+BiTGraph 0.485±.00 0.507±.00 0.386±.01 0.313±.01 0.404±.01 0.381±.00 0.289±.01 0.194±.01 0.209±.00 0.163±.00 0.311±.01 0.171±.01 0.347±.01 0.288±.01
+CoIFNet 0.445±.00 0.471±.00 0.313±.00 0.231±.00 0.346±.00 0.313±.00 0.249±.00 0.169±.00 0.198±.00 0.156±.00 0.206±.00 0.088±.00 0.293±.00 0.238±.00
+Block, r = 0.1
+Dataset ETTh1 ETTh2 ETTm1 ETTm2 Weather Exchange Rate A VG
+Metric MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE
+BRITS 0.802±.01 1.185±.03 1.076±.10 2.025±.41 0.780±.02 1.067±.03 1.246±.05 2.632±.26 0.426±.01 0.400±.01 1.235±.11 2.202±.36 0.928±.05 1.585±.18
+SAITS 0.847±.00 1.275±.00 1.194±.00 2.484±.01 0.792±.00 1.105±.00 1.352±.01 3.112±.03 0.589±.00 0.613±.00 1.397±.04 2.919±.14 1.029±.01 1.918±.03
+STID 0.462±.00 0.485±.01 0.368±.01 0.310±.01 0.373±.01 0.347±.00 0.310±.00 0.243±.01 0.207±.00 0.162±.00 0.280±.01 0.161±.01 0.334±.01 0.285±.01
+MTGNN 0.497±.00 0.518±.00 0.440±.03 0.415±.05 0.419±.00 0.407±.01 0.336±.01 0.245±.00 0.219±.00 0.171±.00 0.354±.01 0.238±.02 0.378±.01 0.332±.01
+AGCRN 0.648±.01 0.826±.01 0.635±.03 0.876±.07 0.509±.02 0.522±.03 0.430±.05 0.438±.12 0.222±.00 0.174±.00 0.473±.02 0.396±.04 0.486±.02 0.539±.05
+DLinear 0.450±.00 0.478±.00 0.371±.00 0.314±.00 0.381±.00 0.372±.00 0.331±.01 0.278±.01 0.257±.00 0.218±.00 0.285±.01 0.170±.01 0.346±.00 0.305±.00
+PatchTST 0.459±.00 0.486±.00 0.349±.00 0.280±.01 0.378±.00 0.367±.00 0.289±.00 0.220±.00 0.233±.00 0.192±.00 0.250±.02 0.271±.24 0.326±.01 0.303±.04
+iTransformer0.474±.00 0.494±.00 0.411±.00 0.372±.00 0.404±.01 0.386±.02 0.348±.01 0.281±.02 0.242±.00 0.187±.00 0.327±.00 0.228±.01 0.368±.00 0.325±.01
+GPT4TS 0.451±.00 0.482±.00 0.368±.00 0.314±.01 0.372±.00 0.361±.00 0.297±.01 0.234±.01 0.231±.00 0.192±.00 0.252±.00 0.136±.01 0.329±.00 0.286±.00
+BiTGraph 0.498±.01 0.520±.01 0.414±.04 0.359±.05 0.413±.01 0.394±.00 0.312±.01 0.217±.01 0.215±.00 0.167±.00 0.323±.01 0.199±.01 0.362±.01 0.309±.02
+CoIFNet 0.452±.00 0.480±.00 0.315±.00 0.235±.00 0.353±.00 0.323±.00 0.252±.00 0.173±.00 0.200±.00 0.158±.00 0.209±.00 0.089±.00 0.297±.00 0.243±.00
+
+
+--- PAGE 13 ---
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2015 13
+real-world datasets demonstrate the effectiveness and com-
+putational efficiency of our proposed approach. We hope the
+proposed CoIFNet framework and its theoretical justifica-
+tions could inspire future research in related fields. Our code
+is available at: https://github.com/KaiTang-eng/CoIFNet.
+REFERENCES
+[1] I. Price, A. Sanchez-Gonzalez, F. Alet, T. R. Andersson, A. El-Kadi,
+D. Masters, T. Ewalds, J. Stott, S. Mohamed, P . Battaglia et al. ,
+“Probabilistic weather forecasting with machine learning,” Nature,
+vol. 637, no. 8044, pp. 84–90, 2025.
+[2] J. Zhang, F.-Y. Wang, K. Wang, W.-H. Lin, X. Xu, and C. Chen,
+“Data-driven intelligent transportation systems: A survey,” IEEE
+Transactions on Intelligent Transportation Systems, vol. 12, no. 4, pp.
+1624–1639, 2011.
+[3] Y. Zhou, Z. Ding, Q. Wen, and Y. Wang, “Robust load forecasting
+towards adversarial attacks via bayesian learning,” IEEE Transac-
+tions on Power Systems, vol. 38, no. 2, pp. 1445–1459, 2023.
+[4] K. Zhang, Q. Wen, C. Zhang, R. Cai, M. Jin, Y. Liu, J. Y. Zhang,
+Y. Liang, G. Pang, D. Song, and S. Pan, “Self-supervised learning
+for time series analysis: Taxonomy, progress, and prospects,”IEEE
+Transactions on Pattern Analysis and Machine Intelligence , vol. 46,
+no. 10, pp. 6775–6794, 2024.
+[5] Y. Liu, T. Hu, H. Zhang, H. Wu, S. Wang, L. Ma, and M. Long,
+“itransformer: Inverted transformers are effective for time series
+forecasting,” in Proceedings of the International Conference on Learn-
+ing Representations, 2024.
+[6] Y. Li and D. C. Anastasiu, “Mc-ann: A mixture clustering-based
+attention neural network for time series forecasting,” IEEE Trans-
+actions on Pattern Analysis and Machine Intelligence , 2025.
+[7] J. Wang, W. Du, Y. Yang, L. Qian, W. Cao, K. Zhang, W. Wang,
+Y. Liang, and Q. Wen, “Deep learning for multivariate time series
+imputation: A survey,” in Proceedings of the International Joint
+Conference on Artificial Intelligence, 2025.
+[8] X. Chen and L. Sun, “Bayesian temporal factorization for mul-
+tidimensional time series prediction,” IEEE Transactions on Pattern
+Analysis and Machine Intelligence, vol. 44, no. 9, pp. 4659–4673, 2021.
+[9] C. Xu and Y. Xie, “Conformal prediction for time series,” IEEE
+Transactions on Pattern Analysis and Machine Intelligence , vol. 45,
+no. 10, pp. 11 575–11 587, 2023.
+[10] J. Zhang, L. Gao, X. Luo, H. Shen, and J. Song, “Deta: De-
+noised task adaptation for few-shot learning,” in Proceedings of
+the IEEE/CVF international conference on computer vision , 2023, pp.
+11 541–11 551.
+[11] Y. Li, R. Yu, C. Shahabi, and Y. Liu, “Diffusion convolutional
+recurrent neural network: Data-driven traffic forecasting,” in Pro-
+ceedings of the International Conference on Learning Representations ,
+2018.
+[12] B. Yu, H. Yin, and Z. Zhu, “Spatio-temporal graph convolutional
+networks: a deep learning framework for traffic forecasting,” in
+Proceedings of the 27th International Joint Conference on Artificial
+Intelligence, 2018, p. 3634–3640.
+[13] Y. Tashiro, J. Song, Y. Song, and S. Ermon, “CSDI: Conditional
+score-based diffusion models for probabilistic time series imputa-
+tion,” in Proceedings of the Advances in Neural Information Processing
+Systems, 2021.
+[14] W. Cao, D. Wang, J. Li, H. Zhou, L. Li, and Y. Li, “Brits: Bidirec-
+tional recurrent imputation for time series,” in Proceedings of the
+Advances in Neural Information Processing Systems , vol. 31, 2018.
+[15] Y. Luo, X. Cai, Y. Zhang, J. Xu et al. , “Multivariate time series
+imputation with generative adversarial networks,” in Proceedings
+of the Advances in Neural Information Processing Systems , vol. 31,
+2018.
+[16] X. Chen, X. Li, B. Liu, and Z. Li, “Biased temporal convolution
+graph network for time series forecasting with missing values,”
+in Proceedings of the International Conference on Learning Representa-
+tions, 2024.
+[17] C. E. Shannon, “A mathematical theory of communication,” The
+Bell system technical journal, vol. 27, no. 3, pp. 379–423, 1948.
+[18] B. K. Nelson, “Time series analysis using autoregressive integrated
+moving average (arima) models,” Academic Emergency Medicine ,
+vol. 5, no. 7, pp. 739–744, 1998.
+[19] F. A. A. Bashir and H.-L. Wei, “Handling missing data in multi-
+variate time series using a vector autoregressive model-imputation
+(var-im) algorithm,” Neurocomputing, vol. 276, pp. 23–30, 2018.
+[20] B. N. Oreshkin, D. Carpov, N. Chapados, and Y. Bengio, “N-
+BEATS: Neural basis expansion analysis for interpretable time
+series forecasting,” in Proceedings of the International Conference on
+Learning Representations, 2020.
+[21] Z. Wu, S. Pan, G. Long, J. Jiang, and C. Zhang, “Graph wavenet
+for deep spatial-temporal graph modeling,” in Proceedings of the
+28th International Joint Conference on Artificial Intelligence , 2019, p.
+1907–1913.
+[22] L. Bai, L. Yao, C. Li, X. Wang, and C. Wang, “Adaptive graph con-
+volutional recurrent network for traffic forecasting,” in Proceedings
+of the Advances in Neural Information Processing Systems , vol. 33,
+2020, pp. 17 804–17 815.
+[23] Z. Wu, S. Pan, G. Long, J. Jiang, X. Chang, and C. Zhang, “Connect-
+ing the dots: Multivariate time series forecasting with graph neural
+networks,” in Proceedings of the 26th ACM SIGKDD International
+Conference on Knowledge Discovery & Data Mining , 2020, pp. 753–
+763.
+[24] A. Zeng, M. Chen, L. Zhang, and Q. Xu, “Are transformers
+effective for time series forecasting?” in Proceedings of the AAAI
+Conference on Artificial Intelligence , vol. 37, no. 9, 2023, pp. 11 121–
+11 128.
+[25] Z. Shao, Z. Zhang, F. Wang, W. Wei, and Y. Xu, “Spatial-temporal
+identity: A simple yet effective baseline for multivariate time series
+forecasting,” in Proceedings of the 31st ACM International Conference
+on Information & Knowledge Management, 2022, pp. 4454–4458.
+[26] H. Zhou, S. Zhang, J. Peng, S. Zhang, J. Li, H. Xiong, and
+W. Zhang, “Informer: Beyond efficient transformer for long se-
+quence time-series forecasting,” in Proceedings of the AAAI Confer-
+ence on Artificial Intelligence, vol. 35, no. 12, 2021, pp. 11 106–11 115.
+[27] H. Wu, J. Xu, J. Wang, and M. Long, “Autoformer: Decomposition
+transformers with auto-correlation for long-term series forecast-
+ing,” in Proceedings of the Advances in Neural Information Processing
+Systems, vol. 34, 2021, pp. 22 419–22 430.
+[28] Y. Nie, N. H. Nguyen, P . Sinthong, and J. Kalagnanam, “A time se-
+ries is worth 64 words: Long-term forecasting with transformers,”
+in Proceedings of the International Conference on Learning Representa-
+tions, 2023.
+[29] T. Zhou, P . Niu, L. Sun, R. Jin et al., “One fits all: Power general
+time series analysis by pretrained lm,” in Proceedings of the Ad-
+vances in Neural Information Processing Systems , vol. 36, 2023, pp.
+43 322–43 355.
+[30] Q. Ma, Z. Liu, Z. Zheng, Z. Huang, S. Zhu, Z. Yu, and J. T. Kwok,
+“A survey on time-series pre-trained models,” IEEE Transactions
+on Knowledge and Data Engineering, 2024.
+[31] M. Jin, S. Wang, L. Ma, Z. Chu, J. Y. Zhang, X. Shi, P .-Y. Chen,
+Y. Liang, Y.-F. Li, S. Pan et al., “Time-llm: Time series forecasting
+by reprogramming large language models,” in Proceedings of the
+International Conference on Learning Representations, 2024.
+[32] M. Liu, H. Huang, H. Feng, L. Sun, B. Du, and Y. Fu, “Pristi: A
+conditional diffusion framework for spatiotemporal imputation,”
+in Proceedings of the 39th IEEE International Conference on Data
+Engineering, 2023, pp. 1927–1939.
+[33] W. Du, D. C ˆot´e, and Y. Liu, “Saits: Self-attention-based imputation
+for time series,” Expert Systems with Applications , vol. 219, p.
+119619, 2023.
+[34] Z. Che, S. Purushotham, K. Cho, D. Sontag, and Y. Liu, “Recurrent
+neural networks for multivariate time series with missing values,”
+Scientific Reports, vol. 8, no. 1, p. 6085, 2018.
+[35] Y. Rubanova, R. T. Chen, and D. K. Duvenaud, “Latent ordinary
+differential equations for irregularly-sampled time series,” in Pro-
+ceedings of the Advances in Neural Information Processing Systems ,
+vol. 32, 2019.
+[36] M. Schirmer, M. Eltayeb, S. Lessmann, and M. Rudolph, “Mod-
+eling irregular time series with continuous recurrent units,” in
+Proceedings of the International Conference on Machine Learning, 2022,
+pp. 19 388–19 405.
+[37] Z. Wang, L. Yang, L. Sun, Q. Wen, and Y. Wang, “Task-oriented
+time series imputation evaluation via generalized representers,” in
+Proceedings of the Advances in Neural Information Processing Systems,
+2024.
+[38] J. Peng, M. Yang, Q. Zhang, and X. Li, “S4m: S4 for multivariate
+time series forecasting with missing values,” in Proceedings of the
+International Conference on Learning Representations, 2025.
+[39] C. Yu, F. Wang, Z. Shao, T. Qian, Z. Zhang, W. Wei, Z. An,
+Q. Wang, and Y. Xu, “ GinAR+: A Robust End-To-End Framework
+for Multivariate Time Series Forecasting with Missing Values ,”
+
+
+--- PAGE 14 ---
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2015 14
+IEEE Transactions on Knowledge and Data Engineering , no. 1, pp. 1–
+14, 2025.
+[40] K. Liang, Y. Liu, S. Zhou, W. Tu, Y. Wen, X. Yang, X. Dong, and
+X. Liu, “Knowledge graph contrastive learning based on relation-
+symmetrical structure,” IEEE Transactions on Knowledge and Data
+Engineering, vol. 36, no. 1, pp. 226–238, 2023.
+[41] J. Deng, X. Chen, R. Jiang, D. Yin, Y. Yang, X. Song, and I. W.
+Tsang, “Disentangling structured components: Towards adaptive,
+interpretable and scalable time series forecasting,” IEEE Transac-
+tions on Knowledge and Data Engineering , 2024.
+[42] T. Kim, J. Kim, Y. Tae, C. Park, J.-H. Choi, and J. Choo, “Reversible
+instance normalization for accurate time-series forecasting against
+distribution shift,” in Proceedings of the International Conference on
+Learning Representations, 2021.
+[43] C. Wang, Q. Qi, J. Wang, H. Sun, Z. Zhuang, J. Wu, and J. Liao,
+“Rethinking the power of timestamps for robust time series fore-
+casting: A global-local fusion perspective,” in Proceedings of the
+Advances in Neural Information Processing Systems , 2024.
+[44] Entropy, Relative Entropy, and Mutual Information . John Wiley &
+Sons, Ltd, 2005, ch. 2, pp. 13–55.
+[45] M. Van Ness, T. M. Bosschieter, R. Halpin-Gregorio, and M. Udell,
+“The missing indicator method: From low to high dimensions,”
+in Proceedings of the 29th ACM SIGKDD Conference on Knowledge
+Discovery and Data Mining, 2023, p. 5004–5015.
+[46] H. Cheng, Q. Wen, Y. Liu, and L. Sun, “Robusttsf: Towards theory
+and design of robust time series forecasting with anomalies,” in
+Proceedings of the International Conference on Learning Representa-
+tions, 2024, pp. 1–28.

@@ -1,0 +1,1505 @@
+
+
+--- PAGE 1 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Jie Yang1 * Yifan Hu 2 Kexin Zhang 3 Luyang Niu 4 Philip S. Yu1 Kaize Ding 3
+Abstract
+Missing values are common in real-world time
+series, and multivariate time series forecasting
+with missing values (MTSF-M) has become a
+crucial area of research for ensuring reliable pre-
+dictions. To address the challenge of missing data,
+current approaches have developed an imputation-
+then-prediction framework that uses imputation
+modules to fill in missing values, followed by
+forecasting on the imputed data. However, this
+framework overlooks a critical issue: there is
+no ground truth for the missing values, mak-
+ing the imputation process susceptible to errors
+that can degrade prediction accuracy. In this
+paper, we conduct a systematic empirical study
+and reveal that imputation without direct super-
+vision can corrupt the underlying data distribu-
+tion and actively degrade prediction accuracy. To
+address this, we propose a paradigm shift that
+moves away from imputation and directly predicts
+based on the partially observed time series. We
+introduceConsistency-RegularizedInformation
+Bottleneck (CRIB), a novel framework built on
+the Information Bottleneck principle. CRIB com-
+bines a unified-variate attention mechanism with a
+consistency regularization scheme to learn robust
+representations that filter out noise introduced by
+missing values while preserving essential predic-
+tive signals. Comprehensive experiments on sev-
+eral real-world datasets demonstrate the effective-
+ness of CRIB, which predicts accurately even un-
+der high missing rates. Our code is available in
+https://github.com/Muyiiiii/CRIB.
+1. Introduction
+Multivariate time series forecasting (MTSF), which aims to
+predict future values of multiple variates based on histori-
+*Work done during an internship at Northwestern Univer-
+sity. 1University of Illinois Chicago 2Tsinghua University
+3Northwestern University 4Tongji University. Correspondence
+to: Kaize Ding<kaize.ding@northwestern.edu>.
+Preprint. February 3, 2026.
+cal observations, plays an important role in many domains,
+such as traffic flow forecasting (Shang et al., 2022; Yu et al.,
+2017; Bai et al., 2020), financial analysis (Schaffer et al.,
+2021; Zhu et al., 2024; Li et al., 2025; Hu et al., 2025b;a),
+and weather prediction (Zheng et al., 2015; Wu et al., 2021;
+Tan et al., 2022). However, due to uncontrollable factors
+such as data collection difficulties and transmission fail-
+ures (Li et al., 2023; Marisca et al., 2022; Cini et al., 2021;
+Zhang et al., 2025a), real-world multivariate time series data
+is often partially observed, with missing values scattered
+throughout the series. These missing values inevitably in-
+troduce noise, leading to distribution shifts and disrupting
+the variate correlations. MTSF models (Cao et al., 2020;
+Liu et al., 2022; Ekambaram et al., 2023; Hu et al., 2025e),
+which typically rely on complete data, are highly sensitive to
+such shifts and correlation destruction, thus failing to make
+accurate predictions (Zhou et al., 2023; Hu et al., 2025c).
+This has driven increasing interest in multivariate time se-
+ries forecasting with missing values (MTSF-M) (Cao et al.,
+2018; Zuo et al., 2023; Tang et al., 2020), where the objec-
+tive is to generate accurate and robust forecasts despite the
+presence of incomplete data.
+To mitigate the impact of missing values, recent MTSF-M
+research (Yu et al., 2025; Peng et al., 2025) has focused
+on enhancing observed data by imputing missing values to
+improve prediction performance. One common approach is
+the two-stage framework, where an imputation module (Wu
+et al., 2022; Cao et al., 2018; Du et al., 2023) first fills in the
+missing values, and a forecasting model then predicts future
+values based on the imputed data (Peng et al., 2025; Chen
+et al., 2023; Wu et al., 2015). Moreover, to reduce error accu-
+mulation between these two stages of two separate models,
+some studies have proposed an end-to-end framework (Yu
+et al., 2024; 2025) that imputes missing values progressively
+during encoding and performs forecasting using the imputed
+representations. Overall, these methods generally follow
+an imputation-then-prediction paradigm, aiming to improve
+forecasting accuracy by mitigating the negative effects of
+missing values compared to directly applying forecasting
+models to incomplete data.
+However, current MTSF-M methods ignore a critical limita-
+tion in real-world applications:there is no ground truth for
+missing values. In such scenarios, the imputation module of
+the current MTSF-M methods would lack reliable guidance,
+1
+arXiv:2509.23494v3  [cs.LG]  30 Jan 2026
+
+
+--- PAGE 2 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+(a) Distribution (b) Imputation Correlation Map (c) Prediction Correlation Map
+Figure 1.Analysis of the imputation-then-prediction paradigm on PEMS-BAY (40% missing rate).(a)t-SNE visualizations show that
+current imputation modules cannot recover the original data distribution and their forecasts mismatch with the prediction target, while
+our direct-prediction method aligns better with the target.(b, c)Correlation maps reveal that imputation fails to recover true variate
+correlations, whereas our method preserves underlying correlations more effectively. Quantitative analysis is in App. B.
+which means the imputed values and reconstructed correla-
+tions cannot be guaranteed to be accurate with only the final
+prediction guidance. As a result, noise would propagate into
+the prediction stage and degrade forecasting performance,
+particularly when the missing rate is high. To investigate
+this issue, we conduct an empirical analysis of representa-
+tive imputation-then-prediction methods, where original and
+observed data denote the complete and partially observed
+data, respectively. This includes the two-stage framework
+combining TimesNet (Wu et al., 2022) for imputation and
+TimeXer (Wang et al., 2024a) for forecasting, as well as
+the end-to-end framework BiTGraph (Chen et al., 2023).
+Figure 1 illustrates the empirical results, where panel (a)
+visualizes the distributions of imputed and predicted val-
+ues, and panels (b) and (c) present the correlations among
+variates. Our findings highlight two key phenomena:
+❶ Improper imputation can corrupt the observed data.Cur-
+rent MTSF-M frameworks commonly employ imputation
+modules to recover missing values. However, as shown
+in Figure 1 (a-1, b), without enough direct supervision,
+imputed values deviate considerably from the distribution
+of the original complete data, and the underlying corre-
+lations among variates are not correctly reconstructed.
+The deterioration of both the data distribution and variate
+correlations suggests that imputation guided only by the
+prediction objective can degrade the observed data rather
+than effectively repairing the missing values.
+❷ Flawed imputation, in turn, leads to poor prediction
+performance.Errors from the imputation stage inevitably
+propagate into forecasting. As shown in Figure 1 (a-2, c),
+the predictions exhibit large deviations from the prediction
+targets. Notably, even a model TimeXer applied directly
+to incomplete observed data outperforms a more complex
+framework that combines TimesNet for imputation with
+TimeXer for prediction. These findings indicate that a
+flawed imputation stage can actively harm, rather than
+enhance, the forecasting capabilities of a model.
+Based on these two observations, we ask a fundamental
+question:Is it possible to predict directly from partially ob-
+served time series, avoiding the pitfalls of imputation while
+maintaining high accuracy?To answer this, we propose
+Consistency-RegularizedInformationBottleneck (CRIB),
+a novel framework that predicts directly from partially ob-
+served data, bypassing the issues associated with imputation.
+CRIB is built on the Information Bottleneck (IB) principle,
+which enables it to learn a compressed representation that
+filters noise from missing values while preserving essential
+predictive signals. To achieve this, it employs a unified-
+variate attention mechanism to capture complex correlations
+from the sparse input and is trained with a consistency regu-
+larization scheme to enhance robustness, especially under
+high missing rates.
+Our main contributions can be summarized as follows:
+• Empirical analysis: We perform a systematic empirical
+study of dominant imputation-then-prediction paradigms
+for MTSF-M, showing that imputation modules guided
+only by the prediction objective can corrupt the observed
+data distribution and degrade prediction performance.
+• Method: We propose a novel direct-prediction method,
+CRIB, which removes the imputation step completely.
+2
+
+
+--- PAGE 3 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Built on the Information Bottleneck principle, CRIB in-
+tegrates unified-variate attention and consistency regular-
+ization to learn refined representations that balance noise
+filtering and task-relevant information preservation.
+•Experiments: Extensive experiments on four real-world
+benchmarks demonstrate that CRIB significantly outper-
+forms state-of-the-art methods by an average of 18%, par-
+ticularly under high missing rates, highlighting the advan-
+tage of direct prediction over imputation-then-prediction.
+2. Preliminaries
+Notations & Problem FormulationIn MTSF-M tasks,
+the historical time series is denoted as X={x 1:T
+i |i=
+1,· · ·, N} ∈RN×T , where T is the number of time steps
+and N is the number of variates. The goal is to predict the
+future S time steps Y={x T+1:T+S
+i |i= 1,· · ·, N} ∈
+RN×S . Missingness is represented by a binary mask M∈
+{0,1} N×T , where Xo ={X i,j|M i,j = 1} are observed
+values and Xm ={X i,j|M i,j = 0}are missing values. We
+denote Z∈R N×D as the intermediate representations of
+input, whereDis the dimension of the representation.
+Information Bottleneck for MTSF-MIB theory (Tishby
+& Zaslavsky, 2015; V oloshynovskiy et al., 2019; Yang
+et al., 2025) provides an information-theoretic framework
+for learning compact yet informative representations. Given
+the partially observed input Xo and prediction target Y , the
+goal is to learn a latent representation Z that compresses
+Xo while preserving maximal information about Y . This
+trade-off in CRIB is formalized as follows:
+min
+θ
+[Iθ(Z;X o)−β·I θ(Y;Z)].(1)
+Here, θ represents the learnable parameters of our proposed
+CRIB. I(Z;X o) and I(Y;Z) are the mutual information
+terms measuring compactness and informativeness, respec-
+tively. The Lagrange multiplierβ∈R + controls the balance
+between these two terms (Tishby et al., 2000). Furthermore,
+under standard assumptions in the IB literature (Alemi et al.,
+2016; Chalk et al., 2016; Ma et al., 2023), the joint distribu-
+tion of the variables can be factorized as:
+p(Xo, Y, Z) =p(Z|Xo, Y)p(Y|X o)p(X o)
+=p(Z|X o)p(Y|X o)p(X o), (2)
+namely, there is a Markov chain Y↔X o ↔Z , indicating
+that the representations Z is learned only from Xo without
+direct access to the targetY.
+3. Methodology
+As illustrated in Figure 2, our proposed model, CRIB, by-
+passes the problematic imputation stage by performing fore-
+casts directly on the partially observed data. The architec-
+ture is composed of several key stages, each designed to
+address the challenges of learning from partially observed
+data. First, to handle the raw, sparse input, we introduce a
+Patching Embedding layer that employs a Temporal Con-
+volutional Network (TCN) (Bai et al., 2018) to learn robust
+local feature representations from available data points. Sec-
+ond, to capture the complex global correlations that are
+disrupted by missingness, a Unified-Variate Attention mech-
+anism models correlations across all patches simultaneously.
+Third, to ensure the model learns features that are stable
+and invariant to different missingness, especially under high
+missing rates, we introduce a Consistency Regularization
+scheme based on data augmentation. The entire learning
+process is guided by the IB principle, which provides a the-
+oretical foundation for learning a representation that is max-
+imally compressive against noise while being sufficiently
+informative for the forecasting task.
+3.1. Patching Embedding
+To effectively enhance the semantic information that is
+not available in the partially observed, point-level time se-
+ries Xo ∈R N×T , we first transform the input into a se-
+quence of more meaningful patch-level representations (Nie
+et al., 2022). The series is partitioned into non-overlapping
+patches bX={bx 1:T /P
+i |i= 1,· · ·, N} ∈RN×(T /P)×P of
+length P . We choose P such that the total lengthT is evenly
+divisible. Consequently, this patching strategy reduces the
+sequence length from T to T /P, thus remarkably lowering
+the memory and computational cost of attention calculation.
+Next, to enable the following unified-variate attention mech-
+anism to capture the temporal directionality of each variate
+x1:T
+i , we adopt the temporal encoding strategy inspired by
+vanilla transformer (Vaswani, 2017) as follows:
+TE(t, m) =
+(
+sin(t/100002m/P )ifm= 2k,
+cos(t/100002m/P )ifm= 2k+ 1, (3)
+where m represents the m-th dimension of the feature.
+These temporal embeddings are added to the input patches to
+provide temporal information. Each patch, now containing
+a mix of observed values and temporal embeddings, is then
+processed by a TCN. It utilizes its efficient dilated convolu-
+tion structure to transform sparse patches with missing val-
+ues into dense feature representations H∈R N×(T /P)×D
+that capture local temporal correlations.
+3.2. Unified-Variate Attention
+To model the complex, non-local correlations disrupted by
+missing data, we introduce a unified attention mechanism.
+Instead of using separate modules for inter- and intra-variate
+correlations among all the variates, our approach treats all
+patch representations uniformly. We first flatten the patch
+3
+
+
+--- PAGE 4 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Q
+K
+V
+Data 
+Augmentation
+Patching 
+Embedding
+Consistency 
+Regularization
+Prediction
+Patching
+𝑝𝑝1
+𝑝𝑝1
+𝑝𝑝1
+𝑝𝑝2
+𝑝𝑝2
+𝑝𝑝2
+𝑝𝑝3
+𝑝𝑝3
+𝑝𝑝3
+(a) Data Augmentation
+ (b) Patching Embedding
+(c) Unified-Variate Attention (d) Consistency Regularization
+𝑝𝑝𝑗𝑗
+𝑝𝑝𝑘𝑘
+𝑝𝑝𝑖𝑖
+Input
+Input Series 𝑿𝑿𝒐𝒐
+Patch Tokens
+𝑯𝑯 ∈ ℝ𝑁𝑁×𝑇𝑇
+𝑃𝑃×𝐷𝐷
+Output
+Unified-Variate
+Attention
+TCN
+TE
+Flatten with 𝑁𝑁 × 𝑇𝑇
+𝑃𝑃 Tokens
+𝑿𝑿Aug 𝑿𝑿𝒐𝒐
+Window
+Mask
+Gaussian
+Noise
+Attetnion
+𝒁𝒁
+𝒁𝒁 𝒁𝒁Aug
+Flatten
+𝑯𝑯
+Same
+Operation
+𝑯𝑯Aug
+𝑿𝑿Aug
+Augmentation
+Patch Tokens
+𝑿𝑿𝒐𝒐 ∈ ℝ𝑁𝑁×𝑇𝑇
+�𝒀𝒀 ∈ ℝ𝑁𝑁×𝑆𝑆
+Missing Values
+Embedding Distribution
+𝒁𝒁Aug
+𝑯𝑯Aug
+Same
+Operation
+Augmentation
+Representation
+ℒ𝑪𝑪𝒐𝒐𝑪𝑪sis(𝒇𝒇 𝒁𝒁 , 𝒇𝒇(𝒁𝒁Aug))
+Minimize representation 
+divergence
+IB Compactness Principle IB Informativeness Principle𝑿𝑿𝒐𝒐 ∈ ℝ𝑁𝑁×𝑇𝑇
+𝒁𝒁 ∈ ℝ𝑁𝑁×𝑇𝑇
+𝑃𝑃×𝐷𝐷 𝒀𝒀 ∈ ℝ𝑁𝑁×𝑆𝑆
+Figure 2.Overall framework of CRIB.(a)Data Augmentation creates a more challenging view of the partially observed data Xo by
+generating an augmented version XAug.(b)The Patching Embedding layer converts the Xo and XAug into robust patch-level feature
+representations H and HAug.(c)The Unified-Variate Attention mechanism models the global correlations between all the patches within
+H and HAug to produce refined representations Z and ZAug.(d)Consistency Regularization aligns the representations from the original Z
+and the augmented viewsZ Aug. The entire process is guided by the IB principles of compactness and informativeness to predict bY.
+representations H into a sequence bH∈R (N×T /P)×Dwith
+N×T /P tokens. A standard self-attention mechanism is
+then applied to this flattened sequence:
+Z=Attention(Q, K, V) =Softmax(QK ⊤
+√
+D
+)V,(4)
+where Q, K, V∈R(N×T /P)×Dare the linear projections
+of tokens bH, and ⊤ denotes the matrix transpose. This
+allows the model to learn all possible correlations—both
+within a single variate’s timeline (intra-variate) and across
+different variates (inter-variate)—without imposing strong,
+predefined structural biases. Such flexibility is particularly
+advantageous for sparse data, as it permits the model to
+rely on the most informative available signals, regardless of
+their origin. Unlike previous methods (Yi et al., 2024; Wang
+et al., 2024b) that employ strategies to reduce the memory
+and time costs of attention calculations, often at the expense
+of attention mechanism performance, we accelerate atten-
+tion computation by patching time series. This can reduce
+the number of temporal tokens from T to T /P, lowering
+the memory and computational cost of attention calcula-
+tion by a factor of P 2, while enhancing the semantic-level
+information of the data.
+3.3. Final Prediction
+In CRIB, we implement the predictor using a simple Multi-
+Layer Perceptron (MLP) as follows:
+bY=Predictor(Z) =MLP(Z)∈R N×S ,(5)
+where S is the prediction length and MLP(·) denotes a
+simple two-layer fully connected network with a ReLU acti-
+vation function applied between the layers. We deliberately
+employ a simple linear predictor to demonstrate that the fore-
+casting performance of CRIB stems from the high-quality,
+robust representations Z learned by our IB-guided attention
+mechanism, rather than employing a complex and powerful
+predictor (Liu et al., 2023; Zeng et al., 2023).
+3.4. Information Bottleneck Guidance
+To enhance the quality of the learned representations Z and
+improve forecasting accuracy, we propose an IB-based guid-
+ance. This guidance aims to balance compactness (filtering
+out irrelevant information) with informativeness (preserv-
+ing relevant task-specific signals), allowing CRIB to focus
+on the most significant factors for accurate forecasting. In
+this section, we present how the compactness and informa-
+tiveness principles are formulated and implemented in our
+framework. Full derivations are detailed in App. A.
+3.4.1. COMPACTNESSPRINCIPLE
+The compactness principle, which aims to minimize the mu-
+tual information Iθ(Z;X o), forces the learned representa-
+tion Z to be a minimal sufficient statistic of the input. In our
+context, this encourages the model to discard non-essential
+information, which critically includes the noise introduced
+by the arbitrary locations of missing values. Following
+the variational inference (V oloshynovskiy et al., 2019), we
+4
+
+
+--- PAGE 5 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+derive a equivalent form of the compactness term in Eq. 1:
+Iθ(Z;X o) =Ep(xo,z)
+
+log p(xo, z)
+p(z)p(x o)
+
+=E p(xo)[DKL(p(z|x o)∥q(z))]
+−D KL(p(z)∥q(z)).
+(6)
+Because of difficulty in posterior calculation and the non-
+negative property of Kullback-Leibler (KL) divergence, we
+use pθ(z|xo) to approximate the true posterior distribution
+p(z|xo)and bound Eq. 6:
+Iθ(Z;X o)≤E p(xo)DKL [pθ(z|xo)||q(z)]
+def
+=L Comp,
+(7)
+where we set isotropic Gaussian as the prior distribution
+of refined representations Z, i.e., p(Z) =N(0, I). There-
+fore, representations Z are produced through a multivariate
+Gaussian distribution as:
+pθ(Z|X o) =N(µ θ(Xo),diag(δ θ(Xo))),(8)
+where µθ(·) and σθ(·) are designed as neural networks with
+parameter θ. For training, we use the standard reparameter-
+ization trick (Kingma, 2013), Z=µ θ(Xo) +σθ(Xo)⊙ϵ ,
+which makes the objective in Eq. 7 differentiable without
+the need for stochastic estimation as follows:
+LComp = 1
+2
+DX
+j=1
+
+1 + log
+ 
+σ(j)
+θ (Xo)
+2
+−
+ 
+µ(j)
+θ (Xo)
+2
+−
+ 
+σ(j)
+θ (Xo)
+2
+.
+(9)
+Here, µ(j)
+θ (Xo) and σ(j)
+θ (Xo) denote the j-th element of the
+mean and standard deviation vectors.
+3.4.2. INFORMATIVENESSPRINCIPLE
+To balance the compactness objective, the informativeness
+principle ensures that the representation Z preserves suf-
+ficient information for the forecasting task. To derive a
+tractable lower bound for the informativeness term, we fol-
+low the framework in (V oloshynovskiy et al., 1912) and
+Eq. 2, and assume that prediction errors follow a Gaus-
+sian distribution with fixed variance σ2, i.e., qθ(y|z) =
+N(by, σ2I) (Choi & Lee, 2023). The derivation proceeds as:
+Iθ(Y;Z) =E p(z,y)
+
+log qθ(y|z)
+p(y)
+
++E p(z,y)
+
+log p(y|z)
+qθ(y|z)
+
+≥E p(z,y) [logq θ(y|z)]
+=−E p(z,y)
+ 1
+2σ2 ∥y−by∥2 + T
+2 log(2πσ 2)
+
+∝ −Ep(z,y)
+
+∥y−by∥2 def
+=−L Pred.
+(10)
+thus encouraging the model to extract task-relevant informa-
+tion from intermediate representations.
+3.5. Consistency Regularization
+While the IB framework encourages learning a compact
+representation, high missing rates can still lead to unstable
+training as shown in App. E.2, where the model overfits to
+the specific variate in a given time window (Choi & Lee,
+2023). To mitigate this and enhance robustness, we intro-
+duce a consistency regularization scheme (Bachman et al.,
+2014; Laine & Aila, 2016). The core intuition is that the
+model’s prediction should be invariant to the missingness.
+We achieve this by creating an augmented, more challenging
+view of the input, e.g, introducing additional noise to par-
+tially observed data. By enforcing that the representations
+learned from the observed and augmented views remain
+consistent, we regularize the model to handle missing val-
+ues while stabilizing the refined representations instead of
+focusing excessively on a limited subset of observed data
+and neglecting crucial task-relevant variate correlations.
+Data AugmentationSpecifically, we generate XAug ∈
+RN×T by applying two augmentations (Wen et al., 2020):
+(1) Random Masking, where we randomly select an ad-
+ditional 10% of the observed time points and set them to
+zero to simulate a more severe missingness scenario; and
+(2) Gaussian Noise, where we add noise ϵ∈ N(0, I)to
+all observed points to simulate sensor noise, enhancing the
+model’s robustness to minor fluctuations in the input..
+Consistency RegularizationThen, through the same for-
+ward process as Xo, we can get their refined representations
+ZAug. The refined representations of observed and aug-
+mented data are regularized via the following consistency
+regularization loss function:
+LConsis = 1
+N×T /P
+N×T /PX
+i=1
+||zi −z Aug
+i ||2,(11)
+where N×T /P is the number of the flattened tokens. By
+aligning the representations of the observed and augmented
+data, the model is encouraged to learn stable representations,
+thus enhancing robustness in scenarios with high missing
+rates. Furthermore, this consistency regularization can be
+seamlessly integrated into the overall optimization objective,
+complementing the IB theory to ensure that the refined rep-
+resentations retain essential task-relevant information while
+filtering out irrelevant noise from the missing values.
+3.6. Model Learning
+We have proposed a consistency-regularized method CRIB,
+which can complete MTSF-M tasks based on the IB theory.
+Overall, we optimize our model based on the following
+objective by combining all the introduced loss functions:
+min
+θ
+[α·(L θ
+Comp +β· Lθ
+Pred) +γ· LConsis],(12)
+5
+
+
+--- PAGE 6 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Table 1.Performance comparison on four datasets with a point missing pattern (average MAE and MSE across 20% to 70% missing rate).
+Best isBoldand second-best is Underlined .
+Data MetricBiTGraphBRITSGRINSAITSSPIN SegRNN WPMixer iTransformerPatchTST DLinear TimeXer PAttn OursIMP
+OriginalOriginalOriginalOriginalOriginalOriginalImputedOriginalImputedOriginalImputedOriginalImputedOriginalImputedOriginalImputedOriginalImputedOriginal
+PEMS-BAYMAE0.413 0.3660.350OOM0.4020.120 0.1780.155 0.2010.1070.1250.129 0.1390.156 0.1480.125 0.1350.110 0.1480.09313%
+MSE0.788 0.7050.623OOM0.6490.067 0.2030.082 0.1400.055 0.0720.060 0.0860.087 0.0810.0510.0730.061 0.0910.04315%
+Metr-LAMAE0.445 0.3660.3890.4510.6250.318 0.3140.356 0.3420.2730.2900.313 0.3060.399 0.3660.321 0.2980.302 0.2940.2624%
+MSE0.760 0.6110.6530.7210.9650.345 0.3600.356 0.3850.317 0.3300.320 0.3490.373 0.3620.3130.3330.337 0.3450.3014%
+ETTh1 MAE0.337 0.3570.3560.3720.4370.356 0.4250.340 0.3990.342 0.4190.324 0.3860.402 0.5980.3140.3470.341 0.4320.25618%
+MSE0.387 0.4210.4000.4570.4680.479 0.4770.432 0.4170.408 0.4730.385 0.4350.560 0.6820.377 0.3700.416 0.4700.26927%
+ElectricityMAE0.036 0.0350.0340.0530.1360.078 0.2550.049 0.2180.034 0.1300.036 0.1050.074 0.2100.0290.0830.042 0.1520.02610%
+MSE0.113 0.0590.0610.2660.3581.010 1.2860.172 0.2860.0540.5470.092 0.3790.404 2.0000.064 0.1000.115 0.8640.04418%
+Table 2.Performance comparison on six additional datasets with a
+point missing pattern (average MAE and MSE across 20% to 70%
+missing rate). Best isBoldand second-best is Underlined .
+Data MetricSegRNNWPMixeriTransformerPatchTSTDLinearPAttnCSDINeuralCDEImputeFormerTimesNetOurs
+ETTh2MAE0.1630.1710.2250.1820.2250.2110.5190.3200.1520.1820.141MSE0.0610.0660.1240.0900.1170.1060.6840.1880.0540.0760.048
+ETTm1MAE0.3390.3810.3980.3770.5050.3890.6580.4980.4000.3610.313MSE0.5260.6370.6710.6060.9670.6381.2840.8530.6010.5650.453
+ETTm2MAE0.1300.1530.2060.1820.2170.1900.5270.2340.1230.1700.116MSE0.0410.0540.1130.0920.1070.0980.6810.1100.0370.0650.034
+WeatherMAE0.0590.0870.1180.1210.1710.1180.3810.1310.0590.1110.055MSE0.0520.0520.1400.1200.1550.1140.8820.1330.0520.0810.048
+ExchangeMAE0.0880.1080.1870.1250.2160.0910.6260.4010.0560.1150.034MSE0.0250.0310.0820.0650.1240.0521.1090.3370.0070.0360.003
+BeijingAirMAE0.3580.3710.3820.3680.4050.3810.5430.4410.3660.3760.348MSE0.5320.5870.5980.5680.6190.5921.0180.6910.5640.5850.533
+where α, β, γ∈R are the preset balancing coefficients.
+This entire guidance helps CRIB extract the most important
+task-relevant information from the partially observed data
+while filtering out noise introduced by missing values.
+4. Experiment
+4.1. Experiment Settings
+Datasets.We evaluate our model on 11 MTSF datasets:
+PEMS-BAY , Metr-LA (Li et al., 2017), ETTh1, ETTh2,
+ETTm1, ETTm2 (Zhou et al., 2021), Weather (Miao et al.,
+2024), BeijingAir, Exchange (Lai et al., 2018), Electric-
+ity (Wu et al., 2021), and AQI (Yi et al., 2016). More
+information about these datasets is summarized in App. C.
+Baselines.We evaluate 16 representative baselines: (1)
+MTSF-M methods: BRITS (Cao et al., 2018), SAITS (Du
+et al., 2023), SPIN (Marisca et al., 2022), GRIN (Cini et al.,
+2021), and BiTGraph (Chen et al., 2023). (2) Imputation
+methods: CSDI (Tashiro et al., 2021), NeuralCDE (Kidger
+et al., 2020), ImputeFormer (Nie et al., 2024), and Times-
+Net (Wu et al., 2022). (3) Transformer-based MTSF meth-
+ods: iTransformer (Liu et al., 2023), PatchTST (Nie et al.,
+2022), and PAttn (Tan et al., 2024). (4) MLP- and RNN-
+based MTSF methods: DLinear (Zeng et al., 2023), WP-
+Mixer (Murad et al., 2025), TimeXer (Wang et al., 2024a),
+and SegRNN (Lin et al., 2023).
+Implementation Details.Several forecasting baselines
+are not originally designed for MTSF-M settings. We there-
+fore construct two-stage variants by combining them with
+SOTA imputation modelTimesNet(Wu et al., 2022), which
+which imputes missing values before forecasting. To sim-
+ulate a practical scenario where ground truth for missing
+values is unavailable during inference, TimesNet is trained
+with a 10% missing rate and then used to impute datasets
+with 20%, 40%, 60%, and 70% missing rates. The original
+models and the variants are denoted asOriginalandIm-
+puted, respectively. More details are provided in App. D.1.
+Training.We evaluate forecasting performance using Mean
+Squared Error (MSE) and Mean Absolute Error (MAE). Our
+training cost is in App. D.3.
+4.2. Main Results
+The average performance comparisons are reported in
+Tabs. 1 and 2, with full results and additional missing-
+pattern evaluations provided in App. H and Figure 3. We
+denote out-of-memory and improvement as OOM and IMP,
+respectively. Based on these results, we summarize our
+observations (Obs.) as follows:
+Obs. ❶: CRIB demonstrates superior performance im-
+provement in MTSF-M tasks.Overall, CRIB consistently
+improves forecasting accuracy over strong baselines across
+diverse datasets and missing-value settings. Specifically,
+CRIB reduces the MAE by over 18% on ETTh1 and over
+13% on PEMS-BAY compared to the strongest baseline. We
+attribute this improvement to our model’s design, which
+integrates patch embedding, unified-variate attention, and
+consistency regularization under the IB principle, thus en-
+abling CRIB to effectively filter noise from incomplete data
+while preserving essential predictive signals.
+Obs. ❷: Modern MTSF models have surpassed spe-
+cialized models, and applying imputation to them is of-
+ten detrimental.Our experiments show that recent MTSF
+models (e.g., PatchTST), when applied directly to partially
+observed data, consistently outperform methods designed
+6
+
+
+--- PAGE 7 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Figure 3.Average MAE on PEMS-BAY and ETTh1 with point, block, and column missing patterns.
+specifically for missing values (e.g., BiTGraph). Moreover,
+we find that applying an explicit imputation step to these
+modern models is often harmful; their performance on par-
+tially observed data is frequently superior to that of their
+two-stage variants, which use a pre-trained imputer (e.g.,
+TimesNet). For example, PatchTST has an average 0.324
+MAE while its variant has a worse average 0.386 MAE on
+the ETTh1 dataset. These phenomena suggest that imputa-
+tion without direct ground-truth supervision can introduce
+erroneous values. This, in turn, distorts the underlying data
+distribution and corrupts variate correlations, ultimately de-
+grading forecasting performance.
+4.3. Natural Missingness Evaluation
+Table 3.Performance comparison on AQI datasets (Original vs.
+Imputed). The best results are highlighted inBold, and the second-
+best is highlighted in Underline.
+Data MetricSegRNNWPMixeriTransformerPatchTSTDLinearPAttnCSDINeuralCDEImputeFormerTimesNetOurs
+AQIORIMAE0.6040.6240.6080.6270.5980.6210.8580.7980.7950.6480.555MSE0.8040.8430.8180.8440.7410.8431.4481.4381.3130.9250.663
+AQIIMPMAE0.6500.6650.6680.6660.6530.6630.9410.9460.8570.7330.616MSE0.9660.9861.0120.9930.8930.9951.7751.9281.5431.2060.844
+Obs. ❸: Imputation-based strategies consistently un-
+derperform direct prediction on naturally missing data.
+As shown in Tab. 3, models trained on the fully imputed
+dataset (AQI IMP) yield higher error rates on observed en-
+tries compared to the original sparse data (AQI ORI). We
+attribute this degradation to distributional perturbations in-
+troduced by unsupervised imputation. Lacking ground truth,
+the imputer generates synthetic artifacts that deviate from
+real dynamics. Consequently, the downstream model is
+forced to fit these erratic perturbations, which distorts fea-
+ture representation and impairs its ability to capture authen-
+tic dependencies in valid observations. More implementa-
+tion details are in App. D.2.
+4.4. Ablation and Sensitivity Study
+We further conduct ablation and parameter sensitivity stud-
+ies on the PEMS-BAY , ETTh1, Electricity and Metr-LA
+datasets under four missing rates to examine the contribu-
+tion and robustness of each component in CRIB. In the
+Ablation Study(Figure 4 (a) and App. F), we design three
+ablation experiments with configurations as follows: (1)w/o
+Uni-Atten: we replace the unified-variate attention mecha-
+nism with the vanilla attention mechanism. (2)w/o Consis:
+we remove the consistency regularization. (3)w/o IB: we
+remove the compactness and informativeness guidance of
+IB. We get observations as follows:
+Obs. ❹: Capturing variate correlations and ensuring
+consistency are critical for direct forecasting.Removing
+either the unified-variate attention mechanism or the consis-
+tency regularization leads to clear performance degradation
+across all missing settings. This indicates that explicitly
+modeling inter-variate correlations and enforcing represen-
+tation consistency are both essential for accurate forecasting
+under missingness. Moreover, as shown in Tab. 4, consis-
+tency regularization plays an important role in stabilizing
+training and reducing prediction variance, as reflected by the
+increased error and instability observed when it is removed.
+Obs. ❺: The Information Bottleneck principle is the
+model’s foundational component.Among all ablation
+variants, eliminating the IB guidance results in the most
+severe performance drop. Compared with other compo-
+nents, the IB principle has a more fundamental impact on
+model behavior, as it directly governs the balance between
+filtering irrelevant noise and preserving predictive informa-
+tion from incomplete inputs. The sharp degradation of the
+w/o IB variant, contrasted with the relatively stable perfor-
+mance of other ablations, confirms that IB serves as the core
+mechanism that enables CRIB to learn robust and compact
+representations under missing values.
+We additionally conduct theSensitivity Study(Figure 4 (b)
+and App. G) of key hyperparameters, we vary the weights
+assigned to theEmbedding Size,IB weight: α, andConsis
+Weight:γto study how each impacts model performance.
+Obs. ❻: CRIB is robust to hyperparameter variations,
+though over-regularization can be detrimental under
+high missing rates.As shown in Figure 4 (b), a larger em-
+bedding size generally correlates with better performance.
+However, the model remains effective even with a small
+embedding size (e.g., 32), demonstrating its efficiency in
+terms of computational and memory costs. For the IB and
+consistency regularization weights, we observe a trade-off.
+At low missing rates, higher weight values can improve ac-
+7
+
+
+--- PAGE 8 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+(a)Ablation Experiment Results
+/uni00000028/uni00000050/uni00000045/uni00000048/uni00000047/uni00000047/uni0000004c/uni00000051/uni0000004a/uni00000003/uni00000036/uni0000004c/uni0000005d/uni00000048
+/uni00000014/uni00000019/uni00000016/uni00000015/uni00000019/uni00000017/uni0000001c/uni00000019
+/uni00000030/uni0000004c/uni00000056/uni00000056/uni0000004c/uni00000051/uni0000004a/uni00000003/uni00000035/uni00000044/uni00000057/uni00000048
+/uni00000013/uni00000011/uni00000015
+/uni00000013/uni00000011/uni00000017
+/uni00000013/uni00000011/uni00000019/uni00000013/uni00000011/uni0000001a
+/uni00000013/uni00000011/uni00000013/uni0000001a/uni00000015
+/uni00000013/uni00000011/uni00000013/uni0000001b/uni00000017
+/uni00000013/uni00000011/uni00000013/uni0000001c/uni00000019
+/uni00000013/uni00000011/uni00000014/uni00000013/uni0000001b
+/uni00000013/uni00000011/uni00000014/uni00000015/uni00000013
+/uni00000013/uni00000011/uni00000014/uni00000016/uni00000015
+/uni00000013/uni00000011/uni00000014/uni00000017/uni00000017
+/uni0000002c/uni00000025/uni00000003/uni0000003a/uni00000048/uni0000004c/uni0000004a/uni0000004b/uni00000057
+/uni00000013/uni00000011/uni00000014/uni00000014/uni00000014/uni00000013/uni00000016/uni00000015/uni00000014/uni00000013/uni00000013
+/uni00000030/uni0000004c/uni00000056/uni00000056/uni0000004c/uni00000051/uni0000004a/uni00000003/uni00000035/uni00000044/uni00000057/uni00000048
+/uni00000013/uni00000011/uni00000015
+/uni00000013/uni00000011/uni00000017
+/uni00000013/uni00000011/uni00000019/uni00000013/uni00000011/uni0000001a
+/uni00000013/uni00000011/uni00000013/uni0000001b/uni00000013
+/uni00000013/uni00000011/uni00000013/uni0000001b/uni0000001b
+/uni00000013/uni00000011/uni00000013/uni0000001c/uni00000019
+/uni00000013/uni00000011/uni00000014/uni00000013/uni00000017
+/uni00000013/uni00000011/uni00000014/uni00000014/uni00000015
+/uni00000013/uni00000011/uni00000014/uni00000015/uni00000013
+/uni00000013/uni00000011/uni00000014/uni00000015/uni0000001b
+/uni00000026/uni00000052/uni00000051/uni00000056/uni0000004c/uni00000056/uni00000003/uni0000003a/uni00000048/uni0000004c/uni0000004a/uni0000004b/uni00000057
+/uni00000013/uni00000011/uni00000014/uni00000014/uni00000014/uni00000013/uni00000016/uni00000015/uni00000014/uni00000013/uni00000013
+/uni00000030/uni0000004c/uni00000056/uni00000056/uni0000004c/uni00000051/uni0000004a/uni00000003/uni00000035/uni00000044/uni00000057/uni00000048
+/uni00000013/uni00000011/uni00000015
+/uni00000013/uni00000011/uni00000017
+/uni00000013/uni00000011/uni00000019/uni00000013/uni00000011/uni0000001a
+/uni00000013/uni00000011/uni00000013/uni0000001c
+/uni00000013/uni00000011/uni00000014/uni00000013
+/uni00000013/uni00000011/uni00000014/uni00000014
+/uni00000013/uni00000011/uni00000014/uni00000015
+/uni00000013/uni00000011/uni00000014/uni00000016
+/uni00000013/uni00000011/uni00000014/uni00000017
+/uni00000013/uni00000011/uni00000014/uni00000018 (b)Sensitivity Study Results
+Figure 4.Ablation and Sensitivity experiment results on PEMS-BAY dataset of CRIB.
+Table 4.Ablation study of consistency regularization under different missing rates on ETTh1.
+Method Missing 20% Missing 40% Missing 60% Missing 70%
+MAE MSE MAE MSE MAE MSE MAE MSE
+w/o Consis 0.235±0.0022 0.264±0.0001 0.283±0.0011 0.276±0.0003 0.339±0.0021 0.405±0.0003 0.448±0.0020 0.574±0.0010
+CRIB 0.220±0.0001 0.171±0.0001 0.251±0.0001 0.249±0.0001 0.267±0.0001 0.296±0.0001 0.288±0.0001 0.361±0.0008
+curacy. However, as the missing rate increases, excessively
+high weights tend to over-regularize the model, which can
+hinder its ability to capture complex variate correlations and
+thus degrade the final forecasting performance.
+5. Related Work
+Multivariate Time Series Forecasting with Missing Val-
+uesExisting MTSF methods (Liu et al., 2023; Wang et al.,
+2024a; Hu et al., 2025d), which typically assume complete
+data, suffer significant performance degradation when ap-
+plied to partially observed datasets. To address this issue,
+research on MTSF-M has emerged, focusing mainly on two
+directions: two-stage frameworks and end-to-end models.
+Two-stage methods combine imputation models (Cao et al.,
+2018; Cini et al., 2021; Marisca et al., 2022) with forecast-
+ing models (Liu et al., 2023; Wu et al., 2021; Tashiro et al.,
+2021). However, this decoupled design often leads to er-
+ror propagation across stages (Chen et al., 2023), reducing
+overall forecasting accuracy. End-to-end approaches, on
+the other hand, aim to jointly impute missing values and
+perform forecasting by interleaving spatial and temporal
+modules (Yu et al., 2024). Despite their promise, these meth-
+ods face a key limitation: the lack of ground truth for the
+missing values. As a result, the imputation process becomes
+noisy, which negatively impacts prediction performance. To
+address these limitations, we propose a direct prediction
+method CRIB, which integrates an IB-based Consistency
+Regularization to effectively identify relevant signals while
+filtering out redundant or noisy information, leading to more
+accurate forecasts.
+Information Bottleneck for Time SeriesThe IB prin-
+ciple provides a theoretical framework for learning com-
+pact representations that retain maximal task-relevant in-
+formation while discarding irrelevant variability (Tishby
+et al., 2000). In the context of time series modeling, IB
+is commonly implemented via Variational Autoencoders
+(V AEs) (Kingma, 2013; V oloshynovskiy et al., 2019). Ex-
+isting methods like GP-V AE (Fortuin et al., 2020), MTS-
+IB (Ullmann et al., 2023), and RIB (Xu & Fekri, 2018) use
+the IB framework to model temporal dynamics. However,
+these approaches face a key limitation: a direct application
+of the IB principle can cause the model to concentrate too
+narrowly on observed features (Choi & Lee, 2023; Zhang
+et al., 2025b), thereby neglecting the broader variate cor-
+relations crucial for forecasting from incomplete data. In
+contrast to these works, our proposed CRIB applies the
+IB principle with a unified-attention mechanism and a con-
+sistency regularization. This design enables the model to
+leverage the regularization benefits of IB while avoiding
+excessive information collapse, resulting in representations
+that are both compact and robust to sparsity in the inputs.
+6. Conclusion
+In this paper, we analyze the dominant ‘imputation-then-
+prediction’ paradigm for MTSF-M tasks. Our empirical
+analysis reveals a fundamental flaw in this framework: with-
+out direct supervision, imputation can corrupt data distri-
+bution and degrade, rather than improve, final forecasting
+accuracy. To address this, we propose a direct prediction
+paradigm and introduce CRIB, a novel framework designed
+to learn directly from incomplete data. By leveraging the IB
+principle with unified-variate attention and consistency reg-
+ularization, CRIB effectively filters noise while capturing
+robust predictive signals from partial observations. Exten-
+sive experiments validate our method, showing that CRIB
+achieves a significant 18% improvement and confirms the
+superiority of direct prediction.
+8
+
+
+--- PAGE 9 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Impact Statement
+This paper presents work whose goal is to advance the field
+of Machine Learning. There are many potential societal
+consequences of our work, none of which we feel must be
+specifically highlighted here.
+References
+Alemi, A. A., Fischer, I., Dillon, J. V ., and Murphy, K.
+Deep variational information bottleneck.arXiv preprint
+arXiv:1612.00410, 2016.
+Bachman, P., Alsharif, O., and Precup, D. Learning with
+pseudo-ensembles.Advances in neural information pro-
+cessing systems, 27, 2014.
+Bai, L., Yao, L., Li, C., Wang, X., and Wang, C. Adaptive
+graph convolutional recurrent network for traffic forecast-
+ing.Advances in neural information processing systems,
+33:17804–17815, 2020.
+Bai, S., Kolter, J. Z., and Koltun, V . An empirical evalua-
+tion of generic convolutional and recurrent networks for
+sequence modeling.arXiv preprint arXiv:1803.01271,
+2018.
+Cao, D., Wang, Y ., Duan, J., Zhang, C., Zhu, X., Huang,
+C., Tong, Y ., Xu, B., Bai, J., Tong, J., et al. Spectral tem-
+poral graph neural network for multivariate time-series
+forecasting.Advances in neural information processing
+systems, 33:17766–17778, 2020.
+Cao, W., Wang, D., Li, J., Zhou, H., Li, L., and Li, Y .
+Brits: Bidirectional recurrent imputation for time series.
+Advances in neural information processing systems, 31,
+2018.
+Chalk, M., Marre, O., and Tkacik, G. Relevant sparse codes
+with variational information bottleneck.Advances in
+Neural Information Processing Systems, 29, 2016.
+Chen, X., Li, X., Liu, B., and Li, Z. Biased temporal con-
+volution graph network for time series forecasting with
+missing values. InThe Twelfth International Conference
+on Learning Representations, 2023.
+Choi, M. and Lee, C. Conditional information bottleneck
+approach for time series imputation. InThe Twelfth Inter-
+national Conference on Learning Representations, 2023.
+Cini, A., Marisca, I., and Alippi, C. Filling the g ap s: Mul-
+tivariate time series imputation by graph neural networks.
+arXiv preprint arXiv:2108.00298, 2021.
+Du, W., Cˆot´e, D., and Liu, Y . Saits: Self-attention-based
+imputation for time series.Expert Systems with Applica-
+tions, 219:119619, 2023.
+Ekambaram, V ., Jati, A., Nguyen, N., Sinthong, P., and
+Kalagnanam, J. Tsmixer: Lightweight mlp-mixer model
+for multivariate time series forecasting. InProceedings
+of the 29th ACM SIGKDD Conference on Knowledge
+Discovery and Data Mining, pp. 459–469, 2023.
+Fortuin, V ., Baranchuk, D., R¨atsch, G., and Mandt, S. Gp-
+vae: Deep probabilistic time series imputation. InInterna-
+tional conference on artificial intelligence and statistics,
+pp. 1651–1661. PMLR, 2020.
+Hu, Y ., Li, Y ., Liu, P., Zhu, Y ., Li, N., Dai, T., tao Xia, S.,
+Cheng, D., and Jiang, C. Fintsb: A comprehensive and
+practical benchmark for financial time series forecasting.
+arXiv preprint arXiv:2502.18834, 2025a.
+Hu, Y ., Liu, P., Li, Y ., Cheng, D., Li, N., Dai, T., Bao, J., and
+Shu-Tao, X. Finmamba: Market-aware graph enhanced
+multi-level mamba for stock movement prediction.arXiv
+preprint arXiv:2502.06707, 2025b.
+Hu, Y ., Liu, P., Zhu, P., Cheng, D., and Dai, T. Adap-
+tive multi-scale decomposition framework for time se-
+ries forecasting. InProceedings of the AAAI Conference
+on Artificial Intelligence, volume 39, pp. 17359–17367,
+2025c.
+Hu, Y ., Yang, J., Zhou, T., Liu, P., Tang, Y ., Jin, R., and
+Sun, L. Bridging past and future: Distribution-aware
+alignment for time series forecasting.arXiv preprint
+arXiv:2509.14181, 2025d.
+Hu, Y ., Zhang, G., Liu, P., Lan, D., Li, N., Cheng, D., Dai,
+T., Xia, S.-T., and Pan, S. Timefilter: Patch-specific
+spatial-temporal graph filtration for time series forecast-
+ing. InForty-second International Conference on Ma-
+chine Learning, 2025e.
+Kidger, P., Morrill, J., Foster, J., and Lyons, T. Neural
+controlled differential equations for irregular time series.
+Advances in neural information processing systems, 33:
+6696–6707, 2020.
+Kingma, D. P. Auto-encoding variational bayes.arXiv
+preprint arXiv:1312.6114, 2013.
+Kingma, D. P. Adam: A method for stochastic optimization.
+arXiv preprint arXiv:1412.6980, 2014.
+Lai, G., Chang, W.-C., Yang, Y ., and Liu, H. Modeling
+long-and short-term temporal patterns with deep neural
+networks. InThe 41st international ACM SIGIR confer-
+ence on research & development in information retrieval,
+pp. 95–104, 2018.
+Laine, S. and Aila, T. Temporal ensembling for semi-
+supervised learning.arXiv preprint arXiv:1610.02242,
+2016.
+9
+
+
+--- PAGE 10 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Li, X., Li, H., Lu, H., Jensen, C. S., Pandey, V ., and Markl,
+V . Missing value imputation for multi-attribute sensor
+data streams via message propagation.Proceedings of
+the VLDB Endowment, 17(3):345–358, 2023.
+Li, Y ., Yu, R., Shahabi, C., and Liu, Y . Diffusion con-
+volutional recurrent neural network: Data-driven traffic
+forecasting.arXiv preprint arXiv:1707.01926, 2017.
+Li, Y ., Yang, X., Yang, X., Xu, M., Wang, X., Liu, W., and
+Bian, J. R&d-agent-quant: A multi-agent framework for
+data-centric factors and model joint optimization.arXiv
+preprint arXiv:2505.15155, 2025.
+Lin, S., Lin, W., Wu, W., Zhao, F., Mo, R., and Zhang, H.
+Segrnn: Segment recurrent neural network for long-term
+time series forecasting.arXiv preprint arXiv:2308.11200,
+2023.
+Liu, S., Yu, H., Liao, C., Li, J., Lin, W., Liu, A. X., and Dust-
+dar, S. Pyraformer: Low-complexity pyramidal attention
+for long-range time series modeling and forecasting. In
+International Conference on Learning Representations,
+2022.
+Liu, Y ., Hu, T., Zhang, H., Wu, H., Wang, S., Ma, L.,
+and Long, M. itransformer: Inverted transformers are
+effective for time series forecasting.arXiv preprint
+arXiv:2310.06625, 2023.
+Ma, G., Jiang, R., Yan, R., and Tang, H. Temporal condition-
+ing spiking latent variable models of the neural response
+to natural visual scenes.Advances in Neural Information
+Processing Systems, 36:3819–3840, 2023.
+Marisca, I., Cini, A., and Alippi, C. Learning to reconstruct
+missing data from spatiotemporal graphs with sparse ob-
+servations.Advances in Neural Information Processing
+Systems, 35:32069–32082, 2022.
+Miao, H., Zhao, Y ., Guo, C., Yang, B., Zheng, K., Huang, F.,
+Xie, J., and Jensen, C. S. A unified replay-based continu-
+ous learning framework for spatio-temporal prediction on
+streaming data. In2024 IEEE 40th International Confer-
+ence on Data Engineering (ICDE), pp. 1050–1062. IEEE,
+2024.
+Murad, M. M. N., Aktukmak, M., and Yilmaz, Y . Wpmixer:
+Efficient multi-resolution mixing for long-term time se-
+ries forecasting. InProceedings of the AAAI Conference
+on Artificial Intelligence, volume 39, pp. 19581–19588,
+2025.
+Nie, T., Qin, G., Ma, W., Mei, Y ., and Sun, J. Imputeformer:
+Low rankness-induced transformers for generalizable spa-
+tiotemporal imputation. InProceedings of the 30th ACM
+SIGKDD conference on knowledge discovery and data
+mining, pp. 2260–2271, 2024.
+Nie, Y ., Nguyen, N. H., Sinthong, P., and Kalagnanam, J. A
+time series is worth 64 words: Long-term forecasting with
+transformers.arXiv preprint arXiv:2211.14730, 2022.
+Peng, J., Yang, M., Zhang, Q., and Li, X. S4m: S4 for
+multivariate time series forecasting with missing values.
+arXiv preprint arXiv:2503.00900, 2025.
+Schaffer, A. L., Dobbins, T. A., and Pearson, S.-A. Inter-
+rupted time series analysis using autoregressive integrated
+moving average (arima) models: a guide for evaluating
+large-scale health interventions.BMC medical research
+methodology, 21:1–12, 2021.
+Shang, P., Liu, X., Yu, C., Yan, G., Xiang, Q., and Mi,
+X. A new ensemble deep graph reinforcement learning
+network for spatio-temporal traffic volume forecasting
+in a freeway network.Digital Signal Processing, 123:
+103419, 2022.
+Tan, J., Liu, H., Li, Y ., Yin, S., and Yu, C. A new ensemble
+spatio-temporal pm2. 5 prediction method based on graph
+attention recursive networks and reinforcement learning.
+Chaos, Solitons & Fractals, 162:112405, 2022.
+Tan, M., Merrill, M., Gupta, V ., Althoff, T., and Hartvigsen,
+T. Are language models actually useful for time series
+forecasting?Advances in Neural Information Processing
+Systems, 37:60162–60191, 2024.
+Tang, X., Yao, H., Sun, Y ., Aggarwal, C., Mitra, P., and
+Wang, S. Joint modeling of local and global temporal
+dynamics for multivariate time series forecasting with
+missing values. InProceedings of the AAAI conference on
+artificial intelligence, volume 34, pp. 5956–5963, 2020.
+Tashiro, Y ., Song, J., Song, Y ., and Ermon, S. Csdi: Con-
+ditional score-based diffusion models for probabilistic
+time series imputation.Advances in Neural Information
+Processing Systems, 34:24804–24816, 2021.
+Tishby, N. and Zaslavsky, N. Deep learning and the infor-
+mation bottleneck principle. In2015 ieee information
+theory workshop (itw), pp. 1–5. IEEE, 2015.
+Tishby, N., Pereira, F. C., and Bialek, W. The informa-
+tion bottleneck method.arXiv preprint physics/0004057,
+2000.
+Ullmann, D., Taran, O., and V oloshynovskiy, S. Multivariate
+time series information bottleneck.Entropy, 25(5):831,
+2023.
+Vaswani, A. Attention is all you need.Advances in Neural
+Information Processing Systems, 2017.
+V oloshynovskiy, S., Kondah, M., Rezaeifar, S., Taran, O.,
+Holotyak, T., and Rezende, D. Information bottleneck
+10
+
+
+--- PAGE 11 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+through variational glasses. arxiv. 2019 doi: 10.48550.
+arxiv, 1912.
+V oloshynovskiy, S., Kondah, M., Rezaeifar, S., Taran,
+O., Holotyak, T., and Rezende, D. J. Information
+bottleneck through variational glasses.arXiv preprint
+arXiv:1912.00830, 2019.
+Wang, Y ., Wu, H., Dong, J., Qin, G., Zhang, H., Liu, Y .,
+Qiu, Y ., Wang, J., and Long, M. Timexer: Empowering
+transformers for time series forecasting with exogenous
+variables.Advances in Neural Information Processing
+Systems, 37:469–498, 2024a.
+Wang, Y ., Xu, Y ., Yang, J., Wu, M., Li, X., Xie, L., and
+Chen, Z. Fully-connected spatial-temporal graph for mul-
+tivariate time-series data. InProceedings of the AAAI Con-
+ference on Artificial Intelligence, volume 38, pp. 15715–
+15724, 2024b.
+Wen, Q., Sun, L., Yang, F., Song, X., Gao, J., Wang, X., and
+Xu, H. Time series data augmentation for deep learning:
+A survey.arXiv preprint arXiv:2002.12478, 2020.
+Wu, H., Xu, J., Wang, J., and Long, M. Autoformer: Decom-
+position transformers with auto-correlation for long-term
+series forecasting.Advances in neural information pro-
+cessing systems, 34:22419–22430, 2021.
+Wu, H., Hu, T., Liu, Y ., Zhou, H., Wang, J., and Long, M.
+Timesnet: Temporal 2d-variation modeling for general
+time series analysis.arXiv preprint arXiv:2210.02186,
+2022.
+Wu, S.-F., Chang, C.-Y ., and Lee, S.-J. Time series fore-
+casting with missing values. In2015 1st International
+Conference on Industrial Networks and Intelligent Sys-
+tems (INISCom), pp. 151–156. IEEE, 2015.
+Xu, D. and Fekri, F. Time series prediction via recurrent
+neural networks with the information bottleneck principle.
+In2018 IEEE 19th International Workshop on Signal Pro-
+cessing Advances in Wireless Communications (SPAWC),
+pp. 1–5. IEEE, 2018.
+Yang, J., Zhang, K., Zhang, G., Yu, P. S., and Ding, K.
+Glocal information bottleneck for time series imputation.
+arXiv preprint arXiv:2510.04910, 2025.
+Yi, K., Zhang, Q., Fan, W., He, H., Hu, L., Wang, P., An, N.,
+Cao, L., and Niu, Z. Fouriergnn: Rethinking multivariate
+time series forecasting from a pure graph perspective.
+Advances in Neural Information Processing Systems, 36,
+2024.
+Yi, X., Zheng, Y ., Zhang, J., and Li, T. St-mvl: Filling
+missing values in geo-sensory time series data. InPro-
+ceedings of the 25th international joint conference on
+artificial intelligence, 2016.
+Yu, B., Yin, H., and Zhu, Z. Spatio-temporal graph convo-
+lutional networks: A deep learning framework for traffic
+forecasting.arXiv preprint arXiv:1709.04875, 2017.
+Yu, C., Wang, F., Shao, Z., Qian, T., Zhang, Z., Wei, W.,
+and Xu, Y . Ginar: An end-to-end multivariate time se-
+ries forecasting model suitable for variable missing. In
+Proceedings of the 30th ACM SIGKDD Conference on
+Knowledge Discovery and Data Mining, pp. 3989–4000,
+2024.
+Yu, C., Wang, F., Shao, Z., Qian, T., Zhang, Z., Wei, W., An,
+Z., Wang, Q., and Xu, Y . Ginar+: A robust end-to-end
+framework for multivariate time series forecasting with
+missing values.IEEE Transactions on Knowledge and
+Data Engineering, 2025.
+Zeng, A., Chen, M., Zhang, L., and Xu, Q. Are transformers
+effective for time series forecasting? InProceedings of
+the AAAI conference on artificial intelligence, volume 37,
+pp. 11121–11128, 2023.
+Zhang, K., Jing, B., Candan, K. S., Zhou, D., Wen, Q.,
+Liu, H., and Ding, K. Cross-domain conditional diffu-
+sion models for time series imputation.arXiv preprint
+arXiv:2506.12412, 2025a.
+Zhang, S., Wang, J., Nie, S., Yue, J., Zhu, W., and Lin, Y .
+Loss or gain: Hierarchical conditional information bottle-
+neck approach for incomplete time series classification.
+InProceedings of the 31st ACM SIGKDD Conference on
+Knowledge Discovery and Data Mining V . 2, pp. 3796–
+3807, 2025b.
+Zheng, Y ., Yi, X., Li, M., Li, R., Shan, Z., Chang, E., and Li,
+T. Forecasting fine-grained air quality based on big data.
+InProceedings of the 21th ACM SIGKDD international
+conference on knowledge discovery and data mining, pp.
+2267–2276, 2015.
+Zhou, F., Pan, C., Ma, L., Liu, Y ., Wang, S., Zhang, J.,
+Zhu, X., Hu, X., Hu, Y ., Zheng, Y ., et al. Sloth: struc-
+tured learning and task-based optimization for time se-
+ries forecasting on hierarchies. InProceedings of the
+AAAI Conference on Artificial Intelligence, volume 37,
+pp. 11417–11425, 2023.
+Zhou, H., Zhang, S., Peng, J., Zhang, S., Li, J., Xiong, H.,
+and Zhang, W. Informer: Beyond efficient transformer for
+long sequence time-series forecasting. InProceedings of
+the AAAI conference on artificial intelligence, volume 35,
+pp. 11106–11115, 2021.
+Zhu, P., Li, Y ., Hu, Y ., Liu, Q., Cheng, D., and Liang, Y .
+Lsr-igru: Stock trend prediction based on long short-term
+relationships and improved gru. InProceedings of the
+33rd ACM International Conference on Information and
+Knowledge Management, pp. 5135–5142, 2024.
+11
+
+
+--- PAGE 12 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Zuo, J., Zeitouni, K., Taher, Y ., and Garcia-Rodriguez, S.
+Graph convolutional networks for traffic forecasting with
+missing values.Data Mining and Knowledge Discovery,
+37(2):913–947, 2023.
+12
+
+
+--- PAGE 13 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+A. Full Derivation
+We illustrate the full derivation of the two terms of IB as follows.
+Compactness Principle:
+Iθ(Z;X o) =Ep(xo,z)[log p(xo, z)
+p(z)·p(x o) ],
+=E p(xo,z)[log p(z|xo)·p(x o)
+p(z)·p(x o) ],
+=E p(xo,z)[log p(z|xo)
+p(z) ],
+=E p(xo,z)[log p(z|xo)
+p(z) · q(z)
+q(z) ],
+=E p(xo,z)[log p(z|xo)
+q(z) ]−E p(xo,z)[log p(z)
+q(z) ],
+=E p(xo,z)[log p(z|xo)
+q(z) ]−D KL [p(z)||q(z)],
+=E p(xo)[DKL (p(z|xo)||q(z))]−D KL [p(z)||q(z)],
+≤E p(xo)[DKL (p(z|xo)||p(z))].
+(13)
+Informativeness Principle:
+Iθ(Y;Z) =E p(z,y) [log p(z, y)
+p(z)·p(y) ],
+=Ep(z,y) [log p(y|z)·p(z)
+p(y)·p(z) ],
+=Ep(z,y) [log p(y|z)
+p(y) ],
+=Ep(z,y) [log p(y|z)·q θ(y|z)
+p(y)·q θ(y|z) ],
+=Ep(z,y) [log qθ(y|z)
+p(y) ] +Ep(z,y) [log p(y|z)
+qθ(y|z) ],
+=Ep(z,y) [log qθ(y|z)
+p(y) ] +
+Z Z
+z,y
+p(z)·p(y|z)·log p(y|z)
+qθ(y|z) dzdy,
+=Ep(z,y) [log qθ(y|z)
+p(y) ] +
+Z
+z
+p(z)·D KL [p(y|z)||q θ(y|z)]dz
+≥Ep(z,y) [log qθ(y|z)
+p(y) ],
+=Ep(z,y) [logq θ(y|z)] +H(Y),
+≥Ep(z,y) [logq θ(y|z)].
+(14)
+The inequalities of the upper and lower bound in Equations (13) and (14) follow directly from the non-negativity of the
+KL-divergence and Entropy.
+B. Quantitative Analysis of Introduction
+❶ Detrimental Imputation:We demonstrate that imputation without ground truth is often harmful. As visualized in Figure 1,
+methods following the “imputation-then-prediction” paradigm fail to recover the true data distribution and instead reinforce
+biased patterns from partial observations.
+13
+
+
+--- PAGE 14 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Table 5.Performance comparison on PEMS-BAY dataset (40% Missing).
+Metric CRIB BiTGraph DLinear TimesNet
++ DLinear TimeXer TimesNet
++ TimeXer
+MAE0.0930.413 0.156 0.148 0.125 0.135
+MSE0.0430.788 0.087 0.081 0.051 0.073
+❷ Performance Degradation:We provide counter-intuitive evidence that imputation actively harms prediction accuracy.
+For instance, equipping the predictor TimeXer with the SOTA imputer TimesNet increases the MAE from 0.125 to 0.135
+as shown in Tab. 5. It also has no help in understanding the data distribution and variate correlations as demonstrated
+in Figure 1.
+C. Datasets
+To assess the model’s effectiveness and robustness in handling missing values, we introduce synthetic missingness by
+randomly removing data points at varying missing rates of 20%, 40%, 60%, and 70% with three different missing patterns.
+During the experiments, we normalized the data to facilitate better model fitting.
+We introduce information about datasets in Tab. 6.
+Table 6.Statistics of the 11 real-world datasets used in our experiments.
+Statistics ETTh1 ETTh2 ETTm1 ETTm2 Electricity PEMS-BAY Metr-LA BeijingAir Weather Exchange AQI
+Time Steps17,420 17,420 69,680 69,680 26,304 52,116 34,272 36,000 52,696 7,588 8759
+Variates7 7 7 7 321 325 207 7 21 8 36
+D. Implementation Details
+D.1. Comparison Evaluations
+We use Adam optimizer (Kingma, 2014) to learn the parameters of all models with 10−3 learning rate. The unified-variate
+attention of CRIB is configured with 2 layers and 4 heads, while the predictor is implemented as a simple 2-layer MLP. Both
+historical and future time window sizes are set to 24 for all methods, following the setting of BiTGraph (Chen et al., 2023).
+The patch length is set to 8, so every time series in a time window is patched into three tokens. The entire dataset is divided
+into training, validation, and testing sets with ratios of 60%, 20%, and 20%. All methods are trained on an Nvidia 4090
+GPU with PyTorch 2.0. Hyperparameters of all baselines are consistent with their original papers.
+D.2. Natural Missingness Evaluations
+To fairly compare direct prediction with the imputation-then-prediction paradigm, we first pre-trained TimesNet (Wu et al.,
+2022) on the AQI training set for imputation by applying an additional 10% point-missing mask on observed entries,
+matching the dataset’s estimated natural missing rate. We then used the trained TimesNet to impute all NaNs in AQI and
+trained/evaluated downstream forecasting models on this fully imputed dataset (AQI IMP). In contrast, we trained/evaluated
+the same models directly on the original AQI with natural missingness (AQI ORI).
+D.3. Training Cost
+To ensure fair comparisons, we train all baseline models from scratch using identical dataset splits and experimental
+protocols, as detailed in Sec. 4.1. We evaluate computational efficiency by reporting the memory footprint and parameter
+counts of every model on ETTh1 as follows.
+Conclusion:The results demonstrate that CRIB maintains a computational cost comparable to efficient Transformer
+baselines (e.g., PatchTST (Nie et al., 2022)) while being more lightweight than complex methods such as CSDI (Tashiro
+et al., 2021) and TimesNet (Wu et al., 2022).
+14
+
+
+--- PAGE 15 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Table 7.Comparison of model efficiency in terms of parameter count and memory cost. CRIB achieves a balanced trade-off between
+performance and efficiency.
+Model Parameters Memory (MB)
+CRIB (Ours) 37,450 148.03
+DLinear 1,200 18.99
+PAttn 15,640 55.13
+SegRNN 8,056 30.17
+Transformer 57,063 189.38
+iTransformer 39,768 154.18
+PatchTST 41,528 179.80
+TSMixer 6,837 21.16
+WPMixer 44,370 50.16
+CSDI 239,649 1,269.72
+NeuralCDE 37,767 41.40
+ImputeFormer 264,193 1,488.22
+TimesNet 863,895 1,427.44
+E. Extra Experiments
+Figure 5.Visualization of the input and forecasting results of CRIB on the PEMS-BAY dataset with missing rates from 20% to 70%.
+E.1. Forecasting Results Visualization
+We present a spatial visualization of forecasting results to demonstrate the effectiveness of CRIB under varying missing rates.
+Figure 5 shows the final timestamp in the historical time window and the first forecasting timestamp on the PEMS-BAY
+dataset. At lower missing rates (20% and 40%), by effectively leveraging inter-variate correlations extracted from the
+data, CRIB accurately predicts the future values. Even at higher missing rates (60% and 70%), CRIB can maintain stable
+performance and predict the spatial distribution of the PEMS-BAY datasets. These findings underscore CRIB’s capability to
+handle incomplete data and produce reliable predictions.
+E.2. Unified-Variate Attention Maps Visualization
+In Figure 6, we compare visualizations of directly applying IB on the Transformer with our proposed CRIB. In the first
+experiment, a transformer model serves as the predictor. Thelefttwo figures clearly show that directly applying IB to the
+model would force the model to focus on a few specific values (straight line attention), thereby neglecting global information.
+In contrast, therightfigures reveal that CRIB can not only capture the original intra-variate temporal correlations in one
+attention head but also effectively uncovers cross-variate correlations in another, rather than relying solely on raw correlations.
+15
+
+
+--- PAGE 16 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Figure 6.Visualization comparison of attention maps on the Metr-LA dataset with 60% missing values.Left: Two attention maps of the
+direct application of IB on the standard Transformer.Right: Two attention maps of CRIB.
+As a result, the final forecasting performance is improved remarkably by our unified-variate attention mechanism and
+consistency regularization scheme.
+E.3. Experiments on Various Missing Patterns
+Figures 7 to 14 present the main forecasting results, comparing our proposed model, CRIB, against state-of-the-art baselines.
+The results clearly show that CRIB consistently achieves the lowest MAE and MSE across all evaluated scenarios. This
+superiority holds true for both the PEMS-BAY and ETTh1 datasets, under point, block, and column missing patterns, and
+across a wide range of missing rates from 20% to 70%. Notably, while the performance of most baseline models degrades
+significantly as the missing rate increases, CRIB maintains its superior performance and stability. This demonstrates the
+robustness and effectiveness of our direct-prediction approach, validating its superiority over existing methods, especially in
+challenging high-missing-rate environments.
+Figure 7.MAE comparison on PEMS-BAY and ETTh1 with point, block, and column missing patterns on 20% missing rate.
+Figure 8.MSE comparison on PEMS-BAY and ETTh1 with point, block, and column missing patterns on 20% missing rate.
+F. Extra Ablation Study
+We have done an extra ablation study on three cases of loss of CRIB to prove its effectiveness. The ablation analysis
+across four datasets confirms the necessity of each component, as removing the Consistency Regularization ( LConsis),
+Compactness (LComp), or Informativeness (LPred) objectives consistently leads to performance degradation, validating their
+collective role in ensuring robust and accurate forecasting in MTSF-M tasks.
+16
+
+
+--- PAGE 17 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Figure 9.MAE comparison on PEMS-BAY and ETTh1 with point, block, and column missing patterns on 40% missing rate.
+Figure 10.MSE comparison on PEMS-BAY and ETTh1 with point, block, and column missing patterns on 40% missing rate.
+Figure 11.MAE comparison on PEMS-BAY and ETTh1 with point, block, and column missing patterns on 60% missing rate.
+Figure 12.MSE comparison on PEMS-BAY and ETTh1 with point, block, and column missing patterns on 60% missing rate.
+Figure 13.MAE comparison on PEMS-BAY and ETTh1 with point, block, and column missing patterns on 70% missing rate.
+17
+
+
+--- PAGE 18 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Figure 14.MSE comparison on PEMS-BAY and ETTh1 with point, block, and column missing patterns on 70% missing rate.
+Table 8.Ablation study on ETTh1 dataset.
+ETTh1 0.2 0.4 0.6 0.7
+MAE MSE MAE MSE MAE MSE MAE MSE
+w/o Consis 0.237 0.206 0.274 0.270 0.338 0.413 0.402 0.584
+w/o Reg 0.236 0.206 0.274 0.270 0.339 0.410 0.400 0.579
+w/o Pred 0.432 0.559 0.505 0.698 0.655 1.066 0.796 1.486
+Entire 0.220 0.171 0.251 0.249 0.267 0.296 0.288 0.361
+Table 9.Ablation study on Elec dataset.
+Elec 0.2 0.4 0.6 0.7
+MAE MSE MAE MSE MAE MSE MAE MSE
+w/o Consis 0.0201 0.0196 0.0267 0.0338 0.0346 0.0569 0.0415 0.0931
+w/o Reg 0.0186 0.0175 0.0244 0.0286 0.0322 0.0544 0.0399 0.0980
+w/o Pred 0.0881 0.5454 0.1243 0.9424 0.1818 1.8995 0.2283 2.9058
+Entire 0.0150 0.0120 0.0230 0.0280 0.0300 0.0470 0.0380 0.0910
+Table 10.Ablation study on Metr-LA dataset.
+Metr-LA 0.2 0.4 0.6 0.7
+MAE MSE MAE MSE MAE MSE MAE MSE
+w/o Consis 0.271 0.332 0.257 0.275 0.271 0.306 0.314 0.366
+w/o Reg 0.253 0.307 0.251 0.275 0.266 0.307 0.311 0.364
+w/o Pred 0.442 0.418 0.624 0.529 0.985 1.177 1.276 1.959
+Entire 0.248 0.271 0.249 0.272 0.265 0.305 0.309 0.356
+G. Extra Sensitivity Study
+We analyze hyperparameter sensitivity in Figure 4 (b) and conduct additional sensitivity studies. Empirical results indicate
+that the optimal settings are consistent across different datasets and missing rates. We set the weights for LComp, LPred, and
+LConsis to10 −6,1, and1as default, respectively.
+H. Full Experiments
+18
+
+
+--- PAGE 19 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Table 11.Ablation study on PEMS-BAY dataset.
+PEMS-BAY 0.2 0.4 0.6 0.7
+MAE MSE MAE MSE MAE MSE MAE MSE
+w/o Consis 0.0959 0.0470 0.0882 0.0389 0.0976 0.0465 0.1296 0.0596
+w/o Reg 0.0942 0.0453 0.0869 0.0373 0.0964 0.0456 0.1190 0.0591
+w/o Pred 0.4006 0.2405 0.5618 0.3631 1.0832 1.2727 2.1480 4.8111
+Entire 0.0830 0.0340 0.0850 0.0350 0.0930 0.0430 0.1100 0.0580
+Table 12.Sensitivity analysis ofL Pred weight across all missing rates.
+Weight 0% Missing 20% Missing 40% Missing 60% Missing 70% Missing
+ETTh1 Exchange ETTh1 Exchange ETTh1 Exchange ETTh1 Exchange ETTh1 Exchange
+0.1 0.201 0.0186 0.243 0.0332 0.281 0.0439 0.348 0.0413 0.412 0.0373
+0.5 0.198 0.0186 0.238 0.0301 0.273 0.0294 0.340 0.0362 0.406 0.0423
+1.0 0.198 0.0186 0.237 0.0287 0.274 0.0253 0.337 0.0363 0.403 0.0517
+2.0 0.199 0.0186 0.236 0.0261 0.273 0.0261 0.339 0.0363 0.400 0.0475
+5.0 0.200 0.0186 0.237 0.0246 0.273 0.0258 0.338 0.0287 0.401 0.0320
+Table 13.Sensitivity analysis ofL Comp weight across all missing rates.
+Weight 0% Missing 20% Missing 40% Missing 60% Missing 70% Missing
+ETTh1 Exchange ETTh1 Exchange ETTh1 Exchange ETTh1 Exchange ETTh1 Exchange
+10 0.214 0.0192 0.260 0.0509 0.314 0.0806 0.417 0.2131 0.506 0.2851
+1 0.208 0.0188 0.251 0.0471 0.296 0.0835 0.365 0.1393 0.437 0.2293
+10−2 0.199 0.0186 0.238 0.0300 0.274 0.0319 0.341 0.0435 0.406 0.0499
+10−6 0.198 0.0186 0.237 0.0287 0.274 0.0253 0.337 0.0363 0.403 0.0517
+10−10 0.199 0.0186 0.237 0.0276 0.273 0.0260 0.339 0.0417 0.403 0.0408
+Table 14.Sensitivity analysis ofL Consis weight across all missing rates.
+Weight 0% Missing 20% Missing 40% Missing 60% Missing 70% Missing
+ETTh1 Exchange ETTh1 Exchange ETTh1 Exchange ETTh1 Exchange ETTh1 Exchange
+0.1 0.201 0.0186 0.237 0.0231 0.274 0.0270 0.340 0.0301 0.400 0.0341
+0.5 0.199 0.0186 0.236 0.0260 0.274 0.0273 0.339 0.0378 0.401 0.0368
+1.0 0.198 0.0186 0.237 0.0287 0.274 0.0253 0.337 0.0363 0.403 0.0517
+2.0 0.199 0.0186 0.239 0.0306 0.275 0.0300 0.340 0.0352 0.404 0.0427
+5.0 0.200 0.0186 0.240 0.0312 0.278 0.0377 0.344 0.0376 0.410 0.0357
+19
+
+
+--- PAGE 20 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Table 15.Performance comparison of different models for multivariate time series forecasting with missing values. Missing rate is set at
+20%, 40%, 60%, and 70%. The best results are highlighted inBoldand the second-best is highlighted in Underline .
+Data MetricBiTGraphBRITSGRINSAITSSPIN SegRNN WPMixer iTransformerPatchTST DLinear TimeXer PAttn Ours
+OriginalOriginalImputedOriginalImputedOriginalImputedOriginalImputedOriginalImputedOriginalImputedOriginalImputedOriginalImputedOriginalImputedOriginal
+PEMS-BAY
+MAE@20%0.403 0.351 0.343OOM0.218 0.114 0.2310.122 0.2490.097 0.153 0.107 0.1580.145 0.1630.097 0.146 0.109 0.1730.083
+MSE@20%0.754 0.664 0.585OOM0.234 0.066 0.2320.068 0.1930.048 0.0940.058 0.1070.078 0.0960.042 0.087 0.062 0.1110.034
+MAE@40%0.411 0.360 0.346OOM0.288 0.108 0.1790.129 0.2030.093 0.127 0.106 0.1420.144 0.1380.097 0.1400.098 0.1650.085
+MSE@40%0.777 0.696 0.609OOM0.360 0.054 0.1850.059 0.1350.043 0.0740.047 0.0870.074 0.0690.037 0.073 0.048 0.1000.035
+MAE@60%0.419 0.372 0.355OOM0.501 0.122 0.1530.186 0.1810.108 0.107 0.139 0.1220.158 0.1410.142 0.1210.109 0.1210.093
+MSE@60%0.806 0.720 0.647OOM0.948 0.066 0.1870.093 0.1180.055 0.0600.060 0.0720.090 0.0730.052 0.061 0.059 0.0730.043
+MAE@70%0.420 0.382 0.356OOM0.601 0.136 0.1480.185 0.1730.131 0.1140.165 0.1340.178 0.1520.162 0.1340.123 0.131 0.110
+MSE@70%0.816 0.742 0.653OOM1.053 0.081 0.2080.107 0.1160.074 0.0610.076 0.0790.105 0.0840.072 0.071 0.076 0.0810.058
+Metr-LA
+MAE@20%0.435 0.351 0.387 0.484 0.336 0.280 0.3560.300 0.3720.256 0.308 0.265 0.3230.319 0.3720.296 0.3060.268 0.3240.248
+MSE@20%0.760 0.596 0.638 0.743 0.576 0.319 0.4060.320 0.4340.309 0.3470.313 0.3740.327 0.3710.303 0.345 0.323 0.3700.271
+MAE@40%0.442 0.359 0.390 0.463 0.452 0.317 0.3060.335 0.3340.254 0.280 0.302 0.3070.346 0.3440.293 0.2910.308 0.2820.249
+MSE@40%0.756 0.600 0.667 0.697 0.692 0.305 0.3210.301 0.3490.273 0.297 0.286 0.3210.299 0.3150.273 0.306 0.305 0.3080.272
+MAE@60%0.449 0.371 0.386 0.434 0.856 0.324 0.2930.377 0.3270.274 0.280 0.341 0.2960.426 0.3600.327 0.2950.309 0.2770.265
+MSE@60%0.760 0.615 0.649 0.719 1.196 0.326 0.3340.357 0.3570.309 0.3140.308 0.332 0.381 0.3510.309 0.3230.316 0.3290.305
+MAE@70%0.452 0.382 0.393 0.422 0.856 0.351 0.3010.411 0.3340.307 0.291 0.345 0.2970.506 0.3880.371 0.2990.323 0.2930.309
+MSE@70%0.765 0.632 0.658 0.723 1.397 0.429 0.3800.446 0.4010.378 0.3610.372 0.3700.485 0.4110.369 0.3590.405 0.3710.356
+ETTh1
+MAE@20%0.257 0.232 0.234 0.369 0.232 0.250 0.3940.239 0.3860.238 0.4170.236 0.3980.265 0.5380.232 0.341 0.243 0.4320.220
+MSE@20%0.307 0.378 0.282 0.457 0.191 0.217 0.3310.201 0.3230.204 0.3740.201 0.3820.235 0.5080.199 0.2960.215 0.3870.171
+MAE@40%0.278 0.317 0.338 0.349 0.320 0.303 0.4030.285 0.3830.330 0.4930.286 0.4190.334 0.6160.274 0.340 0.321 0.5060.251
+MSE@40%0.316 0.373 0.386 0.430 0.346 0.310 0.3840.284 0.3520.303 0.5560.274 0.4450.365 0.6460.264 0.323 0.296 0.5180.249
+MAE@60%0.394 0.432 0.399 0.380 0.598 0.394 0.4450.380 0.4040.364 0.3820.356 0.3550.443 0.6310.343 0.346 0.368 0.3990.267
+MSE@60%0.493 0.499 0.498 0.482 0.667 0.566 0.5390.514 0.4510.454 0.4540.437 0.4180.623 0.7630.435 0.393 0.470 0.4620.296
+MAE@70%0.420 0.449 0.455 0.390 0.599 0.477 0.4590.456 0.4240.436 0.3840.417 0.3730.567 0.6080.408 0.3630.432 0.3900.288
+MSE@70%0.432 0.436 0.433 0.461 0.669 0.824 0.6530.728 0.5410.671 0.5070.630 0.4971.016 0.8120.608 0.4680.683 0.5140.361
+Electricity
+MAE@20%0.029 0.018 0.020 0.050 0.021 0.051 0.3570.026 0.3480.020 0.1720.020 0.1430.039 0.1690.019 0.1290.022 0.1970.015
+MSE@20%0.123 0.026 0.015 0.243 0.028 0.478 0.9760.035 0.5060.027 0.2660.028 0.2360.075 0.4120.022 0.158 0.027 0.4990.012
+MAE@40%0.028 0.030 0.030 0.051 0.031 0.066 0.2810.038 0.2320.031 0.1530.029 0.1200.058 0.1940.024 0.089 0.042 0.1880.023
+MSE@40%0.116 0.054 0.066 0.266 0.070 0.722 1.0720.083 0.2670.035 0.937 0.045 0.5260.185 1.8350.038 0.0930.064 1.2000.028
+MAE@60%0.038 0.044 0.041 0.053 0.223 0.089 0.2100.056 0.1590.041 0.1180.040 0.0890.086 0.2280.032 0.060 0.048 0.1330.030
+MSE@60%0.109 0.054 0.059 0.258 0.667 1.185 1.4120.197 0.1840.065 0.7000.110 0.4960.465 2.3480.062 0.0730.139 1.2480.047
+MAE@70%0.049 0.048 0.045 0.058 0.271 0.107 0.1740.075 0.1350.046 0.0790.052 0.0670.111 0.2490.041 0.055 0.056 0.0900.038
+MSE@70%0.104 0.102 0.105 0.296 0.669 1.655 1.6840.374 0.1870.091 0.2870.184 0.2580.888 2.4050.135 0.0750.230 0.5100.091
+20
+
+
+--- PAGE 21 ---
+Revisiting Multivariate Time Series Forecasting with Missing Values
+Table 16.Performance comparison on six additional datasets with varying missing rates. The best results are highlighted inBold.
+Data Metric SegRNN WPMixer iTransformer PatchTST DLinear PAttn CSDI NeuralCDE ImputeFormerTimesNet Ours
+ETTh2
+MAE@0% 0.096 0.095 0.098 0.096 0.098 0.096 0.113 0.197 0.101 0.097 0.094
+MSE@0% 0.024 0.024 0.025 0.024 0.025 0.025 0.033 0.074 0.026 0.025 0.023
+MAE@20% 0.115 0.116 0.115 0.109 0.142 0.116 0.255 0.244 0.122 0.121 0.107
+MSE@20% 0.031 0.030 0.033 0.030 0.040 0.033 0.192 0.105 0.034 0.033 0.028
+MAE@40% 0.148 0.147 0.298 0.215 0.181 0.289 0.404 0.276 0.140 0.153 0.131
+MSE@40% 0.047 0.045 0.180 0.125 0.065 0.173 0.399 0.134 0.049 0.048 0.039
+MAE@60% 0.183 0.202 0.270 0.216 0.253 0.243 0.618 0.347 0.173 0.209 0.154
+MSE@60% 0.072 0.086 0.170 0.121 0.135 0.133 0.840 0.210 0.061 0.092 0.055
+MAE@70% 0.205 0.218 0.218 0.186 0.325 0.196 0.798 0.413 0.174 0.246 0.172
+MSE@70% 0.093 0.104 0.111 0.083 0.228 0.085 1.303 0.303 0.071 0.132 0.069
+ETTm1
+MAE@0% 0.2265 0.2405 0.2309 0.2379 0.2772 0.2423 0.4759 0.3331 0.2999 0.2100 0.2000
+MSE@0% 0.2302 0.2741 0.2514 0.2648 0.3504 0.2782 0.8854 0.4218 0.2682 0.2018 0.2008
+MAE@20% 0.2616 0.2900 0.2909 0.2779 0.3711 0.2971 0.5198 0.3809 0.3271 0.2584 0.2368
+MSE@20% 0.3068 0.3593 0.3751 0.3486 0.5499 0.3864 0.9345 0.5177 0.3282 0.2992 0.2586
+MAE@40% 0.3005 0.3308 0.3593 0.3456 0.4418 0.3592 0.5787 0.4391 0.3571 0.3040 0.2734
+MSE@40% 0.4007 0.4645 0.4851 0.4671 0.7412 0.4801 1.0499 0.6643 0.4749 0.4093 0.3382
+MAE@60% 0.3678 0.4171 0.4365 0.4091 0.5551 0.4191 0.7038 0.5457 0.4315 0.3993 0.3414
+MSE@60% 0.5960 0.7328 0.7580 0.6769 1.1067 0.7022 1.3801 0.9573 0.6978 0.6525 0.5200
+MAE@70% 0.4266 0.4863 0.5034 0.4743 0.6508 0.4816 0.8287 0.6278 0.4845 0.4828 0.4013
+MSE@70% 0.8006 0.9928 1.0663 0.9325 1.4721 0.9837 1.7733 1.2710 0.9035 0.8988 0.6956
+ETTm2
+MAE@0% 0.0802 0.0821 0.0781 0.0824 0.0918 0.0828 0.1313 0.1327 0.0813 0.0782 0.0746
+MSE@0% 0.0175 0.0182 0.0161 0.0182 0.0217 0.0187 0.0410 0.0363 0.0160 0.0165 0.0152
+MAE@20% 0.0956 0.1059 0.1020 0.1005 0.1405 0.1024 0.2687 0.1760 0.0888 0.1087 0.0885
+MSE@20% 0.0231 0.0266 0.0284 0.0251 0.0391 0.0278 0.1976 0.0591 0.0222 0.0260 0.0203
+MAE@40% 0.1159 0.1355 0.2673 0.2041 0.1743 0.2441 0.4131 0.1984 0.1088 0.1417 0.1037
+MSE@40% 0.0305 0.0394 0.1688 0.1210 0.0601 0.1490 0.4003 0.0765 0.0267 0.0406 0.0258
+MAE@60% 0.1432 0.1790 0.2651 0.2425 0.2412 0.2398 0.6221 0.2479 0.1360 0.1986 0.1266
+MSE@60% 0.0477 0.0685 0.1671 0.1423 0.1215 0.1448 0.8293 0.1194 0.0424 0.0811 0.0384
+MAE@70% 0.1650 0.1899 0.1905 0.1803 0.3104 0.1728 0.8024 0.3130 0.1602 0.2317 0.1467
+MSE@70% 0.0619 0.0808 0.0861 0.0779 0.2056 0.0717 1.2968 0.1857 0.0569 0.1142 0.0520
+Weather
+MAE@0% 0.031 0.030 0.030 0.031 0.034 0.031 0.051 0.051 0.035 0.028 0.028
+MSE@0% 0.021 0.019 0.018 0.019 0.023 0.020 0.042 0.029 0.020 0.016 0.016
+MAE@20% 0.042 0.050 0.044 0.048 0.099 0.046 0.173 0.073 0.041 0.062 0.038
+MSE@20% 0.028 0.025 0.031 0.027 0.045 0.032 0.220 0.036 0.028 0.033 0.025
+MAE@40% 0.050 0.074 0.152 0.150 0.135 0.157 0.300 0.095 0.051 0.088 0.050
+MSE@40% 0.037 0.036 0.167 0.156 0.078 0.140 0.500 0.060 0.033 0.047 0.033
+MAE@60% 0.066 0.102 0.175 0.169 0.197 0.168 0.466 0.150 0.066 0.128 0.062
+MSE@60% 0.061 0.062 0.223 0.169 0.178 0.163 1.099 0.150 0.064 0.089 0.057
+MAE@70% 0.076 0.121 0.101 0.118 0.254 0.100 0.586 0.204 0.076 0.166 0.070
+MSE@70% 0.081 0.084 0.138 0.128 0.318 0.120 1.707 0.284 0.083 0.154 0.075
+Exchange
+MAE@0% 0.0185 0.0187 0.0190 0.0186 0.0205 0.0187 0.0264 0.3223 0.0344 0.0195 0.0184
+MSE@0% 0.0010 0.0010 0.0010 0.0010 0.0011 0.0010 0.0017 0.1724 0.0031 0.0011 0.0009
+MAE@20% 0.0292 0.0324 0.0288 0.0273 0.0795 0.0227 0.1992 0.2969 0.0364 0.0458 0.0217
+MSE@20% 0.0031 0.0024 0.0024 0.0019 0.0126 0.0016 0.2089 0.1592 0.0029 0.0041 0.0016
+MAE@40% 0.0629 0.0783 0.1899 0.1416 0.1469 0.1408 0.4358 0.3326 0.0431 0.0786 0.0253
+MSE@40% 0.0129 0.0127 0.0770 0.0884 0.0429 0.1047 0.5718 0.2146 0.0034 0.0130 0.0015
+MAE@60% 0.1165 0.1364 0.2439 0.1978 0.2599 0.1283 0.7911 0.4334 0.0608 0.1357 0.0363
+MSE@60% 0.0363 0.0405 0.1060 0.1129 0.1394 0.0831 1.3714 0.3814 0.0071 0.0404 0.0031
+MAE@70% 0.1418 0.1836 0.2865 0.1321 0.3778 0.0718 1.0766 0.5412 0.0846 0.1991 0.0517
+MSE@70% 0.0490 0.0697 0.1413 0.0581 0.3011 0.0169 2.2850 0.5912 0.0128 0.0881 0.0058
+BeijingAir
+MAE@0% 0.2552 0.2571 0.2606 0.2609 0.2707 0.2601 0.3431 0.3167 0.2533 0.2583 0.2526
+MSE@0% 0.3026 0.3085 0.3156 0.3008 0.3263 0.3102 0.5141 0.3779 0.3189 0.2939 0.2929
+MAE@20% 0.2849 0.2896 0.2923 0.2866 0.3204 0.2949 0.4035 0.3478 0.2770 0.2922 0.2758
+MSE@20% 0.3467 0.3651 0.3655 0.3421 0.3853 0.3603 0.6010 0.4196 0.3496 0.3488 0.3317
+MAE@40% 0.3188 0.3312 0.3545 0.3278 0.3620 0.3480 0.4714 0.3950 0.3297 0.3322 0.3106
+MSE@40% 0.4285 0.4601 0.4820 0.4305 0.4760 0.4689 0.7584 0.5474 0.4645 0.4422 0.4120
+MAE@60% 0.3860 0.4011 0.4124 0.3976 0.4362 0.4142 0.5930 0.4750 0.4006 0.4017 0.3728
+MSE@60% 0.5939 0.6503 0.6573 0.6458 0.6799 0.6624 1.1378 0.7803 0.6110 0.6275 0.5862
+MAE@70% 0.4412 0.4632 0.4691 0.4613 0.5022 0.4673 0.7057 0.5456 0.4549 0.4789 0.4337
+MSE@70% 0.7595 0.8730 0.8874 0.8540 0.9358 0.8745 1.5761 1.0151 0.8327 0.9234 0.8010
+21

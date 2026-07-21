@@ -1,0 +1,1051 @@
+
+--- PAGE 1 ---
+Filling the Missings: Spatiotemporal Data Imputation by Conditional Diffusion
+Wenying He1 , Jieling Huang1 , Junhua Gu1,∗ , Ji Zhang3 and Yude Bai2,∗
+1School of Artificial Intelligence, Hebei University of Technology, Tianjin, China
+2School of Software, Tiangong University, Tianjin, China
+3University of Southern Queensland, Queensland, Australia
+{hwying1234, jhgu}@hebut.edu.cn, 202332805027@stu.hebut.edu.cn, Ji.Zhang@unisq.edu.au,
+baiyude@tiangong.edu.cn
+Abstract
+Missing data in spatiotemporal systems presents a
+significant challenge for modern applications, rang-
+ing from environmental monitoring to urban traffic
+management. The integrity of spatiotemporal data
+often deteriorates due to hardware malfunctions
+and software failures in real-world deployments.
+Current approaches based on machine learning and
+deep learning struggle to model the intricate in-
+terdependencies between spatial and temporal di-
+mensions effectively and, more importantly, suffer
+from cumulative errors during the data imputation
+process, which propagate and amplify through it-
+erations. To address these limitations, we propose
+CoFILL, a novel Conditional Diffusion Model for
+spatiotemporal data imputation. CoFILL builds on
+the inherent advantages of diffusion models to gen-
+erate high-quality imputations without relying on
+potentially error-prone prior estimates. It incor-
+porates an innovative dual-stream architecture that
+processes temporal and frequency domain features
+in parallel. By fusing these complementary fea-
+tures, CoFILL captures both rapid fluctuations and
+underlying patterns in the data, which enables more
+robust imputation. The extensive experiments re-
+veal that CoFILL’s noise prediction network suc-
+cessfully transforms random noise into meaning-
+ful values that align with the true data distribu-
+tion. The results also show that CoFILL outper-
+forms state-of-the-art methods in imputation ac-
+curacy. The source code is publicly available at
+https://github.com/joyHJL/CoFILL.
+1 Introduction
+Spatiotemporal data integrates temporal dynamics with spa-
+tial relationships to represent complex real-world phenom-
+ena. This data type has proven valuable across diverse do-
+mains, from environmental science to urban systems [Yi et
+al., 2016; Li et al., 2017; Wu et al., 2019 ]. Despite its im-
+portance, the collection of spatiotemporal data faces signifi-
+cant challenges in real-world deployments. Sensor malfunc-
+*Corresponding author: Junhua Gu, Yude Bai.
+tion, system instability, and environmental interference often
+lead to missing or corrupted measurements. These data qual-
+ity issues compromise the reliability of information extracted
+from spatiotemporal systems and impair the performance of
+downstream applications [Lian et al., 2023; Tan et al., 2018;
+He et al., 2025a].
+Various methods have been proposed to handle missing
+data in spatiotemporal datasets. Traditional approaches rely
+on statistical and data analytic techniques, and make as-
+sumptions about the underlying probability distributions and
+use techniques such as linear interpolation [Challu et al.,
+2023], expectation-maximization (EM) algorithm [Cong and
+Li, 2024; Baoet al., 2025], or k-nearest neighbors (KNN)[Xu
+et al., 2024 ] to estimate missing data. Their effectiveness
+is constrained by their inherent mathematical foundations,
+which rely on simplified models of relationships between
+variables. When applied to real-world data, where relation-
+ships between spatial and temporal components often follow
+complex, nonlinear patterns, these methods fail to reconstruct
+the true data distribution accurately.
+Deep learning methods have also been applied for spa-
+tiotemporal data imputation to better process the inherent
+complexity in spatiotemporal relationships. Recurrent neural
+networks (RNN) [Shi et al., 2024 ] model temporal relation-
+ships through hidden state propagation, while graph neural
+networks (GNN) [Agafonov, 2020; Jinet al., 2023] learn spa-
+tial dependencies through node-level representations. These
+methods, however, face fundamental limitations. RNN[Chen
+et al., 2022a] operate through an autoregressive mechanism,
+which causes early prediction errors to propagate through
+subsequent time steps. GNN [Cini et al., 2021 ] depend on
+features from neighboring nodes, allowing errors to dissemi-
+nate across the graph structure. The recursive nature of their
+processing leads to error accumulation over time. Their re-
+liance on historical data also constrains their ability to capture
+the full range of possible values during imputation.
+Alternatively, data imputation can be treated as a gener-
+ative task [Lin et al., 2024 ]. Recent work has shown that
+diffusion probabilistic models (DDPM) [Kingma, 2013] and
+generative adversarial networks (GAN) [Goodfellow et al.,
+2020]. However, current DDPM-based methods face two
+key challenges. First, they fail to model both temporal and
+spatial aspects simultaneously [Wu et al., 2019 ] - for exam-
+ple, Tashiro et al. [Tashiro et al., 2021 ] consider only tem-
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+2874
+
+--- PAGE 2 ---
+poral features, ignoring crucial spatial relationships. Second,
+they rely on problematic pre-imputation approaches - Liu et
+al. [Liu et al., 2023 ] use linear interpolation that creates ar-
+tificial fluctuations, causing generated data to deviate from
+actual patterns. Our work addresses these limitations by de-
+veloping a model that integrates both spatial and temporal in-
+formation while avoiding error-prone pre-imputation steps.
+In this paper, we introduce CoFILL (Co
+nditional Diffusion
+Model based on Temporal -Frequency Spatiotemporal Impu-
+tation), a novel approach that addresses the limitations of cur-
+rent methods. Our model enhances imputation by utilizing
+temporal measurements from sensors and geographical con-
+nections between monitoring locations. The temporal data
+captures changing patterns over time, while spatial relation-
+ships reveal location interdependencies. The architecture fea-
+tures modules for temporal and frequency domain feature ex-
+traction to capture rapid changes and persistent patterns. A
+cross-attention mechanism combines these features into rich
+conditional information. This information guides the noise
+prediction network to transform random noise into meaning-
+ful data values through iterative denoising, which enables ro-
+bust imputation by learning the underlying data distribution
+rather than direct estimation.
+Our contributions are summarized as follows:
+• We propose a spatiotemporal imputation framework,
+CoFILL, based on diffusion models. It applies the non-
+recursive property of diffusion models to effectively re-
+duce error accumulation during the imputation process.
+• We develop a dual-stream feature processing architec-
+ture to model complete spatiotemporal dynamics. We
+extract temporal and frequency information through sep-
+arate pathways, then integrate them by cross-attention to
+capture both rapid fluctuations and underlying patterns.
+• We conduct extensive experiments on three real-world
+datasets to validate our approach. The results demon-
+strate that CoFILL outperforms current state-of-the-art
+methods in spatiotemporal data imputation tasks.
+2 Related Works
+2.1 Spatiotemporal Data Imputation
+Methods for spatiotemporal data imputation mainly fall
+into three main categories: statistical approaches, machine
+learning techniques, and deep learning models [He et al.,
+2024]. Statistical methods, such as mean and median im-
+putation [Amiri and Jensen, 2016 ], assume the data follows
+specific probability distributions, which is too restrictive for
+real-world data. Machine learning approaches provide more
+flexibility like random forest (RF) [Li et al., 2014 ] and ma-
+trix factorization [Wang et al., 2018 ]. Other machine learn-
+ing methods such as Bayesian Gaussian process tensor com-
+pletion (BGCP) [Chen et al., 2019b ] and time-regularized
+tensor factorization (TRTF) [Baggag et al., 2019 ] show
+promise in processing complex data. But they still struggle
+with nonlinear relationships and scalability to large datasets.
+Deep learning methods, such as recurrent neural networks
+(RNN) [Vaswani et al., 2017 ] and their variants like GRU-
+D [Shahidi et al., 2024 ], excel at learning temporal patterns
+but accumulate errors over prediction sequences. Convolu-
+tional neural networks, such as TimesNet [Wu et al., 2022 ],
+only analyze time series in Euclidean space using Fourier
+transforms. Graph neural networks [Marisca et al., 2022;
+Chen et al., 2022b ] improve imputation accuracy by mod-
+eling spatial relationships, but their reliance on fixed graph
+structures reduces their adaptability to new scenarios. These
+existing approaches cannot fully capture the nonlinear de-
+pendencies and complex patterns inherent in large-scale spa-
+tiotemporal data.
+2.2 Diffusion Models for Imputation
+Compared with traditional methods and deep learning meth-
+ods, the generative data imputation method by diffusion mod-
+els generates high-quality data. The conditional score-based
+diffusion model (CSDI) [Tashiro et al., 2021 ] uses a subset
+of observed data as conditions to generate residual values.
+Meanwhile, PriSTI [Liu et al., 2023 ] introduces spatiotem-
+poral relationships and attention mechanisms to achieve bet-
+ter imputation results. GP-V AE[Fortuin et al., 2020] models
+temporal patterns using Gaussian processes in latent space,
+while E2GAN [Li et al., 2025 ] offers a simplified approach
+to generate plausible values for time series data. However,
+current diffusion models struggle to effectively extract and
+use conditional information - the known patterns and relation-
+ships in the existing data that guide the generation of missing
+data. This limitation impacts imputation accuracy because of
+the generative values that fail to maintain the underlying tem-
+poral and spatial dependencies of the data.
+2.3 Temporal and Frequency Domain Feature
+Feature extraction plays a vital role in spatiotemporal data
+imputation. Temporal feature extraction through recurrent
+structures like GRU-D [Shahidi et al., 2024] captures imme-
+diate state changes but cannot handle variations at different
+time scales. Meanwhile, frequency domain approaches via
+Fourier transforms, such as TimesNet[Wu et al., 2022], iden-
+tify periodic and cyclical patterns but miss important transient
+changes. GNN-based methods [Marisca et al., 2022 ] focus
+on modeling spatial relationships but overlook these tempo-
+ral dynamics. We hope to address these issues by integrat-
+ing temporal and frequency domain features through a cross-
+attention mechanism. The temporal features capture imme-
+diate state transitions, while frequency features reveal long-
+term trends.
+3 Problem Formulation
+Consider a spatiotemporal system with N observation nodes
+(such as air monitoring stations or traffic sensors) measured
+over L time steps. The measurements form a sequence
+X1:L = X1, X2, . . . , XL ∈ RN ×L, where Xl ∈ RN rep-
+resents the values observed at time step l. The spatial re-
+lationships between nodes are represented by an adjacency
+matrix A ∈ RN ×N , where Ai,j = 1 indicates a connection
+between nodes i and j, and Ai,j = 0 indicates no connection.
+In real-world deployments, some observations may be miss-
+ing due to sensor failures or system errors. We use a binary
+mask M ∈ 0, 1N ×L to indicate the presence or absence of
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+2875
+
+--- PAGE 3 ---
+Forward
+Interpolation
+2
+ 7
+2
+ 5
+ 8
+ 7
+ 9
+4
+ 8
+7
+ 7
+ 8
+ 8
+ 7
+6
+ 5
+6
+ 4
+ 4
+ 8
+ 1
+2
+ 7
+2
+ 5
+ 8
+ 9
+4
+ 7
+ 8
+ 7
+5
+4
+ 8
+ 1
+Observed data
+ 2 Missing data
+ Pre-imputed data
+Figure 1. Pre-imputing by forward interpolation.
+measurements, where mi,l = 1 denotes a valid observation at
+node i and time l, while mi,l = 0 indicates missing data. The
+spatiotemporal imputation problem aims to reconstruct miss-
+ing data in X given the observed measurements and the adja-
+cency matrix A. The goal is to develop an imputation method
+that preserves both the temporal evolution of measurements
+and their spatial relationships across nodes.
+4 Methodology
+4.1 Preprocessing of CoFILL
+CoFILL performs a two-step preprocessing on the input se-
+ries to ensure high-quality inputs for training. We first mask
+some of the observed values in the original data based on a
+random masking strategy. This not only simulates missing
+patterns but also enhances the model’s generalization to di-
+verse scenarios [Tashiro et al., 2021]. Two sets of initial im-
+puted data are then generated from the masked data. The first
+set uses forward interpolation, as shown in Figure 1. It fills
+in missing data by using the known values from the previous
+time step, thus preserving the continuity and periodicity of the
+spatiotemporal data. This also reduces information loss due
+to over-smoothing. The second set fills the missing data with
+Gaussian noise. We introduce noise consistent with the orig-
+inal data distribution to enhance data diversity and introduce
+appropriate randomness for the model [Fortuin et al., 2020;
+He et al., 2025b ]. These two imputed data sets are adopted
+as inputs for subsequent modules, which further supports
+CoFILL in learning spatiotemporal dependencies and miss-
+ing data distributions.
+4.2 Conditional Information Module
+We extract features from the imputed data sets of preprocess-
+ing to provide effective conditional information for the noise
+prediction network. These features, by identifying the spa-
+tiotemporal dependencies from both the observed and pre-
+imputed data, guide the network to predict noise more ac-
+curately. The process works as follows. Initially, we map
+the imputed data X1 to a latent space Hin = Conv(X1) ∈
+Rd×N ×L, where Conv(·) refers to a 1 × 1 convolution opera-
+tion, and d denotes the channel size. Next, we extract features
+from both the temporal and frequency domains, and the com-
+bined feature is obtained through cross-attention.
+In the temporal domain, data reflects instantaneous
+changes, which is crucial for short-term prediction. The tem-
+poral feature extraction module separately obtains both tem-
+poral and spatial dependencies. We map X1 to the latent
+space Hin and pass it through a Temporal Convolutional Net-
+work (TCN) to learn temporal dependencies. The TCN em-
+ploys padded 1-dimensional gated causal convolutions, en-
+suring that the output and input maintain the same shape.
+The convolution kernel Γτ ∈ RK×Cin×Cout generates out-
+puts P, Q∈ RCout×N ×L of the same shape. The definition
+and specific formulas of the TCN structure can be, respec-
+tively, expressed as follows:
+¯Hin = Γτ (Hin) = P ⊙ σ(Q) ∈ RCout×N ×L (1)
+¯Hin = Dropout
+
+Chomp
+
+Conv 2D(dilation)
+(k×k) (Hin)
+
++ Hin
+(2)
+where ⊙ represents the Hadamard product, and σ is the sig-
+moid activation function, introducing nonlinearity and acting
+as a gating mechanism. We denote the output of the TCN as
+¯Hin ∈ Rd×N ×L, the convolution kernel size is k, the dila-
+tion size is 1, which indicates short-term feature extraction,
+and the convolution is expanded along the time axis. We use
+a Graph Convolutional Network (GCN) to learn spatial de-
+pendencies. The definition and specific formulas of the GCN
+structure can be, respectively, expressed as follows:
+˜Hin = ΓG( ¯Hin) = σ(φ(Agcn, ¯Hin)Wi) (3)
+˜Hin = ReLU
+
+Conv2D
+
+Concat
+
+¯Hin,
+
+( ¯HinAgcn)(o)	 (4)
+where Wi ∈ RCg
+in×Cg
+out is a learnable parameter, σ is the sig-
+moid activation function, and φ(·) represents the aggregation
+function that determines how neighboring node features are
+aggregated into the target node. The graph-normalized ad-
+jacency matrix is Agcn = D−1/2(A + I)D−1/2 ∈ RN ×N ,
+where I is the identity matrix, and D is the diagonal matrix
+with Dii = P
+j ∂(A + I)ij. Agcn is the static adjacency ma-
+trix, o is the convolution order of the graph, and Conv2D in-
+dicates that convolution is used for channel fusion. We denote
+the output of both TCN and GCN as ˜Hin ∈ Rd×N ×L. By
+processing dynamic characteristics in the temporal dimension
+with the TCN, we extract the temporal changes in the data. At
+the same time, we adopt the GCN to learn the relationships
+between nodes in the spatial dimension. This combination
+effectively identifies the complex changes in spatiotemporal
+data over time.
+In the frequency domain, data reveals periodicity and
+trends, which are essential for long-term forecasting and rec-
+ognizing periodic patterns. Many time series models fail to
+account for the frequency impact, which leads to an inabil-
+ity to extract the intrinsic features of the series. To this end,
+we apply the Discrete Cosine Transform (DCT) to extract
+frequency domain features ˆHin. Unlike Fourier transforms,
+DCT avoids the Gibbs phenomenon. It also provides superior
+energy compaction compared to Wavelet transforms[Jiang et
+al., 2023]. Its specific formula is as follows:
+ˆHin =
+T −1X
+t=0
+Hin · cos
+ π
+T
+
+t + 1
+2
+
+m
+
+, m= 0, 1, · · ·, T− 1
+(5)
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+2876
+
+--- PAGE 4 ---
+Addition
+Concatenation
+Observed data
+Missing data
+Pre-imputed data
+Noisy data
+CatCat
+CatCat
+Imputed data
+TCN
+GCN
+DCT
+Temporal AttentionTemporal Attention
+Linear
+AA
+Q K
+Cross Attention
+ Ccon Ccon
+Spatial AttentionSpatial Attention
+GCN
+Linear
+AA
+XinXin
+XtemXtem
+XspaXspa
+Mask
+V
+Q K V
+Q VK
+Input Series X
+Masked Series
+X1 by Forward
+Interpolation
+      by Gaussion
+Noise
+Adjacency 
+Matrix
+Output Series
+A) Preprocessing
+Conditional 
+Feature
+B) Conditional Information Module C) Noisy Estimation Module
+Combination 
+Information
+Adjacency 
+Matrix
+X
+Figure 2. The framework of CoFILL.
+where Hin ∈ Rd×N ×L, ˆHin ∈ Rd×N ×L, T represents the
+time step. As m→0, the corresponding DCT component
+captures low-frequency signals, reflecting long-term stable
+trends. Conversely, as m→T, it captures high-frequency com-
+ponents, indicating periodic structures. Together, the differ-
+ent frequency components in DCT represent both the long-
+term trends and periodic patterns within the sequence.
+As shown in Figure 2 B), we apply cross-attention to com-
+bine the temporal-domain feature ˜Hin and the frequency-
+domain feature ˆHin into a mixed feature representation. Tem-
+poral and frequency-domain features offer different perspec-
+tives. Temporal features reveal short-term behavior, while
+frequency-domain features identify long-term trends. The fu-
+sion of both perspectives enables the system to process multi-
+scale data within a unified framework. The temporal feature
+Q retains time sequence, local changes, and spatial features.
+It encodes immediate information along the time axis. The
+frequency-domain feature KV focuses on global periodicity
+and trends, which reduces noise interference while preserving
+key signal characteristics. The combination of both captures
+both local temporal information and global periodic trends.
+The time-frequency domain attention weights and the final
+conditioning information Ccon are defined as:
+QST F= ˜Hin · W Q
+ST F,
+KST F= ˆHin · W K
+ST F,
+VST F= ˆHin · W V
+ST F (6)
+Ccon = Attnstf (QST F, KST F, VST F)
+= softmax
+ QST FK T
+ST F
+√
+d
+
+· VST F (7)
+4.3 Noisy Estimation Module
+The noise prediction network ε in this module is employed
+during the reverse denoising process to progressively sam-
+ple noise, as illustrated in Figure 2 C). It uses conditional
+information Ccon to guide the extraction of spatiotemporal
+dependencies in the noise data Xin. Additionally, it lever-
+ages an attention mechanism to mitigate the randomness in-
+troduced by Gaussian noise injected into the data distribution.
+The model accepts three inputs, including noise information
+Xin = ( X1 ∥ ˜X t), conditional information Ccon, and the
+adjacency matrix A. It first generates temporal features Xtem
+through a temporal attention module ΥT (·). The data is then
+passed into a spatial attention module ΥS(·), equipped with
+a GNN, to produce spatial features Xspa. This process is for-
+malized as follows:
+Xtem = ΥT (Xin) = Attntem(Xin) (8)
+Xspa = ΥS(Xtem, A)
+= MLP(Norm(Attnspa(Xtem)) + Xtem)
++ Norm(G(Xtem, A) +Xtem) (9)
+Attntem(·) and Attn spa(·) represent temporal and spatial
+attention, respectively. The mechanisms are the dot-product
+multi-head self-attention from the transformer architecture.
+We also put conditional information into the attention cal-
+culations to reduce the noise accumulated during the diffu-
+sion steps. Specifically, for Attntem(·), the dot-product atten-
+tion Attn tem(QT , KT , VT ) = softmax((QT K T
+T )/
+√
+d) · VT
+is rewritten as Attn tem(AT , VT ) = AT · VT , where AT =
+softmax((QT K T
+T )/
+√
+d) denotes the attention weights. The
+attention weight AT is calculated by the conditional informa-
+tion Ccon. We set the inputs QT , KT , and VT as follows:
+QT = Ccon · W Q
+T , K T = Ccon · W K
+T , V T = Xin · W V
+T
+(10)
+where W Q
+T , WK
+T , WV
+T ∈ Rd×d are learnable projection pa-
+rameters. Similarly, the spatial attention Attn spa(AS, VS)
+computes the attention weight in the same manner:
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+2877
+
+--- PAGE 5 ---
+Algorithm 1 Training of CoFILL
+Input: Incomplete observed dataX, the adjacency matrixA,
+the number of iterations N, the number of diffusion steps
+T , noise levels sequence ¯αt.
+Output: Optimized noise prediction model ϵθ
+for i = 1 to N do
+Xmask ← Mask(X);
+X1 ← Interpolate(Xmask);
+Sample t ∼ Uniform({1, · · ·, T}), ϵ ∼ N(0, I);
+˜X t = √¯αtX 0 + √1 − ¯αtϵ;
+Updating the gradient ∇θ
+ϵ − ϵθ( ˜X t, X1, A, t)
+
+2
+end for
+QS = Ccon · W Q
+S , K S = Ccon · W K
+S , V S = Xtem · W V
+S
+(11)
+The noise prediction network consists of multiple stacked
+attention layers that progressively refine spatial representa-
+tions. Each layer processes features through a gated activa-
+tion unit, producing spatial features Xspa that split into two
+paths. The primary path forms residual connections feeding
+into subsequent layers, while a secondary path creates skip
+connections that aggregate features across network depths.
+The network combines these accumulated features and pro-
+cesses them through two 1-dimensional convolution layers,
+which contains only the values of the interpolation targets.
+4.4 Training and Prediction
+We apply a random masking strategy, during the training,
+to the input observations X to derive imputation targets ˜X,
+while the remaining observations are used to extract pre-
+imputation features X1 as conditional information. Similar
+to CSDI, we implement masking strategies including point
+strategy, block strategy, and hybrid strategy. As shown in Al-
+gorithm 1, the noise prediction model of CoFILL is trained by
+iterating over the observed data. Specifically, once obtaining
+the training imputation targets ˜X and conditional information
+X1, the training objective for spatiotemporal imputation is:
+L(θ) = E ˜X 0∼q( ˜X 0),ϵ∼N (0,I)
+ϵ − ϵθ( ˜X t, X1, A, t)
+
+2
+(12)
+In the imputation, we deploy the trained noise prediction
+model ϵθ and the available observation masks M to perform
+imputation. The imputation targets consist of all missing data
+in the spatiotemporal data. As shown in Algorithm 2, the
+trained model will fill in the missing data in the spatiotempo-
+ral data by performing reverse diffusion.
+5 Experiments
+5.1 Datasets
+We use three spatiotemporal datasets for imputation algo-
+rithms. The AQI-36 dataset [Zheng et al., 2014] serves as a
+good benchmark due to its inherent missing data patterns and
+complex spatiotemporal dependencies. The hourly PM2.5
+Algorithm 2 Imputation of CoFILL
+Input: A sample of incomplete observed data X, the adja-
+cency matrix A, the number of diffusion steps T , the opti-
+mized noise prediction model ϵθ.
+Output: Missing data of the imputation target Xout
+X1 ← Interpolate(X)
+Set ˜X t ∼ N(0, I)
+for t = T to 1 do
+µθ( ˜X t, X1, A, t) ← 1√ ¯αt
+( ˜X t− βt√1− ¯αt
+ϵθ( ˜X t, X1, A, t))
+˜X t−1 ← N(µθ( ˜X t, X1, A, t), σ2
+t I)
+end for
+measurements across Beijing’s 36 monitoring stations over
+a full year handle both short-term fluctuations and long-term
+season trends. The traffic datasets, METR-LA and PEMS-
+BAY [Li et al., 2017 ], present different scales to test our
+model’s capabilities. METR-LA’s 207 sensors and PEMS-
+BAY’s 325 sensors represent large-scale networks with dense
+spatial correlations. Their five-minute sampling frequency
+verifies model ability to face rapid temporal variations, while
+their different geographic contexts - Los Angeles and San
+Francisco Bay Area - validate results across urban traffic.
+5.2 Baselines for Comparison
+Traditional Statistical Baselines. The fundamental statis-
+tical approaches include Mean, which imputes values using
+historical node averages, and Daily Average (DA), which uses
+time-specific averages. We also include K-Nearest Neighbors
+(KNN) [Bai et al., 2023; Xuet al., 2024], which leverages ge-
+ographical proximity for imputation, and Linear interpolation
+for time series reconstruction. For robust sequential data pro-
+cessing, we incorporate Kalman Filter (KF), which estimates
+missing data through state-space modeling.
+Matrix and Tensor-Based Baselines. These intermedi-
+ate approaches bridge classical statistics and modern ma-
+chine learning by decomposing complex data structures.
+MICE [White et al., 2011 ] uses conditional specifications
+with chained equations for multivariate imputation. Vec-
+tor Autoregression (V AR) predicts single-step values through
+temporal dependencies. Time-Regularized Matrix Factor-
+ization (TRMF) [Yu et al., 2016 ] specializes in temporal
+data patterns, and Bayesian Augmented Tensor Factorization
+(BATF)[Chen et al., 2019a] integrates spatiotemporal knowl-
+edge through tensor decomposition.
+Deep Learning Baselines. For probabilistic modeling
+with uncertainty quantification, we employ V-RIN [Mulyadi
+et al., 2021 ] and GP-V AE[Fortuin et al., 2020 ]. To lever-
+age adversarial learning, we use rGAIN [Yoon et al., 2018],
+which enhances GAIN through bidirectional processing. We
+further employ BRITS[Cao et al., 2018] for RNN-based tem-
+poral modeling and GRIN for graph neural network process-
+ing with bidirectional GRU. Our evaluation also encompasses
+recent diffusion-based methods: CSDI [Tashiro et al., 2021],
+which captures feature interactions through transformers, and
+PriSTI [Liu et al., 2023 ], which implements spatiotemporal
+attention mechanisms.
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+2878
+
+--- PAGE 6 ---
+5.3 Evaluation Metrics
+We investigate the performance by three complementary
+metrics - Mean Absolute Error (MAE), Mean Squared
+Error (MSE), and Continuous Ranked Probability Score
+(CRPS) [Berrisch and Ziel, 2023 ]. MAE and MSE provide
+measures of imputation accuracy by calculating the distance
+between predicted values and ground truth. CRPS evaluates
+the quality of probabilistic predictions by measuring how well
+the predicted probability distributions align with given values.
+5.4 Experimental Design
+To ensure reproducibility and meaningful evaluation, we es-
+tablish a methodical data partitioning strategy that respects
+the temporal characteristics of our datasets. The AQI-36
+dataset requires careful temporal consideration due to its sea-
+sonal nature. We distribute the data across seasons by select-
+ing March, June, September, and December for testing, which
+captures seasonal variations throughout the year. The valida-
+tion set draws from the final 10% of data in February, May,
+August, and November to maintain seasonal representation.
+The remaining months form the training set.
+To evaluate model performance under different missing
+data scenarios, we design two types of data corruption
+schemes. For AQI-36, we implement a simulated failure (SF)
+pattern that replicates real-world sensor malfunction distribu-
+tions. For PEMS-BAY and METR-LA traffic datasets, we
+create controlled missing data scenarios through mask matri-
+ces. These scenarios include random point missing (Point),
+where we mask 25% of observations uniformly at random,
+and structured block missing (Block), which combines 5%
+random masking with continuous missing segments. These
+segments span 1 to 4 hours per sensor and occur with 0.15%
+probability, simulating extended sensor outages.
+Our implementation runs on an NVIDIA RTX 4090 GPU
+with 24GB VRAM. We optimize the model using Adam with
+cosine annealing learning rate decay. The learning rate starts
+at 10−3 and decays to 10−5. Table 1 details the complete
+hyperparameter configuration for each dataset. To establish
+statistical significance, we conduct five independent runs with
+different random seeds for each experiment.
+AQI-36 METR-LA PEMS-BA Y
+Batch size 16 16 16
+Time length L 36 24 24
+Epochs 200 300 300
+Learning rate 0.001 0.001 0.001
+Channel size d 64 64 64
+Noise estimation layer 4 4 4
+Min noise level β1 0.0001 0.0001 0.0001
+Max noise level βT 0.2 0.2 0.2
+Diffusion steps T 100 50 50
+Virtual nodes k 16 64 64
+Table 1. The hyperparameters of CoFILL in each dataset
+5.5 Comparative Performance Study
+Our experimental evaluation demonstrates CoFILL’s consis-
+tent superiority across multiple datasets and missing data sce-
+narios. The quantitative results in Table 2 reveal CoFILL’s
+strong performance in terms of MAE and MSE metrics.
+For probabilistic imputation assessment, Table 3 presents the
+CRPS comparisons. CoFILL achieves the best performance
+in 12 out of 15 experimental configurations spanning differ-
+ent metrics and missing patterns. The improvement becomes
+particularly apparent when compared with PriSTI, the state-
+of-the-art method. On the METR-LA dataset with Block,
+CoFILL reduces both MAE and MSE by 10.22%. On the
+PEMS-BAY point-missing pattern, CoFILL performs on par
+with PriSTI (only ≤1% difference with identical MSE).
+The comparative analysis reveals clear performance pat-
+terns across different methodological categories. Traditional
+statistical and machine learning approaches, such as Mean
+and KNN, show limited effectiveness due to their simplified
+assumptions about spatiotemporal relationships. The deep
+learning approaches, represented by GRIN and BRITS, face
+performance degradation from accumulated errors in their au-
+toregressive processing. While recent diffusion-based mod-
+els like CSDI and PriSTI demonstrate strong baseline perfor-
+mance, CoFILL still outperforms them with advanced condi-
+tional information construction and feature fusion methods.
+5.6 Ablation Study
+We evaluate the impact of key components of CoFILL by
+comparing the following settings.
+• w/o Forward (Forward Interpolation): Pre-imputation
+information X1 is removed, and conditional feature ex-
+traction is performed directly on the missing data.
+• w/o Temporal (Temporal Domain): The temporal mod-
+ule in the conditional feature extraction block is re-
+moved, leaving only the frequency domain module.
+• w/o Frequency (Frequency Domain): The frequency
+module in the conditional feature extraction block is re-
+moved, leaving only the temporal module.
+• w/o Cross (Cross Attention): The cross-attention mech-
+anism between temporal and frequency domains is re-
+moved and replaced by direct addition.
+Table 4 presents the impact of each setting on the perfor-
+mance. We only analyze AQI-36 and METR-LA due to the
+computational cost of re-running diffusion-based CoFILL,
+especially on the larger PEMS-BAY . This aligns with the ex-
+perimental setup of the baseline PriSTI[Liu et al., 2023]. The
+removal of forward interpolation produces the most signifi-
+cant performance degradation across datasets. For AQI-36,
+this modification increases the MAE from 8.7 to 9.15, repre-
+senting a substantial 0.45 unit deterioration. The temporal do-
+main component emerges as the second most critical element,
+with its removal causing more severe performance decline
+than eliminating the frequency domain component from the
+conditional information module described in Section 4.2. The
+cross-attention mechanism shows the least impact on model
+performance, particularly evident in the METR-LA dataset
+where its removal results in minimal MAE changes.
+5.7 Hyperparameter Sensitivity Analysis
+This experiment analyzes two important parameters in the
+diffusion model: max noise level (βT ) and channel size of the
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+2879
+
+--- PAGE 7 ---
+AQI-36 METR-LA PEMS-BA Y
+SF Block Point Block Point
+MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE
+Mean 53.48±0.00 4578.08±0.00 7.48±0.00 139.54±0.00 7.56±0.00 142.22±0.00 5.46±0.00 87.56±0.00 5.42±0.00 86.59±0.00
+DA 50.51±0.00 4416.10±0.00 14.53±0.00 445.08±0.00 14.57±0.00 448.66±0.00 3.30±0.00 43.76±0.00 3.35±0.00 44.50±0.00
+KNN 30.21±0.00 2892.31±0.00 7.79±0.00 124.61±0.00 7.88±0.00 129.29±0.00 4.30±0.00 49.90±0.00 4.30±0.00 49.80±0.00
+Linear 14.46±0.00 673.92±0.00 3.26±0.00 33.76±0.00 2.43±0.00 14.75±0.00 1.54±0.00 14.14±0.00 0.76±0.00 1.74±0.00
+KF 54.09±0.00 4942.26±0.00 16.75±0.00 534.69±0.00 16.66±0.00 529.96±0.00 5.64±0.00 93.19±0.00 5.68±0.00 93.32±0.00
+MICE 30.37±0.00 2594.06±7.17 4.22±0.05 51.07±1.25 4.42±0.07 55.07±1.46 2.94±0.02 28.28±0.37 3.09±0.02 31.43±0.41
+V AR 15.64±0.09 833.46±13.85 3.11±0.08 28.00±0.76 2.69±0.00 21.10±0.02 2.09±0.10 16.06±0.73 1.30±0.00 6.52±0.01
+TRMF 15.46±0.08 1379.05±34.83 2.96±0.00 22.65±0.13 2.86±0.00 20.39±0.02 1.95±0.01 11.21±0.06 1.85±0.00 10.03±00
+BATF 15.21±0.27 662.87±29.55 3.56±0.01 35.39±0.03 3.58±0.01 36.05±0.02 2.05±0.00 14.48±0.01 2.05±0.00 14.90±0.06
+V-RIN 10.00±0.10 838.05±24.74 6.84±0.17 150.08±6.13 3.96±0.08 49.98±1.30 2.49±0.04 36.12±0.66 1.21±0.03 6.08±0.29
+GP-V AE 25.71±0.30 2589.53±59.14 6.55±0.09 122.33±2.05 6.57±0.10 127.26±3.97 2.86±0.15 26.80±2.10 3.41±0.23 38.95±4.16
+rGAIN 15.37±0.26 641.92±33.89 2.90±0.0 21.67±0.15 2.83±0.01 20.03±0.09 2.18±0.01 13.96±0.20 1.88±0.02 10.37±0.20
+BRITS 14.50±0.35 622.36±65.16 2.34±0.01 17.00±0.14 2.34±0.00 16.46±0.05 1.70±0.01 10.50±0.07 1.47±0.00 7.94±0.03
+GRIN 12.08±0.47 523.14±57.17 2.03±0.00 13.26±0.05 1.91±0.00 10.41±0.03 1.14±0.01 6.60±0.10 0.67±0.00 1.55±0.01
+CSDI 9.51±0.10 352.46±7.50 1.98±0.00 12.62±0.60 1.79±0.00 8.96±0.08 0.86±0.00 4.39±0.02 0.57±0.00 1.12±0.03
+PriSTI 9.03±0.07 310.39±7.03 1.86±0.00 10.70±0.02 1.72±0.00 8.24±0.05 0.78±0.00 3.31±0.01 0.55±0.00 1.03±0.00
+CoFILL 8.70±0.06 296.52±7.29 1.67±0.00 9.42±0.00 1.62±0.00 8.01±0.05 0.74±0.00 2.99±0.02 0.57±0.00 1.03±0.00
+Improvement 3.65% 4.47% 10.22% 11.96% 5.81% 2.79% 5.13% 9.67% — —
+Table 2. The results of MAE and MSE for spatiotemporal imputation
+AQI-36 METR-LA PEMS-BA Y
+SF Block Point Block Point
+V-RIN 0.3154 0.1283 0.0781 0.0394 0.0191
+GP-V AE 0.3377 0.1118 0.0977 0.0436 0.0568
+CSDI 0.1056 0.0260 0.0235 0.0127 0.0067
+PriSTI 0.0997 0.0244 0.0227 0.0093 0.0064
+CoFILL 0.09598 0.0220 0.0213 0.0091 0.0069
+Improvement 3.73% 9.80% 6.17% 2.15% —
+Table 3. The results of CRPS for spatiotemporal imputation
+AQI-36 METR-LA
+SF Block Point
+w/o Forward 9.15 1.95 1.83
+w/o Temporal 9.00 1.89 1.78
+w/o Frequency 8.81 1.71 1.72
+w/o Cross 8.82 1.68 1.63
+CoFILL 8.70 1.67 1.62
+Table 4. The result of MAE for ablation studies
+hidden state (d) that represent fundamental trade-offs. The
+former controls the intensity of the noise added during the dif-
+fusion process. A high noise level (βT ) may lead to distorted
+generated data, while a low noise level (βT ) may make it dif-
+ficult to learn the various relationships within the data. The
+latter determines the model’s ability to represent and handle
+information at each time step. A larger d allows the model to
+learn more features, but it may also lead to higher overhead.
+The experimental results are illustrated in Figure 3 (only
+for AQI-36 and METR-LA due to the same reasons discussed
+in Section 5.6). For AQI-36, the model maintains stable MAE
+and MSE values with maximum noise level βT between 0.2
+and 0.4. The METR-LA dataset shows higher sensitivity to
+βT variations within this range. The channel size d produces
+opposing effects, including degrading performance on AQI-
+36 (increasing d) but improving results on METR-LA. This
+behavior reflects the different complexities in air quality and
+traffic data. Furthermore, we set d to 16 for AQI-36 and 64
+for METR-LA. We apply METR-LA’s parameter to PEMS-
+BAY due to their similar data characteristics, as detailed in
+Figure 3. Analysis of hyperparameters βT and d.
+Table 1. This enables CoFILL to outperform PriSTI across
+most scenarios, which obtains better performance even under
+PEMS-BAY’s Point where the metrics remain close to PriSTI.
+6 Conclusion
+In this paper, we present CoFILL, a novel conditional diffu-
+sion framework for spatiotemporal data imputation. CoFILL
+first overcomes the error accumulation problem by imple-
+menting a non-recursive processing structure through our dif-
+fusion framework. Second, it resolves the challenge of cap-
+turing complex temporal dependencies by introducing a dual-
+stream architecture that simultaneously processes temporal
+and frequency domain features. Extensive experiments on
+real-world datasets demonstrate CoFILL’s superior perfor-
+mance. Our model achieves better imputation accuracy than
+SOTAs across various missing data scenarios. We will de-
+velop adaptive fusion and extend CoFILL to handle multi-
+resolution spatiotemporal data in the future.
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+2880
+
+--- PAGE 8 ---
+Acknowledgments
+This work is supported by the National Natural Science Foun-
+dation of China (62302148), Hebei Natural Science Founda-
+tion (F2024202076), and Hebei Yanzhao HuangJintai Talents
+Program (Postdoctoral Platform) (B2024003002).
+References
+[Agafonov, 2020] Anton Agafonov. Traffic flow prediction
+using graph convolution neural networks. In Proceedings
+of the 10th international conference on information sci-
+ence and technology (ICIST), pages 91–95. IEEE, 2020.
+[Amiri and Jensen, 2016] Mehran Amiri and Richard
+Jensen. Missing data imputation using fuzzy-rough
+methods. Neurocomputing, 205:152–164, 2016.
+[Baggag et al., 2019] Abdelkader Baggag, Sofiane Abbar,
+Ankit Sharma, Tahar Zanouda, Abdulaziz Al-Homaid,
+Abhiraj Mohan, and Jaideep Srivastava. Learning spa-
+tiotemporal latent factors of traffic via regularized tensor
+factorization: Imputing missing values and forecasting.
+IEEE Transactions on Knowledge and Data Engineering
+(TKDE), 33(6):2573–2587, 2019.
+[Bai et al., 2023] Yude Bai, Sen Chen, Zhenchang Xing, and
+Xiaohong Li. Argusdroid: detecting android malware vari-
+ants by mining permission-api knowledge graph. Science
+China Information Sciences (SCIS), 66(9):1–19, 2023.
+[Bao et al., 2025] Peijun Bao, Zihao Shao, Wenhan Yang,
+Boon Poh Ng, and Alex C Kot. E3m: zero-shot spatio-
+temporal video grounding with expectation-maximization
+multimodal modulation. In Proceedings of the European
+Conference on Computer Vision (ECCV), pages 227–243.
+Springer, 2025.
+[Berrisch and Ziel, 2023] Jonathan Berrisch and Florian
+Ziel. Crps learning. Journal of Econometrics,
+237(2):105221, 2023.
+[Cao et al., 2018] Wei Cao, Dong Wang, Jian Li, Hao Zhou,
+Lei Li, and Yitan Li. Brits: Bidirectional recurrent im-
+putation for time series. Advances in neural information
+processing systems (NeurIPS), 31, 2018.
+[Challu et al., 2023] Cristian Challu, Kin G Olivares,
+Boris N Oreshkin, Federico Garza Ramirez, Max Mer-
+genthaler Canseco, and Artur Dubrawski. Nhits: Neural
+hierarchical interpolation for time series forecasting.
+In Proceedings of the AAAI conference on artificial
+intelligence (AAAI), volume 37, pages 6989–6997, 2023.
+[Chen et al., 2019a] Xinyu Chen, Zhaocheng He, Yixian
+Chen, Yuhuan Lu, and Jiawei Wang. Missing traffic data
+imputation and pattern discovery with a bayesian aug-
+mented tensor factorization model. Transportation Re-
+search Part C: Emerging Technologies, 104:66–77, 2019.
+[Chen et al., 2019b] Xinyu Chen, Zhaocheng He, and Lijun
+Sun. A bayesian tensor decomposition approach for spa-
+tiotemporal traffic data imputation. Transportation re-
+search part C: emerging technologies, 98:73–84, 2019.
+[Chen et al., 2022a] Jiawen Chen, Yajun Yang, Chenyang
+Wang, Heng Zhang, Chao Qiu, and Xiaofei Wang. Mul-
+titask offloading strategy optimization based on directed
+acyclic graphs for edge computing. IEEE Internet of
+Things Journal, 9(12):9367–9378, 2022.
+[Chen et al., 2022b] Jiawen Chen, Yajun Yang, Chenyang
+Wang, Heng Zhang, Chao Qiu, and Xiaofei Wang. Mul-
+titask offloading strategy optimization based on directed
+acyclic graphs for edge computing. IEEE Internet of
+Things Journal, 9(12):9367–9378, 2022.
+[Cini et al., 2021] Andrea Cini, Ivan Marisca, and Cesare
+Alippi. Filling the g
+ap s: Multivariate time series
+imputation by graph neural networks. arXiv preprint
+arXiv:2108.00298, 2021.
+[Cong and Li, 2024] Yulai Cong and Sijia Li. Big learning
+expectation maximization. In Proceedings of the AAAI
+Conference on Artificial Intelligence (AAAI), volume 38,
+pages 11669–11677, 2024.
+[Fortuin et al., 2020] Vincent Fortuin, Dmitry Baranchuk,
+Gunnar R¨atsch, and Stephan Mandt. Gp-vae: Deep proba-
+bilistic time series imputation. In Proceedings of the Inter-
+national conference on artificial intelligence and statistics
+(AISTATS), pages 1651–1661. PMLR, 2020.
+[Goodfellow et al., 2020] Ian Goodfellow, Jean Pouget-
+Abadie, Mehdi Mirza, Bing Xu, David Warde-Farley,
+Sherjil Ozair, Aaron Courville, and Yoshua Bengio. Gen-
+erative adversarial networks. Communications of the
+ACM, 63(11):139–144, 2020.
+[He et al., 2024] Wenying He, Haolu Zhou, Yun Zuo, Yude
+Bai, and Fei Guo. Muse: A deep learning model based on
+multi-feature fusion for super-enhancer prediction. Com-
+putational Biology and Chemistry, 113:108282, 2024.
+[He et al., 2025a] Wenying He, Feiyu Wang, Yude Bai,
+Neal N. Xiong, Guangquan Xu, and Fei Guo. Pefn: A
+patches enhancement and hierarchical fusion network for
+robust vehicle re-identification. IEEE Internet of Things
+Journal, pages 1–1, 2025.
+[He et al., 2025b] Wenying He, Jialu Xu, Yun Zuo, Yude
+Bai, and Fei Guo. Ensemblese: identification of super-
+enhancers based on ensemble learning. Briefings in Func-
+tional Genomics, 24:elaf003, 04 2025.
+[Jiang et al., 2023] Maowei Jiang, Pengyu Zeng, Kai Wang,
+Huan Liu, Wenbo Chen, and Haoran Liu. Fecam: Fre-
+quency enhanced channel attention mechanism for time
+series forecasting. Advanced Engineering Informatics,
+58:102158, 2023.
+[Jin et al., 2023] Di Jin, Bingdao Feng, Siqi Guo, Xiaobao
+Wang, Jianguo Wei, and Zhen Wang. Local-global de-
+fense against unsupervised adversarial attacks on graphs.
+Proceedings of the AAAI Conference on Artificial Intelli-
+gence, 37(7):8105–8113, Jun. 2023.
+[Kingma, 2013] Diederik P Kingma. Auto-encoding varia-
+tional bayes. arXiv preprint arXiv:1312.6114, 2013.
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+2881
+
+--- PAGE 9 ---
+[Li et al., 2014] Yuebiao Li, Zhiheng Li, and Li Li. Miss-
+ing traffic data: comparison of imputation methods. IET
+Intelligent Transport Systems, 8(1):51–57, 2014.
+[Li et al., 2017] Yaguang Li, Rose Yu, Cyrus Shahabi, and
+Yan Liu. Diffusion convolutional recurrent neural net-
+work: Data-driven traffic forecasting. arXiv preprint
+arXiv:1707.01926, 2017.
+[Li et al., 2025] Lujun Li, Haosen Sun, Shiwen Li, Peijie
+Dong, Wenhan Luo, Wei Xue, Qifeng Liu, and Yike Guo.
+Auto-gas: automated proxy discovery for training-free
+generative architecture search. InProceedings of the Euro-
+pean Conference on Computer Vision (ECCV), pages 38–
+55. Springer, 2025.
+[Lian et al., 2023] Zheng Lian, Lan Chen, Licai Sun, Bin
+Liu, and Jianhua Tao. Gcnet: Graph completion network
+for incomplete multimodal learning in conversation. IEEE
+Transactions on pattern analysis and machine intelligence
+(TPAMI), 45(7):8419–8432, 2023.
+[Lin et al., 2024] Bill Yuchen Lin, Yicheng Fu, Karina Yang,
+Faeze Brahman, Shiyu Huang, Chandra Bhagavatula,
+Prithviraj Ammanabrolu, Yejin Choi, and Xiang Ren.
+Swiftsage: A generative agent with fast and slow thinking
+for complex interactive tasks. Advances in Neural Infor-
+mation Processing Systems (NeurIPS), 36, 2024.
+[Liu et al., 2023] Mingzhe Liu, Han Huang, Hao Feng,
+Leilei Sun, Bowen Du, and Yanjie Fu. Pristi: A condi-
+tional diffusion framework for spatiotemporal imputation.
+In Proceedings of the 39th International Conference on
+Data Engineering (ICDE), pages 1927–1939. IEEE, 2023.
+[Marisca et al., 2022] Ivan Marisca, Andrea Cini, and Ce-
+sare Alippi. Learning to reconstruct missing data from
+spatiotemporal graphs with sparse observations. Advances
+in Neural Information Processing Systems (NeurIPS),
+35:32069–32082, 2022.
+[Mulyadi et al., 2021] Ahmad Wisnu Mulyadi, Eunji Jun,
+and Heung-Il Suk. Uncertainty-aware variational-
+recurrent imputation network for clinical time series.IEEE
+Transactions on Cybernetics, 52(9):9684–9694, 2021.
+[Shahidi et al., 2024] Faezehsadat Shahidi, M Ethan Mac-
+Donald, Dallas Seitz, Rebecca Barry, and Geoffrey
+Messier. Enhancing risk prediction in mental health us-
+ing ensemble hybrid models and administrative health-
+care data with irregular intervals. In Proceedings of
+the IEEE International Conference on Bioinformatics and
+Biomedicine (BIBM), pages 3673–3678. IEEE, 2024.
+[Shi et al., 2024] Yang Shi, Chenling Ding, Shuai Li, Bin
+Li, and Xiaobing Sun. New rnn algorithms for differ-
+ent time-variant matrix inequalities solving under discrete-
+time framework. IEEE Transactions on Neural Networks
+and Learning Systems (TNNLS), 2024.
+[Tan et al., 2018] Qiaoyu Tan, Guoxian Yu, Carlotta
+Domeniconi, Jun Wang, and Zili Zhang. Incomplete
+multi-view weak-label learning. In Proceedings of
+the Twenty-Seventh International Joint Conference on
+Artificial Intelligence (IJCAI), pages 2703–2709, 2018.
+[Tashiro et al., 2021] Yusuke Tashiro, Jiaming Song, Yang
+Song, and Stefano Ermon. Csdi: Conditional score-
+based diffusion models for probabilistic time series impu-
+tation. Advances in Neural Information Processing Sys-
+tems (NeurIPS), 34:24804–24816, 2021.
+[Vaswani et al., 2017] Ashish Vaswani, Noam Shazeer, Niki
+Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez,
+Łukasz Kaiser, and Illia Polosukhin. Attention is all
+you need. advances in neural information processing sys-
+tems. Advances in neural information processing systems
+(NeurIPS), 30(2017), 2017.
+[Wang et al., 2018] Yang Wang, Yong Zhang, Xinglin Piao,
+Hao Liu, and Ke Zhang. Traffic data reconstruction via
+adaptive spatial-temporal correlations. IEEE Transactions
+on Intelligent Transportation Systems (TITS), 20(4):1531–
+1543, 2018.
+[White et al., 2011] Ian R White, Patrick Royston, and An-
+gela M Wood. Multiple imputation using chained equa-
+tions: issues and guidance for practice. Statistics in
+medicine, 30(4):377–399, 2011.
+[Wu et al., 2019] Zonghan Wu, Shirui Pan, Guodong Long,
+Jing Jiang, and Chengqi Zhang. Graph wavenet for
+deep spatial-temporal graph modeling. arXiv preprint
+arXiv:1906.00121, 2019.
+[Wu et al., 2022] Haixu Wu, Tengge Hu, Yong Liu, Hang
+Zhou, Jianmin Wang, and Mingsheng Long. Timesnet:
+Temporal 2d-variation modeling for general time series
+analysis. arXiv preprint arXiv:2210.02186, 2022.
+[Xu et al., 2024] Lihui Xu, Jinfeng Lin, Yuxuan Yang, Zhi-
+hao Zhao, Xiaoming Shi, Guanglong Ge, Jin Qian, Cheng
+Shi, Guohui Li, Simin Wang, et al. Ultrahigh thermal
+stability and piezoelectricity of lead-free knn-based tex-
+ture piezoceramics. Nature Communications, 15(1):9018,
+2024.
+[Yi et al., 2016] Xiuwen Yi, Yu Zheng, Junbo Zhang, and
+Tianrui Li. St-mvl: Filling missing values in geo-sensory
+time series data. In Proceedings of the 25th international
+joint conference on artificial intelligence (IJCAI), 2016.
+[Yoon et al., 2018] Jinsung Yoon, James Jordon, and Mi-
+haela Schaar. Gain: Missing data imputation using gener-
+ative adversarial nets. In Proceedings of the International
+conference on machine learning (ICML), pages 5689–
+5698. PMLR, 2018.
+[Yu et al., 2016] Hsiang-Fu Yu, Nikhil Rao, and Inderjit S
+Dhillon. Temporal regularized matrix factorization for
+high-dimensional time series prediction. Advances in neu-
+ral information processing systems (NeurIPS), 29, 2016.
+[Zheng et al., 2014] Yu Zheng, Licia Capra, Ouri Wolfson,
+and Hai Yang. Urban computing: concepts, methodolo-
+gies, and applications. ACM Transactions on Intelligent
+Systems and Technology (TIST), 5(3):1–55, 2014.
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+2882

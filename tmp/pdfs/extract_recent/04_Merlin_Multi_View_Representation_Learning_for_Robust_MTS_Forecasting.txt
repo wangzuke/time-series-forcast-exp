@@ -1,0 +1,1288 @@
+
+
+--- PAGE 1 ---
+arXiv:2506.12459v1  [cs.LG]  14 Jun 2025
+Merlin: Multi-View Representation Learning for Robust
+Multivariate Time Series Forecasting with Unfixed Missing Rates
+Chengqing Yu
+Fei Wang∗
+Institute of Computing Technology,
+Chinese Academy of Sciences
+State Key Laboratory of AI Safety
+University of Chinese Academy of Sciences,
+Beijing, China
+{yuchengqing22b,wangfei,19b}@ict.ac.cn
+Chuanguang Yang
+Zezhi Shao
+Tao Sun
+Tangwen Qian
+Institute of Computing Technology,
+Chinese Academy of Sciences
+State Key Laboratory of AI Safety, Beijing, China
+{yangchuanguang,shaozezhi,suntao,qiantangwen}@ict.ac.cn
+Wei Wei
+School of Computer Science and Technology,
+Huazhong University of Science and Technology,
+Wuhan, China
+weiw@hust.edu.cn
+Zhulin An
+Yongjun Xu∗
+Institute of Computing Technology,
+Chinese Academy of Sciences
+State Key Laboratory of AI Safety
+University of Chinese Academy of Sciences,
+Beijing, China
+{anzhulin,xyj}@ict.ac.cn
+Abstract
+Multivariate Time Series Forecasting (MTSF) involves predicting
+future values of multiple interrelated time series. Recently, deep
+learning-based MTSF models have gained significant attention for
+their promising ability to mine semantics (global and local infor-
+mation) within MTS data. However, these models are pervasively
+susceptible to missing values caused by malfunctioning data collec-
+tors. These missing values not only disrupt the semantics of MTS,
+but their distribution also changes over time. Nevertheless, exist-
+ing models lack robustness to such issues, leading to suboptimal
+forecasting performance. To this end, in this paper, we propose
+Multi-View Representation Learning (Merlin), which can help
+existing models achieve semantic alignment between incomplete
+observations with different missing rates and complete observa-
+tions in MTS. Specifically, Merlin consists of two key modules:
+offline knowledge distillation and multi-view contrastive learning.
+The former utilizes a teacher model to guide a student model in
+mining semantics from incomplete observations, similar to those
+obtainable from complete observations. The latter improves the
+student model’s robustness by learning from positive/negative data
+pairs constructed from incomplete observations with different miss-
+ing rates, ensuring semantic alignment across different missing
+rates. Therefore, Merlin is capable of effectively enhancing the ro-
+bustness of existing models against unfixed missing rates while
+∗Fei Wang and Yongjun Xu are the corresponding authors.
+This work is licensed under a Creative Commons Attribution 4.0 International License.
+KDD ’25, Toronto, ON, Canada
+© 2025 Copyright held by the owner/author(s).
+ACM ISBN 979-8-4007-1454-2/2025/08
+https://doi.org/10.1145/3711896.3737046
+preserving forecasting accuracy. Experiments on four real-world
+datasets demonstrate the superiority of Merlin.
+CCS Concepts
+• Information systems→ Data mining.
+Keywords
+Multivariate Time Series Forecasting with Unfixed Missing Rates,
+Multi-View Representation Learning, Offline Knowledge Distilla-
+tion, Multi-View Contrastive Learning
+ACM Reference Format:
+Chengqing Yu, Fei Wang, Chuanguang Yang, Zezhi Shao, Tao Sun, Tang-
+wen Qian, Wei Wei, Zhulin An, and Yongjun Xu. 2025. Merlin: Multi-View
+Representation Learning for Robust Multivariate Time Series Forecast-
+ing with Unfixed Missing Rates. In Proceedings of the 31st ACM SIGKDD
+Conference on Knowledge Discovery and Data Mining V.2 (KDD ’25), Au-
+gust 3–7, 2025, Toronto, ON, Canada. ACM, New York, NY, USA, 12 pages.
+https://doi.org/10.1145/3711896.3737046
+KDD Availability Link:
+The source code of this paper has been made publicly available at https:
+//doi.org/10.5281/zenodo.15508818.
+1 Introduction
+Multivariate Time Series Forecasting (MTSF) widely exists in trans-
+portation, environment, weather and other areas [ 17, 22, 41, 50].
+It consists of multiple numerical sequences that change over time,
+which typically contain global information (such as periodicity
+and trends) and local information (such as detailed changes) along
+the temporal dimension [47, 56]. These global and local informa-
+tion constitute the semantics of time series, and fully mining these
+semantics is crucial for achieving accurate forecasting [19, 39].
+
+
+--- PAGE 2 ---
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada Chengqing Yu et al.
+Deep learning-based models, such as Spatial-Temporal Graph
+Neural Networks (STGNNs) [ 44, 45] and Transformers [ 10, 65],
+can fully mine semantics from MTS, but they generally require
+complete observations to maintain accurate forecasting [ 66]. In
+reality, due to factors such as natural disasters and component
+failures, data collectors can easily malfunction and fail to output
+data normally [73]. In this case, existing models only use incomplete
+observations to predict future values, limiting their performance
+[12]. To illustrate, we evaluate the performance of several models
+[43, 57] under different missing rates on the PEMS04 dataset. As
+shown in Figure 1(a), the forecasting errors (Mean Absolute Error)
+of these models increase significantly as the missing rate increases.
+To mitigate the adverse effects of incomplete MTS data, we delve
+deeper into a question: how do missing values lead to the per-
+formance degradation of these models? We find that a large
+number of missing values1 in historical observations can severely
+disrupt the semantics of MTS, while existing models exhibit poor
+robustness in this scenario. As shown in Figure 1 (b), missing values
+disrupt the global information (such as periodicity) and introduce
+abnormal local information such as sudden changes (from normal
+to zero) and abnormal straight lines. Existing models easily capture
+these anomalies instead of the original semantics, leading to a degra-
+dation in performance. Besides, the distribution of missing values
+may change over time, leading to unfixed missing rates across dif-
+ferent time periods. If existing models [43, 57] do not train separate
+models for each missing rate, their performance will significantly
+decline, exhibiting poor robustness to unfixed missing rates.
+An intuitive solution to enhancing the performance of forecast-
+ing models is to use imputation methods to recover missing val-
+ues and propose two-stage or end-to-end modeling approaches
+[48, 49, 67]. However, these methods face two challenges: (1) exist-
+ing imputation methods [1, 35, 54] usually require reconstructing
+both missing and normal values, which disrupts the local infor-
+mation and leads to error accumulation; (2) when dealing with
+unfixed missing rates, existing imputation methods [20, 34, 74] re-
+quire training separate models for different missing rates to ensure
+data recovery accuracy. When imputation and forecasting models
+do not train separate models for each missing rate, their forecast-
+ing performance significantly declines, exhibiting poor robustness
+when dealing with unfixed missing rates.
+To solve the above problems and achieve robust MTSF with un-
+fixed missing rates, we believe that the key idea is to enhance the
+capability of forecasting models for semantic alignment, which
+includes two objectives: (1) complete observations have more ac-
+curate global and local information, and we need to help forecasting
+models mine similar semantics from incomplete observations; (2)
+different missing rates have varying impacts on the original seman-
+tics of MTS, and we need to help forecasting models align the se-
+mantics as much as possible between different missing rates. To this
+end, we propose Multi-View Representation Learning (Merlin),
+taking advantage of offline knowledge distillation (KD) and multi-
+view contrastive learning (CL). For objective 1, based on the idea
+of offline knowledge distillation, we first train a teacher model using
+complete observations and then use the same architecture to ob-
+tain a student model, which is trained on incomplete observations.
+1Missing values in most datasets, such as PEMS04, are typically treated as zeros.
+Figure 1: Examples of MTSF with missing values on PEMS04.
+(a) Although the forecasting errors of existing models in-
+crease significantly as the missing rate increases, Merlin can
+reduce their forecasting errors. (b) Missing values disrupt the
+global information and bring abnormal local information.
+The missing rates are unfixed across different time periods.
+When training the student model, we input complete observations
+into the teacher model and transfer the generated representations
+and forecasting results as knowledge to constrain the student model.
+This ensures that the representations and forecasting results gen-
+erated by the student model from incomplete observations are as
+similar as possible to those generated by the teacher model (the loss
+between them is as small as possible). In this way, the student model
+can mine semantics from incomplete observations that approximate
+those obtained from complete observations. For objective 2, based
+on the idea of multi-view contrastive learning, we first treat in-
+complete observations from the same time point but with different
+missing rates as positive data pairs, and those from different time
+points as negative data pairs. Then, we propose a contrastive loss
+as a constraint for the student model to enhance the dissimilar-
+ity of negative data pairs and the similarity of positive data pairs.
+Through this approach, the student model can align the semantics
+between incomplete observations with different missing rates, with-
+out the need to train several separate models for different missing
+rates. As shown in Figure 1 (a), Merlin can significantly enhance the
+robustness of existing models to unfixed missing rates and improve
+their forecasting performance. The main contributions can be
+outlined as follows:
+• The existing models encounter robustness issues when deal-
+ing with unfixed missing rates, including two phenomena:
+(1) missing values significantly disrupt the semantics (global
+and local information) of MTS; (2) the missing rate typically
+changes over time, and existing models require training sep-
+arate models for different missing rates.
+• The key idea to achieving robust MTSF with unfixed miss-
+ing rates is to help existing models achieve semantic align-
+ment between incomplete observations with different miss-
+ing rates and complete observations. To this end, we propose
+Merlin based on offline knowledge distillation and multi-
+view contrastive learning.
+
+
+--- PAGE 3 ---
+Merlin: Multi-View Representation Learning for Robust Multivariate Time Series Forecasting with Unfixed Missing Rates KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+• We design experiments on four real-world datasets. Results
+show that Merlin can enhance the performance of existing
+models more effectively than imputation methods. Besides,
+with the help of Merlin, existing models only need to be
+trained once to adapt to unfixed missing rates.
+2 Related Work
+2.1 Time Series Analysis with Missing Values
+Existing works typically design imputation methods or end-to-end
+forecasting models to address the negative impact of missing values
+on MTSF [ 67]. Since data collectors typically function properly
+during the early stages of deployment, and missing values occur
+gradually after a period of time, existing works generally assume
+that data collectors can collect complete data (complete observa-
+tions) during the training phase [12, 33]. Under this assumption, in
+the training phase, existing works first mask complete observations
+to generate incomplete observations with different missing rates.
+Then, they use complete observations as labels and combine recon-
+struction loss to train imputation methods or end-to-end models
+[3, 60]. In the test phase, they only use incomplete observations to
+evaluate the performance of several models.
+Based on the above assumptions, in terms of both technology and
+scenario, end-to-end forecasting models [8, 48] first convert com-
+plete observations into incomplete observations based on random
+point missing. Then, they propose additional components (such as
+reconstruction loss or GNN) to directly model incomplete obser-
+vations for each missing rate and achieve forecasting. Imputation
+methods [7, 20, 34] also train separate models for each missing rate
+to restore incomplete observations, using reconstruction loss and
+data recovery components (such as variant attention or GNN).
+In summary, mainstream works require training separate models
+for each missing rate, assuming that the data is complete during the
+training phase, and are typically conducted under the random point
+missing scenario. To be fair, we primarily conduct experiments
+and evaluate baselines based on the above scenario, assumptions,
+and settings. However, considering more realistic scenarios, we
+analyze other data missing scenarios in Section 4.6 and evaluate
+the performance of existing works when the training sets contain
+missing values in Appendix B.
+2.2 Time Series Forecasting Models
+Classic STGNNs [15, 26, 31, 58] combine the Graph Convolutional
+Network (GCN) and sequence models to realize MTSF. At present,
+existing state-of-the-art (SOTA) STGNNs [25, 64] introduce graph
+learning to further improve their forecasting performance. Differ-
+ent from STGNNs, Transformer-based models [55, 68, 72] combine
+temporal attention and spatial attention, or their variants, to im-
+prove forecasting results. However, these complex models suffer
+from high complexity and limited scalability [4, 69]. Currently, light-
+weight models based on Multi-Layer Perceptron (MLP) have gained
+widespread recognition. Chen et al. [ 5] propose TSMixer, which
+uses all-MLP architecture to realize MTSF. Shao et al. [43] analyze
+the core of modeling MTS and propose an MLP framework based
+on the Spatial-Temporal Identity (STID). In summary, a suitable
+MLP framework can achieve satisfactory results more efficiently
+than complex models. Considering that STID analyzes the charac-
+teristics of MTSF and performs satisfactorily on most datasets, it
+is selected as the backbone in this paper. In addition to STID, we
+also evaluate the performance improvement of Merlin on other
+backbones (STGNNs and Transformer) in Section 4.3.
+2.3 Knowledge distillation
+Knowledge distillation can transfer valuable knowledge from the
+teacher model to the student model to improve the student model’s
+performance [59]. Mainstream techniques include offline knowl-
+edge distillation and online knowledge distillation. Among them,
+offline knowledge distillation offers advantages such as good stabil-
+ity, high flexibility, and a simplified training process. It improves
+the ability of the student model by continually guiding it to align
+with the teacher model [51, 63]. Huang et al. [23] use knowledge
+distillation to help the student model achieve semantic alignment
+between low-resolution and high-resolution data. Even when the
+input size is reduced by 50%, the student model can still maintain
+good performance. Monti et al. [36] propose a trajectory forecasting
+model based on knowledge distillation and spatial-temporal Trans-
+former, enabling the student model to perform well with only 25%
+of historical observations. In summary, knowledge distillation helps
+the student model achieve satisfactory forecasting results when the
+effective information in the inputs is significantly reduced, thereby
+enhancing its robustness to missing values.
+2.4 Contrastive learning
+Multi-view contrastive learning enhances the model’s ability to
+align the semantics of similar samples across different views [13, 14,
+16, 28]. Woo et al. [53] treat the seasonal and trend components of
+MTS as different views and use contrastive learning to align their
+semantics. Yue et al. [70] propose hierarchical contrastive learning
+to help the model improve their ability to align the semantics of
+MTS with different scales. Dong et al. [19] combine different mask-
+ing ways with contrastive learning to realize time series forecasting.
+Results show that contrastive learning can align the semantics of
+different masked time series and enhance the forecasting effect.
+Overall, contrastive learning can enhance the model’s ability to
+distinguish negative data pairs and align the semantics between
+positive data pairs [30]. Therefore, if we effectively construct pos-
+itive data pairs, contrastive learning can align the semantics of
+incomplete observations with different missing rates.
+3 Methodology
+3.1 Preliminaries
+Multivariate time series forecasting [11]. Given a historical
+observation tensor𝑋∈ R𝑁𝑣×𝑁𝐻×𝑁𝑐 from𝑁𝐻 time slices in history,
+the model can predict the value𝑌∈ R𝑁𝑣×𝑁𝐿 of the nearest. The
+core goal of MTSF is to construct a mapping function between the
+input𝑋∈ R𝑁𝑣×𝑁𝐻×𝑁𝑐 and output𝑌∈ R𝑁𝑣×𝑁𝐿 .𝑁𝑣 is the number
+of sequences.𝑁𝐻 is the historical length.𝑁𝐿 is the future length.
+𝑁𝑐 is the number of features.
+Multivariate time series forecasting with missing values
+[46]. In this task, we need to mask 𝑀% point randomly from the
+historical observation tensor 𝑋 ∈ R𝑁𝑣×𝑁𝐻×𝑁𝑐 . After the above
+processing, a new input feature𝑋𝑀∈ R𝑁𝑣×𝑁𝐻×𝑁𝑐 is obtained. The
+
+
+--- PAGE 4 ---
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada Chengqing Yu et al.
+core goal of this task is to construct a mapping function between
+the input𝑋𝑀∈ R𝑁𝑣×𝑁𝐻×𝑁𝑐 and output𝑌∈ R𝑁𝑣×𝑁𝐿 .
+Offline knowledge distillation [18, 62]. It can transfer valu-
+able knowledge from the teacher model to the student model as an
+additional loss function, thereby constraining the student model’s
+modeling process and improving its performance. When training
+the student, the teacher model does not need to update its parame-
+ters, and the teacher model is not used during test.
+Contrastive learning [61, 71]. Its main goal is to introduce con-
+trastive loss to help the model enhance the dissimilarity of negative
+data pairs and the similarity of positive data pairs, thereby fully ex-
+tracting invariant information from positive data pairs. Therefore,
+it can effectively improve the model’s generalization.
+3.2 Overall Framework
+The overall framework is shown in Figure 2. We use STID as the
+backbone and propose Merlin, which combines offline knowledge
+distillation with multi-view contrastive learning and is used to train
+STID. A basic introduction to STID is provided in Section 3.3.
+During the training phase, we follow the assumption of existing
+works that the training sets are complete, as discussed in Section 2.1.
+Based on offline knowledge distillation, we first use complete obser-
+vations to train the teacher model. Then, when using incomplete
+observations to train the student model, we transfer the repre-
+sentations and forecasting results generated by the teacher model
+as knowledge, providing constraints (MSE loss) for the student
+model. Meanwhile, for the representations obtained by the student
+model when encoding incomplete observations with different miss-
+ing rates, we propose a contrastive loss based on multi-view con-
+trastive learning to further constrain the student model to align the
+semantics between them. The MSE loss from knowledge distillation
+and the contrastive loss constitute the key components of Merlin,
+helping STID achieve semantic alignment between incomplete ob-
+servations and complete observations. A detailed introduction to
+knowledge distillation and contrastive learning can be found in
+Section 3.4 and Section 3.5, respectively.
+During the test phase, the student model directly uses incomplete
+observations with different missing rates for forecasting, without
+the need for the teacher model. Compared to existing works, the
+use of data in both the training and test phases remains fair and
+reasonable. Although most related works assume that training sets
+are complete, training sets in the real world may contain missing
+values, which affects the performance of the teacher or imputation
+models. Therefore, in Appendix B, we analyze the performance of
+Merlin when the training sets contain missing values.
+3.3 Backbone
+In this section, we briefly introduce the basic structure of the back-
+bone (STID), which is composed of a embedding layer,𝐿 fully con-
+nected (FC) layer and a regression layer. The detailed description
+and definition of STID can be found in the reference [43]. The basic
+modeling process of STID is shown as follows:
+Step I: First, the embedding layer based on a FC layer is used to
+transform the input feature𝑋 into a hidden representation𝐻:
+𝐻 = FC(𝑋), (1)
+where, FC(·) is the fully connected layer.
+Step II: Then, the spatial-temporal identity embeddings (𝑆𝐸,𝑇𝐷
+𝐸
+and𝑇𝑊
+𝐸 ) are passed to𝐻 as additional inputs to the encoder, helping
+the model capture spatial-temporal correlations.
+𝐻𝐸 = Concat(𝐻,𝑆𝐸,𝑇𝐷
+𝐸 ,𝑇𝑊
+𝐸 ), (2)
+where, Concat(·) means concatenate several tensors. Assuming𝑁𝑣
+time series and𝑁𝐻 time slots in a day and𝑁𝑤 = 7 days in a week.
+𝑆𝐸∈ 𝑅𝑁𝑣∗𝐷 is the spatial identity embedding. 𝑇𝐷
+𝐸 ∈ 𝑅𝑁𝐻∗𝐷 and
+𝑇𝑊
+𝐸 ∈𝑅𝑁𝑤∗𝐷 are temporal embedding.𝐷 is the embedding size.
+Step III: The encoder based on𝐿 layers of MLP with the residual
+connection is used to mine the above representation 𝑍. The𝑙-th
+MLP layer can be denoted as:
+𝐻𝑙+1
+𝐸 = FC(Relu(FC(𝐻𝑙
+𝐸)))+ 𝐻𝑙
+𝐸, (3)
+where, Relu(·) is the activation function.
+Step IV: Finally, based on the hidden representation 𝐻𝐿
+𝐸 , the
+regression layer is used to obtain the forecasting results𝑌 .
+𝑌 = FC(𝐻𝐿
+𝐸). (4)
+Compared to complex models, STID has two main advantages:
+(1) It introduces spatial-temporal identity embeddings to provide
+the model with additional global information, effectively mitigating
+the damage of missing values. (2) Based on the above embeddings,
+STID can effectively model MTS with the computational complexity
+of𝑂(𝑁𝐻). Next, we show how to use hidden representations𝐻𝐿
+𝐸
+and forecasting results 𝑌 for offline knowledge distillation with
+multi-view contrastive learning.
+3.4 Offline Knowledge Distillation
+We use two STID models as the student model and the teacher
+model. The inputs to the teacher model are complete observations
+𝑋 . It produces hidden representations𝐻𝐿
+𝐸,𝑇𝑒𝑎𝑐ℎ𝑒𝑟 and forecasting
+results𝑌𝑇𝑒𝑎𝑐ℎ𝑒𝑟 . The inputs to the student model are incomplete
+observations𝑋𝑀,1 to𝑋𝑀,𝑚.𝑚 stands for the number of missing
+rates. It produces 𝑚 hidden representations𝐻𝐿
+𝐸,1 to𝐻𝐿
+𝐸,𝑚 and𝑚
+forecasting results𝑌𝑀,1 to𝑌𝑀,𝑚. The offline knowledge distillation
+consists of two components: the hidden representation distillation
+and the forecasting result distillation.
+Hidden representation distillation: It refers to transferring
+the representations produced by the teacher model to the student
+model, aiming to minimize the mean squared error (MSE) between
+the representations produced by the student model and those pro-
+duced by the teacher model. Its specific formula is shown as follows:
+𝐿𝐻𝐷 =
+𝑚∑︁
+𝑖=1
+Mean((𝐻𝐿
+𝐸,𝑇𝑒𝑎𝑐ℎ𝑒𝑟−𝐻𝐿
+𝐸,𝑖)2), (5)
+where, Mean(·) is the mean of the Tensor.
+Forecasting result distillation: It refers to transferring the
+forecasting results produced by the teacher model to the student
+model, with the objective of minimizing the MSE between the fore-
+casting results produced by the student model and those produced
+by the teacher model. The specific formula is shown as follows:
+𝐿𝑅𝐷 =
+𝑚∑︁
+𝑖=1
+Mean((𝑌𝑇𝑒𝑎𝑐ℎ𝑒𝑟 −𝑌𝑀,𝑖)2). (6)
+
+
+--- PAGE 5 ---
+Merlin: Multi-View Representation Learning for Robust Multivariate Time Series Forecasting with Unfixed Missing Rates KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+Figure 2: The overall framework of our model. During the training phase, we first mask the raw data (complete observations) to
+obtain multiple new data with different missing rates (incomplete observations). The complete observations are used to train
+the teacher model, and the incomplete observations are used to train the student model. The teacher model guides the student
+model to align the semantics between complete and incomplete observations. Contrastive loss enhances the student model’s
+robustness to incomplete observations with different missing rates. During the test phase, the trained student model is used to
+directly process incomplete observations and obtain forecasting results, without the use of the teacher model.
+Based on𝐿𝐻𝐷 and𝐿𝑅𝐷 , the teacher model can guide the student
+model to use incomplete observations to generate representations
+and forecasting results similar to those generated by the teacher
+model. In this way, the student model can achieve semantic align-
+ment between incomplete observations and complete observations.
+3.5 Multi-View Contrastive Learning
+The missing rates are usually unfixed at different time periods. To
+further enhance the robustness of the student model and realize the
+semantic alignment between incomplete observations with different
+missing rates, we propose multi-view contrastive learning. We use
+incomplete observations with different missing rates at the same
+time point as positive data pairs, and use incomplete observations
+at different time point (other samples within a batch) as negative
+data pairs. For representations𝐻𝐿
+𝐸,1 to𝐻𝐿
+𝐸,𝑚 encoded by incomplete
+observations with different missing rates, we achieve multi-view
+contrastive learning using the pairwise contrastive learning method.
+The specific steps are shown as follows:
+Step I: Considering that appropriate dimension reduction can
+enhance the effectiveness of contrastive learning, we use an FC
+layer to reduce the dimension of the hidden representations𝐻𝐿
+𝐸,1
+to𝐻𝐿
+𝐸,𝑚, and obtain the representations𝑍𝐸,1 to𝑍𝐸,𝑚.
+𝑍𝐸,1 = FC(𝐻𝐿
+𝐸,1). (7)
+Step II: We use the𝑍𝐸,1 and𝑍𝐸,2 to obtain 2𝑁𝑠 samples. In𝑍𝐸,1
+and𝑍𝐸,2, the corresponding two samples form a positive data pair,
+while the other samples are their negative data pairs. Based on
+cross-entropy loss, the contrast loss between any two samples𝑧𝐸,𝑖
+and𝑧𝐸,𝑗 is calculated using the following formula:
+𝑙𝑖,𝑗 =−log( exp(sim(𝑧𝐸,𝑖,𝑧𝐸,𝑗)/𝜏)
+Í2𝑁𝑠
+𝑘=1&𝑘≠𝑖 exp(sim(𝑧𝐸,𝑖,𝑧𝐸,𝑘)/𝜏)
+), (8)
+where, exp(·) is the exp function. sim(·) is the Cosine similarity.
+𝑁𝑠 is the number of samples.𝜏 is the temperature parameter.
+Step III: Based on the above formula, we calculate the contrastive
+loss for all samples between𝑍𝐸,1 and𝑍𝐸,2, and obtain𝐿𝑍 1,𝑍 2.
+𝐿𝑍 1,𝑍 2 = 1
+2𝑁𝑠
+𝑁𝑠∑︁
+𝑘=1
+(𝑙2𝑘−1,2𝑘+𝑙2𝑘,2𝑘−1). (9)
+Step IV: The final multi-view contrastive learning loss 𝐿𝐶𝐿 is
+obtained by computing the pairwise contrastive losses from𝑍𝐸,1
+to𝑍𝐸,𝑚.
+𝐿𝐶𝐿 = 2
+𝑚(𝑚− 1)(
+𝑚∑︁
+𝑍𝑗 =𝑍𝑖
+𝑚−1∑︁
+𝑍𝑖 =1
+𝐿𝑍𝑖,𝑍𝑗). (10)
+3.6 Loss Function
+Since MTSF is a regression task, we also need to carry out the
+supervised learning process. To this end, we also incorporate the
+ground truth and L1 loss [2] to train the student model.
+𝐿𝑃𝑟𝑒 =
+𝑚∑︁
+𝑖=1
+Mean(|𝑌𝑡𝑟𝑢−𝑌𝑀,𝑖|, (11)
+where,𝑌𝑡𝑟𝑢 is the ground truth.|·| stands for absolute value.
+Finally, we need to effectively combine all the above loss func-
+tions. In this paper, we use the method of adding all loss functions,
+which can avoid the problem of information forgetting [21]. The
+final loss𝐿𝐹𝑖𝑛𝑎𝑙𝑙𝑦 function is shown as follows:
+
+
+--- PAGE 6 ---
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada Chengqing Yu et al.
+Table 1: The statistics of four datasets.
+Datasets Variates Timesteps Granularity
+METR-LA 207 34272 5 minutes
+PEMS04 307 16992 5 minutes
+China AQI 1300 41506 1 hour
+Global Wind 2908 10957 1 day
+𝐿𝐹𝑖𝑛𝑎𝑙𝑙𝑦 =𝛽1∗𝐿𝑃𝑟𝑒+𝛽2∗(𝐿𝐻𝐷+𝐿𝑅𝐷)+ 𝛽3∗𝐿𝐶𝐿, (12)
+where,𝛽 stands for the weight of the loss. 𝛽2 and𝛽3 need to be
+divided by the current epoch size in each epoch. After completing
+the process of the training phase, the test phase is performed by
+using only the student model, without using the teacher model.
+4 Experiment and Analysis
+4.1 Experimental Design
+Datasets. We select four real-world datasets from different domains:
+METR-LA2, PEMS043, China AQI4, and Global Wind5. The basic
+statistics for these datasets are shown in Table 1.
+Baselines. We select baselines from three perspectives: (1) Three
+SOTA one-stage forecasting models: TSMixer [5], FourierGNN [64],
+and DSformer [68]. (2) To demonstrate the improvement of Merlin
+on STID, we compare the STID+Merlin with the raw STID. Be-
+sides, we combine four imputation methods with STID to obtain
+multiple two-stage models: STID+GATGPT [9], STID+SPIN [34],
+STID+GPT2 [74] and STID+TI-MAE [27]. (3) We combine existing
+multivariate time series forecasting models with imputation models,
+and obtain several two-stage models as baselines: iTransformer [32]
++ TimesNet [54], MTGNN [57] + SPIN, TimeMixer[52] + GATGPT,
+and DUET[40] + GPT2. The previous method for each combination
+is the forecasting model.
+Setting. We design the experiments from the following aspects:
+(1) According to ratios in [38, 42], four datasets are uniformly di-
+vided into training sets, validation sets, and testing sets. (2) The
+history length and future length are 12. All metrics are calculated as
+the average of the 12-step forecasting results. (3) We randomly as-
+sign mask points with ratios of 25%, 50%, 75%, and 90%. The value of
+the masked point is uniformly set to zero. Experiments are repeated
+with 5 different random seeds for each model. The final metrics
+are calculated as the mean value of repeated experiments. (4) To
+prove the robustness of Merlin, we train it once, using data with
+multiple missing rates. Specifically, the student model is trained
+simultaneously using data with missing rates of 25%, 50%, 75%, and
+90%. (5) Our code is available at this link6.
+Metrics. Three classical metrics are used, including MAE (Mean
+Absolute Error), RMSE (Root Mean Square Error) and MAPE (Mean
+Absolute Percentage Error) [29]. The smaller these metrics are, the
+lower the forecasting errors.
+2https://github.com/liyaguang/DCRNN
+3https://github.com/guoshnBJTU/ASTGNN/tree/main/data
+4https://quotsoft.net/air/
+5https://www.ncei.noaa.gov/
+6https://github.com/ChengqingYu/Merlin
+4.2 Main Results
+Table 2 shows the performance comparison results of all baselines
+and Merlin. We can draw the following conclusions: (1) Compared
+with two-stage models, the forecasting errors of all single-stage
+models are larger. The main reason is that existing single-stage mod-
+els are not robust to incomplete observations. (2) Compared with
+imputation methods, Merlin improves the forecasting performance
+of STID more effectively. The main reason is that Merlin effec-
+tively combines the advantages of multi-view contrastive learning
+and offline knowledge distillation, which can significantly enhance
+the robustness of STID in modeling incomplete observations. (3)
+STID+Merlin works better than all baselines in all cases. Firstly, we
+select the high-performance STID as our backbone model, which in-
+troduces spatial-temporal embeddings to provide additional global
+information for the model, helping to mitigate the impact of miss-
+ing values. Secondly, we introduce offline knowledge distillation
+to guide STID on how to align the semantics between incomplete
+observations and complete observations, thereby enhancing STID’s
+robustness to incomplete observations. Finally, we propose multi-
+view contrastive learning to achieve semantic alignment between
+incomplete observations with different missing rates, further im-
+proving its robustness. Therefore, STID+Merlin can achieve the
+best forecasting results on all datasets and all missing rates. In
+the next section, we will further evaluate Merlin’s performance
+improvement effects on other backbones.
+4.3 Transferability of Merlin
+To validate the effectiveness and transferability of Merlin, we choose
+three other models (TimeMixer, DUET, and MTGNN) as backbones
+and compare the performance of Merlin with other imputation
+methods (GATGPT, GPT2, TI-MAE and SPIN). Table 3 shows the
+MAE values of Merlin and other imputation methods. We can draw
+the following conclusions: (1) One-stage models struggle to per-
+form well. Specifically, missing values make it difficult for existing
+models to fully mine semantics from incomplete observations, re-
+sulting in unsatisfactory results. (2) Compared with imputation
+methods, Merlin can better restore the performance of all backbone
+models. The experimental results fully prove the transfer ability
+and practical value of Merlin, which can effectively enhance the
+robustness of all backbones.
+4.4 Ablation Experiments
+We conduct ablation experiments from the following four perspec-
+tives: (1) w/o HD: We remove the hidden representation distillation.
+(2) w/o RD: We remove the forecasting result distillation. (3) w/o
+KD: We removed the teacher model and knowledge distillation.In
+this case, STID achieves contrastive learning using both complete
+and incomplete observations. (4) w/o CL: We remove the multi-
+view contrastive learning.
+Figure 3 shows the results of the ablation experiment. We can
+draw the following conclusions: (1) The forecasting result distilla-
+tion has the least effect on the results. It shows that as long as the
+encoder can fully mine semantics from MTS, the decoder can realize
+effective forecasting. (2) When either the hidden representation
+distillation or the contrastive learning is removed individually, the
+model performance drops significantly. This is mainly because both
+
+
+--- PAGE 7 ---
+Merlin: Multi-View Representation Learning for Robust Multivariate Time Series Forecasting with Unfixed Missing Rates KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+Table 2: Performance comparison results of several models. The best results are shown in bold.
+Datasets Models Missing rate 25% Missing rate 50% Missing rate 75% Missing rate 90%
+MAE MAPE RMSE MAE MAPE RMSE MAE MAPE RMSE MAE MAPE RMSE
+METR-LA
+DSformer 3.44 10.45 7.21 3.61 11.15 7.52 3.82 12.31 8.11 4.05 13.57 8.84
+FourierGNN 3.42 10.39 7.17 3.59 10.96 7.47 3.78 12.18 7.95 3.97 12.89 8.62
+TSMixer 3.45 10.48 7.25 3.60 11.09 7.53 3.84 12.34 8.21 4.01 13.42 8.76
+iTransformer+TimesNet 3.37 10.31 7.02 3.51 10.77 7.39 3.72 11.61 7.81 3.89 12.47 8.35
+MTGNN+SPIN 3.26 9.79 6.73 3.45 10.45 7.18 3.59 10.97 7.56 3.84 12.31 8.24
+TimeMixer+GATGPT 3.35 9.97 6.91 3.49 10.65 7.27 3.63 11.23 7.59 3.86 12.29 8.28
+DUET+GPT2 3.32 9.95 6.87 3.48 10.62 7.26 3.61 11.18 7.54 3.87 12.42 8.31
+STID (Raw) 3.39 10.27 7.05 3.53 10.88 7.45 3.75 11.83 7.86 3.92 12.59 8.43
+STID+SPIN 3.28 9.84 6.79 3.44 10.39 7.20 3.60 11.06 7.55 3.78 12.02 7.93
+STID+GPT2 3.31 9.91 6.83 3.43 10.44 7.18 3.55 10.85 7.49 3.75 11.84 7.86
+STID+TI-MAE 3.34 9.92 6.88 3.46 10.51 7.22 3.58 10.93 7.52 3.76 11.85 7.89
+STID+GATGPT 3.27 9.85 6.75 3.39 10.35 7.06 3.52 10.87 7.43 3.73 11.76 7.85
+STID+Merlin 3.21 9.41 6.64 3.28 9.85 6.78 3.43 10.42 7.18 3.65 11.25 7.64
+PEMS04
+DSformer 23.65 16.24 38.34 24.37 16.29 39.83 25.87 17.66 41.73 27.43 18.41 43.17
+FourierGNN 22.95 15.42 37.06 24.06 16.15 39.48 25.69 17.49 41.48 27.29 18.32 42.81
+TSMixer 23.37 15.81 37.40 24.26 16.04 39.57 25.76 17.54 41.65 28.04 18.58 43.49
+iTransformer+TimesNet 21.64 15.08 34.56 22.75 15.34 36.57 24.18 16.06 39.42 25.57 17.56 41.23
+MTGNN+SPIN 20.94 14.71 33.52 21.78 15.07 35.22 23.36 15.78 37.64 24.92 16.63 40.77
+TimeMixer+GATGPT 21.38 14.87 34.42 22.42 15.13 36.03 23.98 15.94 39.23 25.43 17.56 41.10
+DUET+GPT2 21.29 14.84 34.37 22.51 15.21 36.23 24.16 16.02 39.54 25.25 17.34 40.89
+STID (Raw) 22.35 15.08 36.05 23.46 16.18 37.92 25.03 17.13 40.87 26.53 17.91 42.32
+STID+SPIN 20.47 14.22 32.64 21.69 15.02 34.97 23.26 15.57 37.29 24.79 16.52 40.58
+STID+GPT2 20.76 14.36 32.96 21.63 14.92 34.67 23.15 15.51 37.21 24.51 16.37 40.16
+STID+TI-MAE 20.81 14.52 33.27 21.75 15.05 35.04 23.04 15.42 37.15 24.34 16.32 39.77
+STID+GATGPT 20.42 14.15 32.58 21.36 14.83 34.12 22.87 15.26 36.94 24.09 15.94 39.36
+STID+Merlin 19.84 13.85 31.65 20.31 14.07 32.37 21.43 14.95 34.45 22.96 15.56 37.07
+China AQI
+DSformer 17.52 35.36 29.81 19.32 39.27 31.74 20.47 43.66 33.85 23.48 45.52 38.69
+FourierGNN 17.35 35.25 29.27 19.14 38.43 31.29 20.96 43.83 34.04 24.06 46.25 39.43
+TSMixer 17.03 34.83 28.84 18.85 37.68 30.62 20.28 43.54 33.42 23.65 45.93 38.94
+iTransformer+TimesNet 16.49 32.06 28.07 17.79 35.76 29.45 20.03 42.76 32.98 23.04 45.65 37.68
+MTGNN+SPIN 15.83 31.89 27.21 16.97 34.13 28.79 18.91 40.56 30.77 22.18 44.92 36.03
+TimeMixer+GATGPT 16.09 32.56 27.48 17.39 34.82 29.04 19.86 41.37 32.27 22.57 45.36 36.81
+DUET+GPT2 15.97 32.04 27.35 17.04 34.73 28.91 19.34 40.85 31.84 22.30 45.01 36.39
+STID (Raw) 16.86 34.46 28.81 18.56 39.95 30.24 20.36 43.63 33.17 23.42 45.84 38.54
+STID+SPIN 15.39 30.25 26.64 16.83 34.67 28.69 18.43 40.43 30.06 21.86 44.78 35.83
+STID+GPT2 15.53 30.89 26.92 16.91 34.88 28.75 18.35 40.26 29.97 21.45 44.26 34.96
+STID+TI-MAE 15.74 31.72 27.09 17.08 35.24 28.97 18.29 40.07 29.82 21.58 44.53 35.23
+STID+GATGPT 15.46 30.53 26.87 16.67 34.34 28.43 18.14 39.96 29.65 21.07 43.79 34.36
+STID+Merlin 15.21 30.42 26.38 15.84 32.06 27.25 17.43 35.68 29.34 20.18 43.36 33.31
+Global Wind
+DSformer 5.92 35.78 8.42 6.09 36.04 8.65 6.17 36.28 8.77 6.31 36.52 8.97
+FourierGNN 5.95 35.81 8.43 6.11 36.12 8.69 6.18 36.33 8.79 6.36 36.47 9.08
+TSMixer 5.93 35.75 8.39 6.07 35.94 8.62 6.21 36.12 8.84 6.33 36.34 9.02
+iTransformer+TimesNet 5.88 35.66 8.30 6.01 35.77 8.55 6.12 35.95 8.74 6.23 36.08 8.86
+MTGNN+SPIN 5.84 35.18 8.23 5.94 35.42 8.45 6.10 35.69 8.69 6.18 36.04 8.77
+TimeMixer+GATGPT 5.86 35.27 8.25 5.99 35.53 8.54 6.11 35.83 8.71 6.21 36.25 8.83
+DUET+GPT2 5.85 35.38 8.29 5.95 35.54 8.52 6.09 35.72 8.65 6.17 35.94 8.75
+STID (Raw) 5.91 35.53 8.38 6.05 35.62 8.57 6.14 35.87 8.73 6.25 36.31 8.89
+STID+SPIN 5.80 34.57 8.25 5.94 35.18 8.41 6.12 35.41 8.69 6.21 36.27 8.82
+STID+GPT2 5.83 35.01 8.27 5.93 35.09 8.39 6.08 35.34 8.60 6.19 35.45 8.83
+STID+TI-MAE 5.84 35.06 8.28 5.94 35.15 8.43 6.09 35.26 8.62 6.18 35.41 8.76
+STID+GATGPT 5.82 34.75 8.26 5.91 34.92 8.37 6.07 35.08 8.57 6.15 35.34 8.73
+STID+Merlin 5.76 34.28 8.17 5.85 34.59 8.32 5.97 34.83 8.49 6.08 35.04 8.64
+components play a critical role in achieving semantic alignment. (3)
+When contrastive learning is used without knowledge distillation,
+the model’s forecasting performance also declines, which further
+demonstrates the importance of knowledge distillation in aligning
+the semantics between complete and incomplete observations.
+4.5 Hyperparameter Analysis
+Table 4 presents the main hyperparameters of Merlin and STID.
+We evaluate six hyperparameters that have the most significant
+impact on Merlin’s performance: Three weights of the loss (𝛽1,𝛽2
+and𝛽3), batch size, temperature parameter, and the dimensionality
+
+
+--- PAGE 8 ---
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada Chengqing Yu et al.
+Table 3: MAE values of Merlin and other methods (The best
+results are shown in bold).
+Backbone Methods METR-LA Global Wind
+25% 50% 75% 90% 25% 50% 75% 90%
+DUET
++Merlin 3.26 3.38 3.53 3.77 5.82 5.92 6.06 6.13
++GATGPT3.28 3.45 3.56 3.83 5.83 5.94 6.08 6.15
++GPT2 3.32 3.48 3.61 3.87 5.85 5.95 6.09 6.17
++TI-MAE3.35 3.49 3.59 3.86 5.86 5.97 6.11 6.21
++SPIN 3.29 3.51 3.64 3.91 5.83 5.96 6.12 6.25
+raw 3.41 3.56 3.79 3.95 5.93 6.07 6.15 6.29
+TimeMixer
++Merlin 3.31 3.42 3.57 3.81 5.83 5.95 6.08 6.17
++GATGPT3.35 3.49 3.63 3.86 5.86 5.99 6.11 6.21
++GPT2 3.39 3.54 3.67 3.89 5.87 6.02 6.13 6.23
++TI-MAE3.41 3.55 3.71 3.95 5.91 6.03 6.12 6.24
++SPIN 3.36 3.56 3.74 3.93 5.85 6.05 6.14 6.27
+raw 3.43 3.59 3.81 3.99 5.94 6.08 6.16 6.32
+MTGNN
++Merlin 3.24 3.37 3.52 3.75 5.81 5.93 6.04 6.11
++GATGPT3.27 3.42 3.57 3.79 5.85 5.96 6.08 6.16
++GPT2 3.31 3.43 3.61 3.85 5.87 5.97 6.11 6.19
++TI-MAE3.33 3.46 3.64 3.87 5.88 5.99 6.13 6.21
++SPIN 3.26 3.45 3.59 3.84 5.84 5.94 6.10 6.18
+raw 3.39 3.55 3.77 3.92 5.92 6.06 6.17 6.28
+Figure 3: Results of ablation experiments. w/o HD represents
+the removal of hidden representation distillation. w/o RD
+stands for the removal of forecasting result distillation. w/o
+KD indicates the deletion of the teacher model and the offline
+knowledge distillation. w/o CL represents the removal of
+multi-view contrastive learning.
+of𝑍𝐸 [6]. The experimental results on PEMS04 are shown in Figure
+4. We can draw the following conclusions: (1) The dimensionality
+of𝑍𝐸 has limited influence on the experimental results, proving
+that contrastive learning is capable of achieving effective seman-
+tic alignment with relatively few parameters. (2) Appropriately
+increasing the batch size can improve the forecasting accuracy of
+STID. A larger batch size increases the number of negative data
+pairs, thereby enhancing the model’s robustness and its ability to
+capture semantics. However, the batch size that is too large can
+lead to underfitting issues. (3) Proper balance of temperature pa-
+rameter is important to improve the effect of contrastive learning.
+Appropriately reducing the temperature parameter can improve
+the performance of STID and enhance its convergence. However,
+Table 4: Values of the corresponding hyperparameters.
+Methods Config Values
+Merlin
+weight of L1 Loss𝛽1 2
+weight of KD Loss𝛽2 2
+weight of CL Loss𝛽3 1
+temperature parameter 1
+dimensionality of𝑍𝐸 16
+batch size 16
+STID
+optimizer Adam [24]
+learning rate 0.0002
+weight decay 0.0001
+embedding size 64
+node embedding size 64
+temporal embedding size (day) 64
+temporal embedding size (week) 64
+number of layers 3
+dropout 0.15
+learning rate schedule MultiStepLR
+clip gradient normalization 5
+milestone [1,10,25,50,75,90,100]
+gamme 0.5
+epoch 101
+Figure 4: Results of hyperparameter experiments (PEMS04).
+setting the temperature parameter too small may lead to the prob-
+lem of local optimality. (4) Among the three weights of the loss,𝛽1
+plays the most significant role. This is primarily because the knowl-
+edge distillation and contrastive loss are mainly used as constraints
+during the early training stages, whereas the model’s performance
+in the later stages primarily depends on the L1 loss.
+
+
+--- PAGE 9 ---
+Merlin: Multi-View Representation Learning for Robust Multivariate Time Series Forecasting with Unfixed Missing Rates KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+4.6 Experiment on Multivariate Time Series
+Forecasting with Unfixed Missing Rates
+To simulate the unfixed missing rates in real-world, we conduct
+the following experiments: (1) For the training and validation sets,
+we additionally process the data into four forms with missing rates
+of 25%, 50%, 75%, and 90%. (2) For the test set, we divide the time
+series into different segments based on time and randomly mask
+each segment with missing rates of 25%, 50%, 75%, and 90%. (3) For
+STID+Merlin, we train it as described in this paper: the unmasked
+data is used to train the teacher model, while the masked data is
+used to train the student model. Only the student model is used
+on the test set. (4) Baselines use three training ways: the first way
+involves training separate models for each missing rate, with the
+corresponding model selected for forecasting on the test set based
+on the current missing rate. The second way uses a single model
+trained on masked data with all four missing rates, which is di-
+rectly tested on the test set. The final way trains a model using the
+unmasked data, which is directly tested on the test set.
+Table 5 shows the results of several models on unfixed missing
+rates. The following conclusions can be drawn: (1) Trained only
+once, STID+Merlin achieves best results across all datasets. Experi-
+mental results demonstrate that STID+Merlin can effectively handle
+the unfixed missing rates. (2) For other baselines, training mod-
+els separately for each missing rate performs better than training
+a single model for all missing rates, demonstrating that existing
+methods are limited in both practical value and robustness in MTSF
+with unfixed missing rates. (3) If a forecasting model is trained
+using only complete data, its forecasting performance significantly
+declines when data missing occurs. This demonstrates the poor
+robustness of existing models in real-world scenarios.
+4.7 Efficiency
+We compare the training times on the PEMS04 dataset for STID +
+Merlin, STID+GPT2, STID+GATGPT, iTransformer+TimesNet, and
+MTGNN+SPIN. Considering that STID+Merlin only needs to be
+trained once to adapt to different missing rates, whereas the other
+baselines require separate training sessions for each missing rate,
+we directly record the training time of the proposed STID+Merlin
+for a single epoch and sum up the training times for each missing
+rate for the other baselines. The experimental equipment is the 8×
+RTX 4090 graphics card. Figure 5 displays the average training time
+per epoch for these models. Despite incorporating components such
+as contrastive learning and knowledge distillation during the train-
+ing process, STID+Merlin also achieves satisfactory results in terms
+of efficiency. Besides, Since neither the imputation model nor the
+teacher model is needed during the inference phase, STID+Merlin
+offers greater efficiency advantages during inference.
+5 Conclusion
+This paper aims to enhance the robustness of existing forecasting
+models on MTSF with unfixed missing rates, which involves two
+main challenges: (1) missing values disrupting the semantics (global
+and local information) of MTS; (2) the missing rate is unfixed at
+different time periods in the real world. To this end, we propose
+Merlin based on offline knowledge distillation and multi-view con-
+trastive learning. Merlin can assist existing models in effectively
+Table 5: Performance comparison results of several models
+on unfixed missing rates.
+Datasets Methods MAE MAPE RMSE
+METR-LA
+STID+Merlin 3.41 10.27 7.08
+STID+GATGPT (Separately) 3.48 10.74 7.31
+STID+GATGPT (Together) 3.55 10.87 7.48
+STID (Separately) 3.61 11.12 7.59
+STID (Together) 3.73 11.78 7.84
+STID (Complete) 4.06 13.62 8.91
+MTGNN+Merlin 3.47 10.65 7.25
+MTGNN+GATGPT (Separately) 3.53 10.85 7.44
+MTGNN+GATGPT (Together) 3.58 11.04 7.52
+MTGNN (Separately) 3.64 11.34 7.63
+MTGNN (Together) 3.77 12.15 7.98
+MTGNN (Complete) 4.09 13.77 9.01
+PEMS04
+STID+Merlin 21.18 14.79 34.06
+STID+GATGPT (Separately) 22.15 15.34 35.58
+STID+GATGPT (Together) 24.03 15.87 39.23
+STID (Separately) 24.52 16.44 39.97
+STID (Together) 25.64 17.66 41.43
+STID (Complete) 31.27 22.58 47.41
+MTGNN+Merlin 22.34 15.08 35.94
+MTGNN+GATGPT (Separately) 23.45 15.94 37.62
+MTGNN+GATGPT (Together) 24.86 16.75 40.37
+MTGNN (Separately) 25.07 17.14 40.54
+MTGNN (Together) 26.58 18.15 42.07
+MTGNN (Complete) 32.65 23.46 49.54
+Figure 5: Training time for each epoch of several models.
+achieving semantic alignment between incomplete observations
+with different missing rates and complete observations, thereby
+significantly enhancing their robustness to the unfixed missing
+rate. Extensive experiments show that the proposed model can
+achieve satisfactory forecasting results on all datasets and settings.
+Additionally, with the help of Merlin, existing forecasting models
+only need to be trained once to adapt to unfixed missing rates. In
+future work, we plan to investigate the effects of offline knowledge
+distillation when the teacher and student models utilize different
+neural network structures.
+Acknowledgments
+This work is supported by NSFC No. 62372430, No. 62476264, and
+No. 62406312; the Postdoctoral Fellowship Program of CPSF under
+Grant Number GZC20241758 and BX20240385; the Youth Innova-
+tion Promotion Association CAS No.2023112; and HUA-Innovation
+fundings.
+
+
+--- PAGE 10 ---
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada Chengqing Yu et al.
+References
+[1] Hyun Ahn, Kyunghee Sun, and Kwanghoon Pio Kim. 2022. Comparison of
+missing data imputation methods in time series forecasting.Computers, Materials
+& Continua 70, 1 (2022), 767–779.
+[2] Cristian Challu, Kin G Olivares, Boris N Oreshkin, Federico Garza Ramirez,
+Max Mergenthaler Canseco, and Artur Dubrawski. 2023. Nhits: Neural hierarchi-
+cal interpolation for time series forecasting. InProceedings of the AAAI Conference
+on Artificial Intelligence, Vol. 37. 6989–6997.
+[3] Jatin Chauhan, Aravindan Raghuveer, Rishi Saket, Jay Nandy, and Balaraman
+Ravindran. 2022. Multi-Variate Time Series Forecasting on Variable Subsets. In
+Proceedings of the 28th ACM SIGKDD Conference on Knowledge Discovery and
+Data Mining. 76–86.
+[4] Ling Chen, Donghui Chen, Zongjiang Shang, Binqing Wu, Cen Zheng, Bo Wen,
+and Wei Zhang. 2023. Multi-scale adaptive graph neural network for multivariate
+time series forecasting. IEEE Transactions on Knowledge and Data Engineering 35,
+10 (2023), 10748–10761.
+[5] Si-An Chen, Chun-Liang Li, Sercan O Arik, Nathanael Christian Yoder, and
+Tomas Pfister. 2023. TSMixer: An All-MLP Architecture for Time Series Forecast-
+ing. Transactions on Machine Learning Research (2023). https://openreview.net/
+forum?id=wbpxTuXgm0
+[6] Ting Chen, Simon Kornblith, Mohammad Norouzi, and Geoffrey Hinton. 2020. A
+simple framework for contrastive learning of visual representations. In Interna-
+tional conference on machine learning . PMLR, 1597–1607.
+[7] Xinyu Chen, Zhanhong Cheng, HanQin Cai, Nicolas Saunier, and Lijun Sun. 2024.
+Laplacian Convolutional Representation for Traffic Time Series Imputation. IEEE
+Transactions on Knowledge and Data Engineering 36, 11 (2024), 6490–6502.
+[8] Xiaodan Chen, Xiucheng Li, Bo Liu, and Zhijun Li. 2023. Biased Temporal
+Convolution Graph Network for Time Series Forecasting with Missing Values.
+In The Twelfth International Conference on Learning Representations .
+[9] Yakun Chen, Xianzhi Wang, and Guandong Xu. 2023. Gatgpt: A pre-trained large
+language model with graph attention network for spatiotemporal imputation.
+arXiv preprint arXiv:2311.14332 (2023).
+[10] Fang Cheng and Hui Liu. 2024. Multi-step electric vehicles charging loads fore-
+casting: An autoformer variant with feature extraction, frequency enhancement,
+and error correction blocks. Applied Energy 376 (2024), 124308.
+[11] Yu Chengqing, Yan Guangxi, Yu Chengming, Zhang Yu, and Mi Xiwei. 2023.
+A multi-factor driven spatiotemporal wind power prediction model based on
+ensemble deep graph attention reinforcement learning networks. Energy 263
+(2023), 126034.
+[12] Andrea Cini, Ivan Marisca, and Cesare Alippi. 2022. Filling the G_ap_s: Mul-
+tivariate Time Series Imputation by Graph Neural Networks. In International
+Conference on Learning Representations .
+[13] Jinliang Deng, Xiusi Chen, Zipei Fan, Renhe Jiang, Xuan Song, and Ivor W Tsang.
+2021. The pulse of urban transport: Exploring the co-evolving pattern for spatio-
+temporal forecasting. ACM Transactions on Knowledge Discovery from Data
+(TKDD) 15, 6 (2021), 1–25.
+[14] Jinliang Deng, Xiusi Chen, Renhe Jiang, Xuan Song, and Ivor W Tsang. 2022.
+A multi-view multi-task learning framework for multi-variate time series fore-
+casting. IEEE Transactions on Knowledge and Data Engineering 35, 8 (2022),
+7665–7680.
+[15] Jinliang Deng, Xiusi Chen, Renhe Jiang, Du Yin, Yi Yang, Xuan Song, and Ivor W.
+Tsang. 2024. Disentangling Structured Components: Towards Adaptive, Inter-
+pretable and Scalable Time Series Forecasting. IEEE Transactions on Knowledge
+and Data Engineering 36, 8 (2024), 3783–3800.
+[16] Jiewen Deng, Renhe Jiang, Jiaqi Zhang, and Xuan Song. 2024. Multi-modality
+spatio-temporal forecasting via self-supervised learning. In Proceedings of the
+Thirty-Third International Joint Conference on Artificial Intelligence . 2018–2026.
+[17] Jinliang Deng, Feiyang Ye, Du Yin, Xuan Song, Ivor Tsang, and Hui Xiong. 2024.
+Parsimony or capability? decomposition delivers both in long-term time series
+forecasting. Advances in Neural Information Processing Systems 37 (2024), 66687–
+66712.
+[18] Aimei Dong, Jian Liu, Guodong Zhang, Zhonghe Wei, Yi Zhai, and Guohua Lv.
+2023. Momentum contrast transformer for COVID-19 diagnosis with knowledge
+distillation. Pattern Recognition 143 (2023), 109732.
+[19] Jiaxiang Dong, Haixu Wu, Haoran Zhang, Li Zhang, Jianmin Wang, and Ming-
+sheng Long. 2024. Simmtm: A simple pre-training framework for masked time-
+series modeling. Advances in Neural Information Processing Systems 36 (2024).
+[20] Wenjie Du, David Côté, and Yanf Liu. 2023. Saits: Self-attention-based imputation
+for time series. Expert Systems with Applications 219 (2023), 119619.
+[21] Jianping Gou, Liyuan Sun, Baosheng Yu, Shaohua Wan, and Dacheng Tao. 2023.
+Hierarchical multi-attention transfer for knowledge distillation. ACM Transac-
+tions on Multimedia Computing, Communications and Applications 20, 2 (2023),
+1–20.
+[22] Jincai Huang, Yongjun Xu, Qi Wang, Qi Cheems Wang, Xingxing Liang, Fei
+Wang, Zhao Zhang, Wei Wei, Boxuan Zhang, Libo Huang, et al. 2025. Foundation
+models and intelligent decision-making: Progress, challenges, and perspectives.
+The Innovation (2025), 100948.
+[23] Zhenhua Huang, Shunzhi Yang, MengChu Zhou, Zhetao Li, Zheng Gong, and
+Yunwen Chen. 2022. Feature map distillation of thin nets for low-resolution
+object recognition. IEEE Transactions on Image Processing 31 (2022), 1364–1379.
+[24] Diederik P Kingma and Jimmy Ba. 2014. Adam: A method for stochastic opti-
+mization. arXiv preprint arXiv:1412.6980 (2014).
+[25] Mengzhang Li and Zhanxing Zhu. 2021. Spatial-temporal fusion graph neural
+networks for traffic flow forecasting. In Proceedings of the AAAI conference on
+artificial intelligence, Vol. 35. 4189–4196.
+[26] Yaguang Li, Rose Yu, Cyrus Shahabi, and Yan Liu. 2018. Diffusion Convolutional
+Recurrent Neural Network: Data-Driven Traffic Forecasting. In International
+Conference on Learning Representations .
+[27] Zhe Li, Zhongwen Rao, Lujia Pan, Pengyun Wang, and Zenglin Xu. 2023. Ti-mae:
+Self-supervised masked time series autoencoders. arXiv preprint arXiv:2301.08871
+(2023).
+[28] Ke Liang, Lingyuan Meng, Meng Liu, Yue Liu, Wenxuan Tu, Siwei Wang, Sihang
+Zhou, Xinwang Liu, Fuchun Sun, and Kunlun He. 2024. A survey of knowledge
+graph reasoning on graph types: Static, dynamic, and multi-modal. IEEE Trans-
+actions on Pattern Analysis and Machine Intelligence 46, 12 (2024), 9456–9478.
+[29] Hui Liu, Chengqing Yu, Haiping Wu, Zhu Duan, and Guangxi Yan. 2020. A new
+hybrid ensemble deep reinforcement learning model for wind speed short term
+forecasting. Energy 202 (2020), 117794.
+[30] Jiexi Liu and Songcan Chen. 2024. Timesurl: Self-supervised contrastive learning
+for universal time series representation learning. In Proceedings of the AAAI
+Conference on Artificial Intelligence, Vol. 38. 13918–13926.
+[31] Xinwei Liu, Muchuan Qin, Yue He, Xiwei Mi, and Chengqing Yu. 2021. A new
+multi-data-driven spatiotemporal PM2. 5 forecasting model based on an ensemble
+graph reinforcement learning convolutional network. Atmospheric Pollution
+Research 12, 10 (2021), 101197.
+[32] Yong Liu, Tengge Hu, Haoran Zhang, Haixu Wu, Shiyu Wang, Lintao Ma, and
+Mingsheng Long. 2024. iTransformer: Inverted Transformers Are Effective for
+Time Series Forecasting. In The Twelfth International Conference on Learning
+Representations. https://openreview.net/forum?id=JePfAI8fah
+[33] Ivan Marisca, Cesare Alippi, and Filippo Maria Bianchi. 2024. Graph-based Fore-
+casting with Missing Data through Spatiotemporal Downsampling. InProceedings
+of the 41st International Conference on Machine Learning (Proceedings of Machine
+Learning Research, Vol. 235). PMLR, 34846–34865.
+[34] Ivan Marisca, Andrea Cini, and Cesare Alippi. 2022. Learning to reconstruct
+missing data from spatiotemporal graphs with sparse observations. Advances in
+neural information processing systems 35 (2022), 32069–32082.
+[35] Xiaoye Miao, Yangyang Wu, Jun Wang, Yunjun Gao, Xudong Mao, and Jianwei
+Yin. 2021. Generative semi-supervised learning for multivariate time series
+imputation. In Proceedings of the AAAI conference on artificial intelligence , Vol. 35.
+8983–8991.
+[36] Alessio Monti, Angelo Porrello, Simone Calderara, Pasquale Coscia, Lamberto
+Ballan, and Rita Cucchiara. 2022. How many observations are enough? knowledge
+distillation for trajectory forecasting. In Proceedings of the IEEE/CVF Conference
+on Computer Vision and Pattern Recognition . 6553–6562.
+[37] Subhabrata Mukherjee and Ahmed Hassan Awadallah. 2020. XtremeDistil: Multi-
+stage Distillation for Massive Multilingual Models. In Proceedings of the 58th
+Annual Meeting of the Association for Computational Linguistics . 2221–2234.
+[38] Xiangfei Qiu, Jilin Hu, Lekui Zhou, Xingjian Wu, Junyang Du, Buang Zhang,
+Chenjuan Guo, Aoying Zhou, Christian S. Jensen, Zhenli Sheng, and Bin Yang.
+2024. TFB: Towards Comprehensive and Fair Benchmarking of Time Series
+Forecasting Methods. Proc. VLDB Endow. 17, 9 (2024), 2363–2377.
+[39] Xiangfei Qiu, Zhe Li, Wanghui Qiu, Shiyan Hu, Lekui Zhou, Xingjian Wu,
+Zhengyu Li, Chenjuan Guo, Aoying Zhou, Zhenli Sheng, Jilin Hu, Christian S.
+Jensen, and Bin Yang. 2025. TAB: Unified Benchmarking of Time Series Anomaly
+Detection Methods. In Proc. VLDB Endow.
+[40] Xiangfei Qiu, Xingjian Wu, Yan Lin, Chenjuan Guo, Jilin Hu, and Bin Yang.
+2025. DUET: Dual Clustering Enhanced Multivariate Time Series Forecasting. In
+SIGKDD. 1185–1196.
+[41] Zezhi Shao, Tangwen Qian, Tao Sun, Fei Wang, and Yongjun Xu. 2025. Spatial-
+temporal large models: A super hub linking multiple scientific areas with artificial
+intelligence. The Innovation 6, 2 (2025), 100763.
+[42] Zezhi Shao, Fei Wang, Yongjun Xu, Wei Wei, Chengqing Yu, Zhao Zhang, Di Yao,
+Tao Sun, Guangyin Jin, Xin Cao, Gao Cong, Christian S. Jensen, and Xueqi Cheng.
+2025. Exploring Progress in Multivariate Time Series Forecasting: Comprehensive
+Benchmarking and Heterogeneity Analysis. IEEE Transactions on Knowledge and
+Data Engineering 37, 1 (2025), 291–305.
+[43] Zezhi Shao, Zhao Zhang, Fei Wang, Wei Wei, and Yongjun Xu. 2022. Spatial-
+Temporal Identity: A Simple yet Effective Baseline for Multivariate Time Series
+Forecasting. In Proceedings of the 31st ACM International Conference on Informa-
+tion and Knowledge Management . 4454–4458.
+[44] Zezhi Shao, Zhao Zhang, Fei Wang, and Yongjun Xu. 2022. Pre-training enhanced
+spatial-temporal graph neural network for multivariate time series forecasting.
+In Proceedings of the 28th ACM SIGKDD conference on knowledge discovery and
+data mining. 1567–1577.
+[45] Zezhi Shao, Zhao Zhang, Wei Wei, Fei Wang, Yongjun Xu, Xin Cao, and Chris-
+tian S Jensen. 2022. Decoupled dynamic spatial-temporal graph neural network
+
+
+--- PAGE 11 ---
+Merlin: Multi-View Representation Learning for Robust Multivariate Time Series Forecasting with Unfixed Missing Rates KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+for traffic forecasting. Proceedings of the VLDB Endowment 15, 11 (2022), 2733–
+2746.
+[46] S Sridevi, S Rajaram, C Parthiban, S SibiArasan, and C Swadhikar. 2011. Impu-
+tation for the analysis of missing values and prediction of time series data. In
+2011 international conference on recent trends in information Technology (ICRTIT) .
+IEEE, 1158–1163.
+[47] Jing Tan, Hui Liu, Yanfei Li, Shi Yin, and Chengqing Yu. 2022. A new ensemble
+spatio-temporal PM2. 5 prediction method based on graph attention recursive
+networks and reinforcement learning. Chaos, Solitons & Fractals 162 (2022),
+112405.
+[48] Xianfeng Tang, Huaxiu Yao, Yiwei Sun, Charu Aggarwal, Prasenjit Mitra, and
+Suhang Wang. 2020. Joint modeling of local and global temporal dynamics for
+multivariate time series forecasting with missing values. In Proceedings of the
+AAAI Conference on Artificial Intelligence , Vol. 34. 5956–5963.
+[49] Trang H Tran, Lam M Nguyen, Kyongmin Yeo, Nam Nguyen, Dzung Phan, Roman
+Vaculin, and Jayant Kalagnanam. 2023. An End-to-End Time Series Model for
+Simultaneous Imputation and Forecast. arXiv preprint arXiv:2306.00778 (2023).
+[50] Fei Wang, Di Yao, Yong Li, Tao Sun, and Zhao Zhang. 2023. AI-enhanced spatial-
+temporal data-mining technology: New chance for next-generation urban com-
+puting. The Innovation 4, 2 (2023).
+[51] Kai Wang, Yu Liu, Qian Ma, and Quan Z Sheng. 2021. Mulde: Multi-teacher
+knowledge distillation for low-dimensional knowledge graph embeddings. In
+Proceedings of the Web Conference 2021 . 1716–1726.
+[52] Shiyu Wang, Haixu Wu, Xiaoming Shi, Tengge Hu, Huakun Luo, Lintao Ma,
+James Y Zhang, and JUN ZHOU. 2024. TimeMixer: Decomposable Multiscale
+Mixing for Time Series Forecasting. In International Conference on Learning
+Representations (ICLR).
+[53] Gerald Woo, Chenghao Liu, Doyen Sahoo, Akshat Kumar, and Steven Hoi. 2021.
+CoST: Contrastive Learning of Disentangled Seasonal-Trend Representations for
+Time Series Forecasting. In International Conference on Learning Representations .
+[54] Haixu Wu, Tengge Hu, Yong Liu, Hang Zhou, Jianmin Wang, and Mingsheng
+Long. 2023. TimesNet: Temporal 2D-Variation Modeling for General Time Series
+Analysis. In The Eleventh International Conference on Learning Representations .
+[55] Haixu Wu, Hang Zhou, Mingsheng Long, and Jianmin Wang. 2023. Interpretable
+weather forecasting for worldwide stations with a unified deep model. Nature
+Machine Intelligence (2023), 1–10.
+[56] Xingjian Wu, Xiangfei Qiu, Hongfan Gao, Jilin Hu, Chenjuan Guo, and Bin
+Yang. 2025. K2VAE: A Koopman-Kalman Enhanced Variational AutoEncoder for
+Probabilistic Time Series Forecasting. In ICML.
+[57] Zonghan Wu, Shirui Pan, Guodong Long, Jing Jiang, Xiaojun Chang, and Chengqi
+Zhang. 2020. Connecting the dots: Multivariate time series forecasting with graph
+neural networks. In Proceedings of the 26th ACM SIGKDD international conference
+on knowledge discovery & data mining . 753–763.
+[58] Zonghan Wu, Shirui Pan, Guodong Long, Jing Jiang, and Chengqi Zhang. 2019.
+Graph wavenet for deep spatial-temporal graph modeling. In Proceedings of the
+28th International Joint Conference on Artificial Intelligence . 1907–1913.
+[59] Qing Xu, Zhenghua Chen, Mohamed Ragab, Chao Wang, Min Wu, and Xiaoli Li.
+2022. Contrastive adversarial knowledge distillation for deep model compression
+in time-series regression tasks. Neurocomputing 485 (2022), 242–251.
+[60] Yi Xu, Armin Bazarjani, Hyung-gun Chi, Chiho Choi, and Yun Fu. 2023. Uncov-
+ering the Missing Pattern: Unified Framework Towards Trajectory Imputation
+and Prediction. In Proceedings of the IEEE/CVF Conference on Computer Vision
+and Pattern Recognition. 9632–9643.
+[61] Chuanguang Yang, Zhulin An, Linhang Cai, and Yongjun Xu. 2022. Mutual
+contrastive learning for visual representation learning. In Proceedings of the
+AAAI Conference on Artificial Intelligence , Vol. 36. 3045–3053.
+[62] Chuanguang Yang, Zhulin An, Helong Zhou, Fuzhen Zhuang, Yongjun Xu, and
+Qian Zhang. 2023. Online knowledge distillation via mutual contrastive learn-
+ing for visual recognition. IEEE Transactions on Pattern Analysis and Machine
+Intelligence 45, 8 (2023), 10212–10227.
+[63] Chuanguang Yang, Helong Zhou, Zhulin An, Xue Jiang, Yongjun Xu, and Qian
+Zhang. 2022. Cross-image relational knowledge distillation for semantic segmen-
+tation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern
+Recognition. 12319–12328.
+[64] Kun Yi, Qi Zhang, Wei Fan, Hui He, Liang Hu, Pengyang Wang, Ning An, Long-
+bing Cao, and Zhendong Niu. 2023. FourierGNN: Rethinking Multivariate Time
+Series Forecasting from a Pure Graph Perspective. In Thirty-seventh Conference
+on Neural Information Processing Systems .
+[65] Chengming Yu, Ji Qiao, Chao Chen, Chengqing Yu, and Xiwei Mi. 2024. TFE-
+former: A new temporal frequency ensemble transformer for day-ahead photo-
+voltaic power prediction. Journal of Cleaner Production 448 (2024), 141690.
+[66] Chengqing Yu, Fei Wang, Zezhi Shao, Tangwen Qian, Zhao Zhang, Wei Wei,
+Zhulin An, Qi Wang, and Yongjun Xu. 2025. GinAR+: A Robust End-To-End
+Framework for Multivariate Time Series Forecasting with Missing Values. IEEE
+Transactions on Knowledge and Data Engineering (2025), 1–14.
+[67] Chengqing Yu, Fei Wang, Zezhi Shao, Tangwen Qian, Zhao Zhang, Wei Wei, and
+Yongjun Xu. 2024. Ginar: An end-to-end multivariate time series forecasting
+model suitable for variable missing. In Proceedings of the 30th ACM SIGKDD
+Conference on Knowledge Discovery and Data Mining . 3989–4000.
+[68] Chengqing Yu, Fei Wang, Zezhi Shao, Tao Sun, Lin Wu, and Yongjun Xu. 2023.
+Dsformer: A double sampling transformer for multivariate time series long-term
+prediction. In Proceedings of the 32nd ACM International Conference on Information
+and Knowledge Management. 3062–3072.
+[69] Chengqing Yu, Fei Wang, Yilun Wang, Zezhi Shao, Tao Sun, Di Yao, and Yongjun
+Xu. 2024. MGSFformer: A Multi-Granularity Spatiotemporal Fusion Transformer
+for Air Quality Prediction. Information Fusion (2024), 102607.
+[70] Zhihan Yue, Yujing Wang, Juanyong Duan, Tianmeng Yang, Congrui Huang,
+Yunhai Tong, and Bixiong Xu. 2022. Ts2vec: Towards universal representation of
+time series. In Proceedings of the AAAI Conference on Artificial Intelligence, Vol. 36.
+8980–8987.
+[71] Xiaoxia Zhang, Shang Shi, HaiChao Sun, Degang Chen, Guoyin Wang, and
+Kesheng Wu. 2024. ACVAE: A novel self-adversarial variational auto-encoder
+combined with contrast learning for time series anomaly detection. Neural
+Networks 171 (2024), 383–395.
+[72] Yunhao Zhang and Junchi Yan. 2022. Crossformer: Transformer utilizing cross-
+dimension dependency for multivariate time series forecasting. In The Eleventh
+International Conference on Learning Representations .
+[73] Chuanpan Zheng, Xiaoliang Fan, Cheng Wang, Jianzhong Qi, Chaochao Chen,
+and Longbiao Chen. 2023. INCREASE: Inductive Graph Representation Learning
+for Spatio-Temporal Kriging. In Proceedings of the ACM Web Conference 2023 .
+673–683.
+[74] Tian Zhou, Peisong Niu, Liang Sun, Rong Jin, et al . 2023. One fits all: Power
+general time series analysis by pretrained lm. Advances in neural information
+processing systems 36 (2023), 43322–43355.
+A Compared with Different Loss Functions
+In terms of constructing the loss function, this paper uses L1 Loss
+to evaluate the difference between the forecasting results of the
+student model and the ground truth. In addition, L2 Loss is used to
+evaluate the difference between the student model and the teacher
+model. To better analyze the impact of the loss function on the re-
+sults, we consider using only one of the loss functions or swapping
+the use of the above two loss functions. Besides, considering that
+the KL-divergence is also commonly used to evaluate the similarity
+between different distributions, we use the KL divergence as a new
+loss function to replace hidden representation distillation and con-
+ducted experiments. Table 6 shows the MAE values of Merlin and
+other loss functions. The experimental results show that Merlin
+can get the best result. Additionally, compared to KL divergence,
+the MSE loss achieves better results. The main reason is that KL
+divergence focuses on improving the similarity between the dis-
+tributions of representations, while MSE focuses on minimizing
+the numerical differences between representations. In summary,
+MTSF with missing values is a regression task, where minimizing
+numerical differences is more important.
+B Experiments When the Performance of the
+Teacher Model is Degraded
+Both existing imputation models and our model assume that com-
+plete data can be collected during the training phase [7]. However,
+considering the possibility of incomplete data collection in real-
+world scenarios (i.e., missing values in the training set), the teacher
+model and imputation models might be trained on multivariate
+time series with missing values, potentially leading to degraded
+performance. Therefore, it is crucial to evaluate the effectiveness of
+Merlin under such conditions. In this section, we simulate scenarios
+where the training data for the teacher model has the 5% missing
+rate (this challenge also faced by imputation methods) and evaluate
+the improvements brought by Merlin and other imputation meth-
+ods to different backbones under these conditions. Specifically, the
+
+
+--- PAGE 12 ---
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada Chengqing Yu et al.
+Table 6: MAE values of the proposed method and other loss
+functions (The best results are shown in bold).
+Datasets Methods Missing rates
+25% 50% 75% 90%
+METR-LA
+Proposed 3.21 3.28 3.43 3.65
+L1 3.23 3.31 3.44 3.67
+L2 3.28 3.37 3.53 3.73
+KL-divergence 3.26 3.34 3.49 3.71
+Swapping 3.27 3.35 3.51 3.72
+Global Wind
+Proposed 5.76 5.85 5.97 6.08
+L1 5.79 5.87 6.01 6.10
+L2 5.81 5.92 6.06 6.15
+KL-divergence 5.80 5.89 6.02 6.11
+Swapping 5.83 5.91 6.04 6.17
+Table 7: MAE values of Merlin and other methods (The miss-
+ing rate of the training set is 5%).
+Backbone Methods METR-LA Global Wind
+25% 50% 75% 90% 25% 50% 75% 90%
+STID
++Merlin 3.25 3.33 3.46 3.69 5.80 5.88 6.01 6.11
++GATGPT3.31 3.43 3.56 3.77 5.86 5.94 6.11 6.17
++GPT2 3.34 3.48 3.59 3.80 5.88 5.97 6.16 6.24
++TI-MAE 3.38 3.50 3.62 3.82 5.90 6.01 6.14 6.21
++SPIN 3.30 3.49 3.64 3.83 5.85 5.98 6.15 6.26
+raw 3.44 3.57 3.79 3.96 5.95 6.09 6.18 6.30
+DUET
++Merlin 3.30 3.41 3.57 3.80 5.85 5.95 6.10 6.17
++GATGPT3.32 3.48 3.60 3.86 5.87 5.98 6.12 6.20
++GPT2 3.35 3.52 3.64 3.91 5.91 6.01 6.14 6.24
++TI-MAE 3.35 3.49 3.59 3.86 5.90 6.02 6.15 6.25
++SPIN 3.29 3.51 3.64 3.91 5.87 5.99 6.16 6.27
+raw 3.45 3.62 3.84 4.01 5.97 6.11 6.19 6.33
+TimeMixer
++Merlin 3.35 3.45 3.61 3.84 5.86 5.98 6.11 6.21
++GATGPT3.39 3.52 3.67 3.90 5.90 6.03 6.15 6.24
++GPT2 3.42 3.57 3.70 3.93 5.91 6.06 6.17 6.26
++TI-MAE 3.45 3.59 3.74 3.98 5.94 6.08 6.16 6.27
++SPIN 3.41 3.60 3.78 3.96 5.88 6.09 6.18 6.30
+raw 3.47 3.63 3.87 4.03 5.97 6.12 6.21 6.35
+MTGNN
++Merlin 3.27 3.39 3.54 3.77 5.84 5.97 6.07 6.15
++GATGPT3.30 3.42 3.57 3.79 5.88 6.01 6.11 6.19
++GPT2 3.34 3.47 3.64 3.89 5.91 6.03 6.15 6.23
++TI-MAE 3.37 3.49 3.67 3.91 5.92 6.04 6.16 6.25
++SPIN 3.31 3.45 3.59 3.84 5.87 5.98 6.13 6.22
+raw 3.43 3.58 3.81 3.95 5.96 6.10 6.20 6.34
+original data is first modified to simulate the 5% missing rate. Sub-
+sequently, these datasets are further processed to simulate higher
+missing rates of 25%, 50%, 75%, and 90%. Merlin and baselines is
+trained on datasets with the 5% missing rate, as well as the datasets
+with subsequent missing rates of 25%, 50%, 75%, and 90%.
+Table 7 shows the MAE values of Merlin and other methods.
+The following conclusions can be drawn: (1) Even when the data
+quality of the training sets for the teacher model decreases, Merlin
+can still effectively enhance the forecasting performance of sev-
+eral backbone models. (2) Compared to imputation models, Merlin
+demonstrates superior capability in restoring the forecasting per-
+formance of different backbones, further proving its practical value
+in real-world scenarios.
+C Compared with Multi-Stage Training
+Considering that different training processes can affect the over-
+all performance of the model, this section compares the effects of
+multi-stage training with adding all loss functions. The multi-stage
+training strategy used to construct the comparative experiment
+includes the following two aspects [37]: (1) Three-stage training:
+Firstly, train the model using the loss function of contrastive learn-
+ing, then optimize the student model using the loss function of
+knowledge distillation, and finally optimize the student model us-
+ing the L1 loss. (2) Two-stage training: Firstly, train the model using
+contrastive learning. Then optimize the student model using the
+combination of knowledge distillation and the L1 loss.
+Table 8 shows the RMSE values of the proposed method and
+other multi-stage training methods. Experimental results show
+that compared with the multi-stage training strategy, the proposed
+method can achieve better forecasting results. The main reason
+is the problem of information forgetting in multi-stage training,
+which limits the performance of STID.
+Table 8: RMSE values of the proposed method and other
+multi-stage training methods (The best results are shown in
+bold).
+Datasets Methods Missing rates
+25% 50% 75% 90%
+METR-LA
+Proposed 6.64 6.78 7.18 7.64
+Two-stage 6.67 6.83 7.25 7.67
+Three-stage 6.71 6.91 7.27 7.72
+PEMS04
+Proposed 31.65 32.37 34.45 37.07
+Two-stage 32.08 32.94 34.56 37.44
+Three-stage 32.34 33.06 34.82 37.61
+D Notations
+Some commonly used notations are presented in Table 9.
+Table 9: Frequently used notation.
+Notation size Definitions
+𝑁𝐻 Constant Length of historical observations
+𝑁𝐿 Constant Length of forecasting results
+𝑁𝑠 Constant Batch size
+𝑁𝑣 Constant Number of variables
+𝑁𝑐 Constant Number of features
+𝑚 Constant Number of missing rates
+𝑋 𝑁 𝑣×𝑁𝐻×𝑁𝑐 Complete observations
+𝑋𝑀 𝑁𝑣×𝑁𝐻×𝑁𝑐 incomplete observations
+𝑌 𝑁 𝑣×𝑁𝐿 Forecasting results
+FC Functions Fully connected layer
+ReLU Functions Activation function ReLU
+Mean Functions The mean of the Tensor
+softmax Functions Activation function softmax
