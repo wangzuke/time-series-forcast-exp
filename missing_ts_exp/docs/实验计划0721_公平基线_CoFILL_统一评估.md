@@ -1,27 +1,26 @@
-# 实验计划0721-B：公平基线 / CoFILL / 统一评估实验计划
+# 实验计划0721：公平基线 / CoFILL / 统一评估实验计划
 
-> 适用机器：机器 B，8 × NVIDIA A800  
 > 计划日期：2026-07-21  
 > 对应总计划：[`实验计划0721_CoFILL_PGUTS_HD_TTS预测改造.md`](实验计划0721_CoFILL_PGUTS_HD_TTS预测改造.md)  
-> 机器定位：负责统一数据 / mask / evaluator，补齐 HD-TTS 与 BiTGraph 公平 baseline，推进 CoFILL 原始复现与 CoFILL-Forecaster 小矩阵，并最终合并机器 A/B 结果。  
+> 计划定位：负责核验并发布已完成的统一 mask bundle，准备统一 evaluator，补齐 HD-TTS 与 BiTGraph 公平 baseline，推进 CoFILL 原始复现与 CoFILL-Forecaster 小矩阵，并最终合并全部 0721 结果。  
 > batch size 要求：所有正式训练 `batch_size >= 512`；若模型显式不支持，应通过 dataloader 修复或 gradient accumulation 使有效 batch size 不低于 512，并在结果表中区分 `batch_size` 与 `effective_batch_size`。
 
 ---
 
-## 一、本机实验目标
+## 一、本计划实验目标
 
-机器 B 的任务不是追求单一新模型，而是保证整个 0721 项目的**公平性、可比性和可汇总性**。本机必须完成四类工作：
+本计划的任务不是追求单一新模型，而是保证整个 0721 项目的**公平性、可比性和可汇总性**。本计划必须完成四类工作：
 
-1. **统一协议资产**：生成并发布 0721 的 canonical mask bundle、manifest、统一 split 和 evaluator。
-2. **公平 baseline**：在 0721 缺失条件下补跑 HD-TTS-AMP 与 BiTGraph，作为机器 A 的 P-GUTS / HD-PGUTS 对照。
+1. **统一协议资产**：核验并发布已生成的 `dataset/0721_missing_masks/` canonical mask bundle、manifest、统一 split，并准备统一 evaluator。
+2. **公平 baseline**：在 0721 缺失条件下补跑 HD-TTS-AMP 与 BiTGraph，作为 P-GUTS / HD-PGUTS 主线的对照。
 3. **CoFILL 扩展线**：跑通 CoFILL 原始 block imputation，并验证 CoFILL-Forecaster 是否值得继续。
-4. **结果合并**：合并机器 A/B 的 CSV、检查 `mask_sha256`、统一指标，并为最终 `0721实验报告.md` 提供主表和图。
+4. **结果合并**：合并所有实验线的 CSV、检查 `mask_sha256`、统一指标，并为最终 `0721实验报告.md` 提供主表和图。
 
 ---
 
 ## 二、统一公平协议
 
-机器 B 是统一协议的来源。机器 A 的全部实验必须复用机器 B 生成的 `fair_data/`。
+0721 前置缺失数据准备已经完成，统一协议资产固定在 `dataset/0721_missing_masks/`。全部正式实验都必须复用该目录，不再各自生成 mask。
 
 | 项目 | 统一要求 |
 | --- | --- |
@@ -46,30 +45,27 @@
 
 ```text
 missing_ts_exp/results/0721_cofill_pguts_forecasting/
-├── fair_data/
-│   ├── manifest.csv
-│   └── mask_observed_*.npy
-├── raw_logs/machine_b/
-├── checkpoints/machine_b/
+├── raw_logs/baseline_cofill/
+├── checkpoints/baseline_cofill/
 ├── predictions/
 ├── csv/
-│   ├── machine_b_baseline_results.csv
-│   ├── machine_b_cofill_results.csv
-│   ├── machine_b_efficiency_results.csv
+│   ├── baseline_results.csv
+│   ├── cofill_results.csv
+│   ├── baseline_cofill_efficiency_results.csv
 │   ├── main_results.csv
 │   ├── ablation_results.csv
 │   └── efficiency_results.csv
 ├── figures/
 └── notes/
-    ├── machine_b_repro_notes.md
+    ├── baseline_cofill_repro_notes.md
     └── merge_notes.md
 ```
 
-`main_results.csv` 必须兼容机器 A 的字段：
+`main_results.csv` 使用以下统一字段：
 
 ```text
 run_id
-machine_id
+experiment_line
 model
 variant
 source_code
@@ -102,102 +98,83 @@ notes
 
 ## 四、执行总顺序
 
-机器 B 分为 6 个 wave：
+本计划分为 6 个阶段：
 
 ```text
-Wave B0：统一 mask / split / evaluator
-Wave B1：HD-TTS / BiTGraph 0721 公平 baseline
-Wave B2：CoFILL 原始 imputation 复现
-Wave B3：CoFILL-Forecaster 小矩阵
-Wave B4：关键 baseline 补种子 / 补 horizon=12
-Wave B5：合并机器 A/B 结果并生成总表和图
+Phase 0：核验统一 mask / split 并准备 evaluator
+Phase 1：HD-TTS / BiTGraph 0721 公平 baseline
+Phase 2：CoFILL 原始 imputation 复现
+Phase 3：CoFILL-Forecaster 小矩阵
+Phase 4：关键 baseline 补种子 / 补 horizon=12
+Phase 5：合并结果并生成总表和图
 ```
 
 ---
 
-## 五、Wave B0：统一 mask / split / evaluator
+## 五、Phase 0：核验统一 mask / split 并准备 evaluator
 
-### 5.1 统一 mask 生成
+### 5.1 统一 mask bundle 核验
 
-生成以下 mask：
-
-| 数据集 | 缺失类型 | 缺失率 |
-| --- | --- | --- |
-| METR-LA、PEMS-BAY | Point | 50%、70% |
-| METR-LA、PEMS-BAY | Block-T | 50%、70%、90% |
-| METR-LA、PEMS-BAY | Block-ST | 50%、70%、90% |
-
-共：
+0721 缺失数据前置实验已经完成，统一 mask bundle 固定为：
 
 ```text
-2 datasets × (2 point + 3 block-t + 3 block-st) = 16 masks
+dataset/0721_missing_masks/
+├── manifest.csv
+├── mask_observed_*.npy
+├── split_Metr_h12.json
+├── split_Metr_h24.json
+├── split_PEMS_h12.json
+├── split_PEMS_h24.json
+└── README.md
 ```
 
-输出：
+本计划不再重新生成 mask，只做核验。该目录包含 16 份 mask：
+
+| 数据集 | 缺失类型 | 缺失率 | 来源 |
+| --- | --- | --- | --- |
+| METR-LA、PEMS-BAY | Point | 50%、70% | 复用 0720 |
+| METR-LA、PEMS-BAY | Block-T | 50%、70% | 复用 0720，并统一命名为 `block_t` |
+| METR-LA、PEMS-BAY | Block-T | 90% | 0721 新生成 |
+| METR-LA、PEMS-BAY | Block-ST | 50%、70%、90% | 0721 新生成 |
+
+核验命令：
+
+```bash
+cd /data/wangzuke/time-series-forecast-exp
+python - <<'PY'
+import csv, pathlib, numpy as np
+base = pathlib.Path('dataset/0721_missing_masks')
+rows = list(csv.DictReader((base / 'manifest.csv').open()))
+print('manifest rows', len(rows))
+print('npy files', len(list(base.glob('*.npy'))))
+for r in rows:
+    mask = np.load(r['mask_path'])
+    actual = 1 - float(mask.mean())
+    print(r['dataset'], r['missing_type'], r['target_missing_rate'], mask.shape, f'{actual:.6f}', r['mask_sha256'][:12])
+PY
+```
+
+通过标准：
+
+1. `manifest.csv` 为 16 行。
+2. `.npy` 文件为 16 个。
+3. split json 为 4 个。
+4. METR-LA mask shape 为 `(34272, 207, 1)`；PEMS-BAY mask shape 为 `(52116, 325, 1)`。
+5. 实际缺失率与 manifest 一致，且 Block-T / Block-ST 误差小于 `±0.5pp`。
+6. 复用 0720 的 point 50/70、Block-T 50/70 mask 的 sha256 与 0720 原文件一致。
+
+### 5.2 统一 split
+
+split metadata 已随前置实验生成：
 
 ```text
-fair_data/manifest.csv
-fair_data/mask_observed_Metr_point_r50_seed2024.npy
-...
-fair_data/mask_observed_PEMS_blockst_r90_seed2024.npy
+dataset/0721_missing_masks/split_Metr_h12.json
+dataset/0721_missing_masks/split_Metr_h24.json
+dataset/0721_missing_masks/split_PEMS_h12.json
+dataset/0721_missing_masks/split_PEMS_h24.json
 ```
 
-### 5.2 mask 标定要求
-
-| 缺失类型 | 标定要求 |
-| --- | --- |
-| Point | 精确到目标缺失率 |
-| Block-T | 实际缺失率误差控制在 `±0.5pp` |
-| Block-ST | 实际缺失率误差控制在 `±0.5pp`，并记录空间传播半径 / 邻域策略 |
-
-manifest 字段至少包含：
-
-```text
-dataset
-data_path
-data_sha256
-n_timesteps
-n_nodes
-n_channels
-mask_type
-target_missing_rate
-actual_missing_rate
-block_length
-spatial_propagation
-seed
-stream_seed
-mask_path
-mask_sha256
-mask_convention
-```
-
-### 5.3 统一 split
-
-为每个 `(dataset, T_out)` 生成 split metadata：
-
-```text
-fair_data/split_Metr_h12.json
-fair_data/split_Metr_h24.json
-fair_data/split_PEMS_h12.json
-fair_data/split_PEMS_h24.json
-```
-
-字段：
-
-```text
-total_windows
-train_len
-val_len
-test_len
-train_start
-val_start
-test_start
-window
-horizon
-stride
-```
-
-机器 A/B 所有模型必须读取或复现这个 split。
+所有模型必须读取或复现这些 split。不得在各模型内部使用独立随机切分。
 
 ### 5.4 统一 evaluator
 
@@ -224,11 +201,11 @@ num_eval_points
 
 ---
 
-## 六、Wave B1：HD-TTS / BiTGraph 0721 公平 baseline
+## 六、Phase 1：HD-TTS / BiTGraph 0721 公平 baseline
 
 ### 6.1 目的
 
-为机器 A 的 P-GUTS-Forecaster / HD-PGUTS 提供公平对照。0721 baseline 不应沿用 0720 的全部数字，因为 0721 新增了：
+为 P-GUTS-Forecaster / HD-PGUTS 主线提供公平对照。0721 baseline 不应沿用 0720 的全部数字，因为 0721 新增了：
 
 1. `T_out=12`
 2. Block-ST
@@ -287,7 +264,7 @@ num_eval_points
 
 ---
 
-## 七、Wave B2：CoFILL 原始 imputation 复现
+## 七、Phase 2：CoFILL 原始 imputation 复现
 
 ### 7.1 目的
 
@@ -318,7 +295,7 @@ PEMS-BAY / Block-ST / 90%
 | B6 | CoFILL PEMS-BAY Block-T 70% |
 | B7 | CoFILL PEMS-BAY Block-ST 70% |
 
-若 Wave B1 baseline 尚未完成，CoFILL 不得抢占所有 baseline GPU；baseline 优先。
+若 Phase 1 baseline 尚未完成，CoFILL 不得抢占所有 baseline GPU；baseline 优先。
 
 ### 7.4 验收
 
@@ -328,7 +305,7 @@ PEMS-BAY / Block-ST / 90%
 
 ---
 
-## 八、Wave B3：CoFILL-Forecaster 小矩阵
+## 八、Phase 3：CoFILL-Forecaster 小矩阵
 
 ### 8.1 改造目标
 
@@ -366,7 +343,7 @@ batch_size >= 512
 
 只有当以下条件同时满足，才扩展 CoFILL-Forecaster：
 
-1. MAE 接近或优于机器 A 的 HD-PGUTS / P-GUTS-Forecaster。
+1. MAE 接近或优于P-GUTS / HD-PGUTS 主线。
 2. 推理时间不超过 HD-PGUTS 的 `5×`。
 3. 不确定性输出能产生可解释信号，例如高缺失率下预测方差更高。
 
@@ -384,9 +361,9 @@ CoFILL-Forecaster 默认是扩展线，不阻塞 P-GUTS / HD-PGUTS 主线。若 
 
 ---
 
-## 九、Wave B4：关键 baseline 补实验
+## 九、Phase 4：关键 baseline 补实验
 
-根据机器 A 的阶段性结果，机器 B 负责补齐以下比较：
+根据 P-GUTS / HD-PGUTS 主线的阶段性结果，本计划负责补齐以下比较：
 
 ### 9.1 HD-TTS-AMP 多种子
 
@@ -403,7 +380,7 @@ batch_size>=512
 
 ### 9.2 horizon=12 对照
 
-若机器 A 在 `T_out=12` 下补跑 HD-PGUTS，本机同步补：
+若 P-GUTS / HD-PGUTS 主线在 `T_out=12` 下补跑 HD-PGUTS，本计划同步补：
 
 ```text
 HD-TTS-AMP
@@ -435,20 +412,20 @@ n_params
 
 ---
 
-## 十、Wave B5：合并机器 A/B 结果
+## 十、Phase 5：合并结果
 
 ### 10.1 合并输入
 
-机器 B 最终接收机器 A 的：
+最终合并时接收 P-GUTS / HD-PGUTS 主线的：
 
 ```text
-csv/machine_a_pguts_results.csv
-csv/machine_a_hd_pguts_results.csv
-csv/machine_a_ablation_results.csv
-csv/machine_a_efficiency_results.csv
+csv/pguts_results.csv
+csv/hd_pguts_results.csv
+csv/hd_pguts_ablation_results.csv
+csv/pguts_hdpguts_efficiency_results.csv
 ```
 
-合并成本机：
+合并成本计划的统一结果：
 
 ```text
 csv/main_results.csv
@@ -460,7 +437,7 @@ csv/efficiency_results.csv
 
 每条结果必须通过：
 
-1. `mask_sha256` 存在于 `fair_data/manifest.csv`。
+1. `mask_sha256` 存在于 `dataset/0721_missing_masks/manifest.csv`。
 2. `batch_size >= 512` 或 `effective_batch_size >= 512`。
 3. `T_in=24`。
 4. `T_out` 只允许 12 或 24。
@@ -469,7 +446,7 @@ csv/efficiency_results.csv
 
 ### 10.3 图表
 
-机器 B 负责统一生成：
+本计划负责统一生成：
 
 ```text
 figures/missing_rate_vs_mae_block_st.png
@@ -479,50 +456,50 @@ figures/adaptive_scale_weights.png
 figures/efficiency_tradeoff.png
 ```
 
-其中 `adaptive_scale_weights.png` 依赖机器 A 的 HD-PGUTS full 导出权重。
+其中 `adaptive_scale_weights.png` 依赖 HD-PGUTS full 导出的权重统计。
 
 ---
 
-## 十一、本机最终交付物
+## 十一、本计划最终交付物
 
-机器 B 完成后交付：
+本计划完成后交付：
 
-1. `fair_data/manifest.csv` 与全部 `mask_observed_*.npy`
-2. `fair_data/split_*.json`
+1. `dataset/0721_missing_masks/manifest.csv` 与全部 `mask_observed_*.npy` 的核验记录
+2. `dataset/0721_missing_masks/split_*.json` 的核验记录
 3. 统一 evaluator 脚本与使用说明
-4. `csv/machine_b_baseline_results.csv`
-5. `csv/machine_b_cofill_results.csv`
+4. `csv/baseline_results.csv`
+5. `csv/cofill_results.csv`
 6. `csv/main_results.csv`
 7. `csv/ablation_results.csv`
 8. `csv/efficiency_results.csv`
-9. `notes/machine_b_repro_notes.md`
+9. `notes/baseline_cofill_repro_notes.md`
 10. `notes/merge_notes.md`
 11. 最终图表与 `0721实验报告.md` 的数据基础
 
 ---
 
-## 十二、与机器 A 的交接规则
+## 十二、与 P-GUTS / HD-PGUTS 主线的交接规则
 
-### 12.1 机器 B → 机器 A
+### 12.1 本计划提供给主线实验的内容
 
-机器 B 在 Wave B0 完成后同步：
+Phase 0 完成后提供：
 
 ```text
-fair_data/
+dataset/0721_missing_masks/ 核验结论
 统一 evaluator
 run_id 命名规范
 CSV 字段规范
 ```
 
-机器 A 不得在未同步 `fair_data/manifest.csv` 的情况下启动正式训练。
+由于 `dataset/0721_missing_masks/` 已经完成，P-GUTS / HD-PGUTS 主线可以同时开始环境准备和原始代码复现；正式训练前只需确认本地该目录完整可读。
 
-### 12.2 机器 A → 机器 B
+### 12.2 主线实验提供给本计划的内容
 
-机器 A 每完成一个 wave，同步：
+P-GUTS / HD-PGUTS 主线每完成一个阶段，提供：
 
 ```text
-csv/machine_a_*.csv
-notes/machine_a_repro_notes.md
+csv/pguts_*.csv、csv/hd_pguts_*.csv
+notes/pguts_hdpguts_repro_notes.md
 关键 raw_logs
 HD-PGUTS adaptive fusion 权重统计
 ```
