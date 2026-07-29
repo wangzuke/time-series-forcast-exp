@@ -1,0 +1,8 @@
+python -m experiments.run_imputation --config imputation/r0723/la_pguts_36.yaml --dataset-name la_block --seed 1 --batch-size 16 --batches-epoch 300
+python -m experiments.run_imputation --config imputation/r0723/la_pguts_36.yaml --dataset-name la_block --seed 2 --batch-size 16 --batches-epoch 300
+python -m experiments.run_imputation --config imputation/r0723/bay_pguts_36.yaml --dataset-name bay_block --seed 1 --batch-size 16 --batches-epoch 300
+python -m experiments.run_imputation --config imputation/r0723/bay_pguts_36.yaml --dataset-name bay_block --seed 2 --batch-size 16 --batches-epoch 300
+python -m experiments.run_imputation --config imputation/r0723/la_cgdist_pguts_36.yaml --dataset-name la_block --seed 1 --batch-size 16 --batches-epoch 300
+python -m experiments.run_imputation --config imputation/r0723/la_cgdist_pguts_36.yaml --dataset-name la_block --seed 2 --batch-size 16 --batches-epoch 300
+python -m experiments.run_imputation --config imputation/r0723/bay_cgdist_pguts_36.yaml --dataset-name bay_block --seed 1 --batch-size 16 --batches-epoch 300
+python -m experiments.run_imputation --config imputation/r0723/bay_cgdist_pguts_36.yaml --dataset-name bay_block --seed 2 --batch-size 16 --batches-epoch 300
