@@ -12,7 +12,7 @@
 
 1. 核验 0721 已生成的统一缺失 mask bundle。
 2. 用完全相同的 canonical HDF5、mask、窗口切分和 batch size，补跑 HD-TTS-AMP 与 BiTGraph baseline。
-3. 为 CoFILL 原始 imputation / 后续 CoFILL-Forecaster 接入准备统一启动入口和结果汇总格式。
+3. 跑通 CoFILL 原始 imputation 接入：官方 CoFILL 代码已克隆到 `external_repro/CoFILL`，本实验线新增 0721 canonical HDF5 / shared mask runner。
 
 所有正式训练必须满足：
 
@@ -36,6 +36,9 @@
 | `missing_ts_exp/scripts/r0721_validate_baseline_cofill_assets.py` | 校验 0721 mask bundle、sha256、shape、实际缺失率、split metadata |
 | `missing_ts_exp/scripts/r0721_run_baseline_cofill.sh` | 统一启动入口：validate / smoke / baseline_full / baseline_key_seeds / cofill_imputation / collect / status |
 | `missing_ts_exp/scripts/r0721_collect_baseline_cofill.py` | 从 raw logs 汇总 `baseline_results.csv`、`cofill_results.csv`、`main_results.csv` |
+| `missing_ts_exp/scripts/r0721_prepare_cofill_data.py` | 为 CoFILL 准备 HDF5 链接、train mean/std、METR-LA 与 PEMS-BAY 距离矩阵 |
+| `missing_ts_exp/scripts/r0721_cofill_runner.py` | 真实 CoFILL 0721 runner：读取 canonical HDF5 和统一 observed-mask，并输出 `[cofill_metrics]` |
+| `missing_ts_exp/scripts/r0721_run_cofill_0721.sh` | CoFILL shell wrapper，默认使用 `hd-tts` conda 环境运行 CoFILL 适配入口 |
 
 运行脚本已经加了可执行权限，也可以直接用 `bash` 调用。
 
@@ -195,33 +198,40 @@ seeds: 2, 3
 
 ## 七、CoFILL 原始 imputation 接入
 
-当前 workspace 中还没有本地 CoFILL 代码目录，只有论文文件：
+当前 workspace 已接入 CoFILL 官方代码：
 
 ```text
-papers/missing-value-forecasting/CoFILL_IJCAI.pdf
-tmp/pdfs/cofill_pguts/CoFILL_IJCAI.txt
+external_repro/CoFILL/
 ```
 
-所以 CoFILL 不能像 BiTGraph / HD-TTS 一样直接启动。为了避免产生“看似完成但其实没跑”的假结果，脚本采用显式接入方式。
+当前 commit 为总体实验计划指定的：
 
-如果已经准备好 CoFILL 本地实现，请提供一个可执行 runner，并设置：
+```text
+d461621b213df7d682034a1da99721f2ba65b1ab
+```
+
+已新增 0721 适配入口：
+
+```text
+missing_ts_exp/scripts/r0721_run_cofill_0721.sh
+missing_ts_exp/scripts/r0721_cofill_runner.py
+```
+
+该入口会：
+
+1. 调用 `r0721_prepare_cofill_data.py` 准备 CoFILL 兼容数据资产。
+2. 读取 `dataset/metr_la/metr_la.h5` 或 `dataset/pems_bay/pems_bay.h5`。
+3. 读取 `dataset/0721_missing_masks/mask_observed_*.npy`，语义为 `1=observed,0=missing`。
+4. 保留 CoFILL 原模型结构，只改数据入口和 mask 入口。
+5. 输出 `[cofill_metrics] {...}`，供 `r0721_collect_baseline_cofill.py` 汇总。
+
+默认使用已有 `hd-tts` 环境运行 CoFILL 适配入口：
 
 ```bash
-R0721_COFILL_RUNNER=/absolute/path/to/run_cofill_0721.sh \
-  bash missing_ts_exp/scripts/r0721_run_baseline_cofill.sh cofill_imputation
+R0721_COFILL_ENV=hd-tts
 ```
 
-这个 runner 需要接受以下参数：
-
-```text
---dataset
---data_path
---mask_path
---run_dir
---batch_size
---seed
---task imputation
-```
+已经完成 dry-run 验证：CoFILL 能加载官方模型、METR-LA canonical HDF5、0721 Block-T 70% mask、距离矩阵，并输出 `status=dry_run`。dry-run 不代表正式训练完成，只代表接入口可执行。
 
 脚本会启动 4 个原始 imputation 任务：
 
@@ -232,11 +242,25 @@ R0721_COFILL_RUNNER=/absolute/path/to/run_cofill_0721.sh \
 | PEMS-BAY | Block-T | 70% | 1 |
 | PEMS-BAY | Block-ST | 70% | 1 |
 
-如果没有设置 `R0721_COFILL_RUNNER`，脚本不会伪造实验结果，只会在对应 log 中记录阻塞原因。
+正式启动：
+
+```bash
+bash missing_ts_exp/scripts/r0721_run_baseline_cofill.sh cofill_imputation
+```
+
+可调参数：
+
+```bash
+R0721_COFILL_EPOCHS=200
+R0721_COFILL_NSAMPLE=5
+R0721_COFILL_DIFFUSION_STEPS=50
+R0721_COFILL_NUM_WORKERS=4
+R0721_COFILL_ENV=hd-tts
+```
 
 ### CoFILL 结果日志格式
 
-为了让汇总脚本自动识别 CoFILL 指标，runner 训练/测试结束后建议打印一行 JSON：
+为了让汇总脚本自动识别 CoFILL 指标，runner 训练/测试结束后会打印一行 JSON：
 
 ```text
 [cofill_metrics] {"status":"finished","MAE":1.23,"MSE":2.34,"MRE":0.12,"train_time_sec":3600,"gpu_peak_mb":24000}
@@ -328,15 +352,7 @@ bash missing_ts_exp/scripts/r0721_run_baseline_cofill.sh validate
 bash missing_ts_exp/scripts/r0721_run_baseline_cofill.sh smoke
 bash missing_ts_exp/scripts/r0721_run_baseline_cofill.sh baseline_full
 bash missing_ts_exp/scripts/r0721_run_baseline_cofill.sh baseline_key_seeds
-bash missing_ts_exp/scripts/r0721_run_baseline_cofill.sh collect
-```
-
-如果 CoFILL runner 已经准备好，再执行：
-
-```bash
-R0721_COFILL_RUNNER=/absolute/path/to/run_cofill_0721.sh \
-  bash missing_ts_exp/scripts/r0721_run_baseline_cofill.sh cofill_imputation
-
+bash missing_ts_exp/scripts/r0721_run_baseline_cofill.sh cofill_imputation
 bash missing_ts_exp/scripts/r0721_run_baseline_cofill.sh collect
 ```
 

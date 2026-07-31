@@ -32,9 +32,6 @@ _CACHE_DIR_OBS = os.path.join(
 
 def _cluster_order_from_array(arr: np.ndarray, n_features: int) -> list[int]:
     """给定 (T, C) 数组，返回层次聚类得到的通道重排顺序。"""
-    from scipy.cluster.hierarchy import linkage, leaves_list
-    from scipy.spatial.distance import squareform
-
     if n_features <= 2:
         return list(range(n_features))
 
@@ -43,10 +40,37 @@ def _cluster_order_from_array(arr: np.ndarray, n_features: int) -> list[int]:
     dist = 1.0 - np.abs(corr)
     np.fill_diagonal(dist, 0.0)
     dist = np.clip((dist + dist.T) / 2.0, 0.0, None)  # 对称化，修正浮点误差
-    condensed = squareform(dist, checks=False)
-    Z = linkage(condensed, method="average", optimal_ordering=True)
-    order = leaves_list(Z)
-    return [int(i) for i in order]
+    try:
+        from scipy.cluster.hierarchy import linkage, leaves_list
+        from scipy.spatial.distance import squareform
+
+        condensed = squareform(dist, checks=False)
+        Z = linkage(condensed, method="average", optimal_ordering=True)
+        order = leaves_list(Z)
+        return [int(i) for i in order]
+    except ImportError:
+        return _greedy_corr_order(corr)
+
+
+def _greedy_corr_order(corr: np.ndarray) -> list[int]:
+    """无 scipy 环境下的确定性 fallback。
+
+    从平均绝对相关性最高的通道开始，每次接上与当前末尾最相关的未访问通道。
+    它不是层次聚类的完全替代，但能稳定地把相关通道排近，保证 grouped_q 变体可运行。
+    """
+    C = corr.shape[0]
+    sim = np.abs(corr)
+    np.fill_diagonal(sim, 0.0)
+    start = int(np.argmax(sim.mean(axis=1)))
+    order = [start]
+    unused = set(range(C))
+    unused.remove(start)
+    while unused:
+        last = order[-1]
+        nxt = max(unused, key=lambda j: (float(sim[last, j]), -int(j)))
+        order.append(int(nxt))
+        unused.remove(nxt)
+    return order
 
 
 def compute_channel_order(dataset_name: str) -> list[int]:

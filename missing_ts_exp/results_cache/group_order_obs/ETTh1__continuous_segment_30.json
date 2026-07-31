@@ -1,0 +1,1 @@
+{"dataset": "ETTh1", "missing_type": "continuous_segment", "missing_rate": 0.3, "mask_seed": 0, "order": [3, 1, 6, 4, 2, 0, 5]}

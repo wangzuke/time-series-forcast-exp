@@ -15,7 +15,9 @@ set -euo pipefail
 #   R0721_GPUS="1 2 3 4 5 6 7"  # GPU 0 is intentionally excluded.
 #   R0721_SLOTS_PER_GPU=2         # Use two concurrent runs per 80G A800 by default.
 #
-# CoFILL is optional and requires an actual local implementation:
+# CoFILL is integrated through:
+#   missing_ts_exp/scripts/r0721_run_cofill_0721.sh
+# Override only if needed:
 #   R0721_COFILL_RUNNER=/abs/path/to/cofill_runner.sh \
 #     bash missing_ts_exp/scripts/r0721_run_baseline_cofill.sh cofill_imputation
 
@@ -288,7 +290,7 @@ run_cofill_imputation() {
   local missing="$2"
   local rate="$3"
   local seed="$4"
-  local runner="${R0721_COFILL_RUNNER:-}"
+  local runner="${R0721_COFILL_RUNNER:-$ROOT/missing_ts_exp/scripts/r0721_run_cofill_0721.sh}"
   local name="cofill_${dataset}_${missing}_r${rate}_h0_b512_s${seed}"
   local run_dir="$CKPT_DIR/$name"
 
@@ -315,7 +317,13 @@ run_cofill_imputation() {
       --run_dir "$run_dir" \
       --batch_size 512 \
       --seed "$seed" \
-      --task imputation
+      --task imputation \
+      --missing_type "$missing" \
+      --target_missing_rate "0.${rate}" \
+      --epochs "${R0721_COFILL_EPOCHS:-200}" \
+      --nsample "${R0721_COFILL_NSAMPLE:-5}" \
+      --diffusion_steps "${R0721_COFILL_DIFFUSION_STEPS:-50}" \
+      --num_workers "${R0721_COFILL_NUM_WORKERS:-4}"
 }
 
 if [[ "$MODE" == "smoke" ]]; then
