@@ -1,0 +1,3 @@
+dataset,method,predictor,impute,missing_type,missing_rate,seq_len,pred_len,seed,mse,mae,impute_mse,n_params,peak_mem_mb,train_time_sec,best_val_mse
+ETTh1,misstsm,iTransformer,none,continuous_segment,0.3,96,96,2024,0.43846664736900126,0.4554060608951151,1.1249111185382041,453887,0.0,2.5000295639038086,0.7428569810822794
+Weather,simple,iTransformer,linear,continuous_segment,0.3,96,96,2024,0.19364609817045622,0.2351398504082811,0.1280719770911266,302453,0.0,7.8120551109313965,0.44997133589362287
