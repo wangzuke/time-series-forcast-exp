@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>观测缺失条件下多变量时间序列预测的多尺度图关系建模</title>
+  <style>
+    :root {
+      --ink: #111827;
+      --text: #263247;
+      --muted: #5d6678;
+      --line: #cfd6e2;
+      --paper: #ffffff;
+      --bg: #e9edf3;
+      --blue: #08275c;
+      --teal: #0f7280;
+      --light-blue: #eef5fc;
+      --light-teal: #edf8f9;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Times New Roman", "Noto Serif SC", "SimSun", "Microsoft YaHei", serif;
+      letter-spacing: 0;
+    }
+
+    .deck {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+    }
+
+    .slide {
+      display: none;
+      width: min(98vw, 1440px);
+      aspect-ratio: 16 / 9;
+      background: var(--paper);
+      border: 1px solid #bfc7d5;
+      box-shadow: 0 16px 42px rgba(20, 34, 56, 0.18);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide.active { display: block; }
+
+    .header {
+      height: 72px;
+      border-bottom: 3px solid var(--blue);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: end;
+      gap: 20px;
+      padding: 0 44px 13px;
+      background: linear-gradient(180deg, #fbfcfe, #f4f7fb);
+    }
+
+    .header h2 {
+      margin: 0;
+      font-size: 29px;
+      line-height: 1.18;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .section-label {
+      color: var(--blue);
+      font-size: 14px;
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .content {
+      height: calc(100% - 72px);
+      padding: 24px 44px 42px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .title-slide .content {
+      height: 100%;
+      padding: 68px 72px 58px;
+      justify-content: center;
+      gap: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 1180px;
+      font-size: 46px;
+      line-height: 1.18;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .subtitle {
+      max-width: 1160px;
+      font-size: 23px;
+      line-height: 1.5;
+      color: var(--text);
+    }
+
+    .meta-line {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.55;
+    }
+
+    p {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.46;
+    }
+
+    ul, ol {
+      margin: 0;
+      padding-left: 23px;
+    }
+
+    li {
+      font-size: 17px;
+      line-height: 1.34;
+      margin: 4px 0;
+    }
+
+    .lead {
+      font-size: 20px;
+      line-height: 1.45;
+      color: var(--ink);
+      border-left: 5px solid var(--blue);
+      padding: 9px 15px;
+      background: var(--light-blue);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .box {
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 12px 14px;
+    }
+
+    .box.blue { background: var(--light-blue); border-color: #b9cde3; }
+    .box.teal { background: var(--light-teal); border-color: #b8dce1; }
+
+    .box h3 {
+      margin: 0 0 7px;
+      font-size: 18px;
+      line-height: 1.24;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .figure-layout {
+      display: grid;
+      grid-template-columns: 1.36fr 0.64fr;
+      gap: 18px;
+      align-items: stretch;
+      min-height: 0;
+      flex: 1;
+    }
+
+    .figure-frame {
+      border: 1px solid var(--line);
+      background: #fff;
+      display: grid;
+      place-items: center;
+      padding: 8px;
+      min-height: 0;
+    }
+
+    .figure-frame img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .notes {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .formula {
+      font-family: "Cambria Math", "Times New Roman", serif;
+      background: #f6f8fb;
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      font-size: 18px;
+      line-height: 1.42;
+      color: var(--ink);
+      white-space: pre-wrap;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      padding: 8px 10px;
+      font-size: 16px;
+      line-height: 1.32;
+    }
+
+    th {
+      background: #eaf0f7;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .footer {
+      position: absolute;
+      left: 44px;
+      right: 44px;
+      bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #6d7585;
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 13px;
+      border-top: 1px solid #e2e6ed;
+      padding-top: 7px;
+    }
+
+    .controls {
+      position: fixed;
+      left: 50%;
+      bottom: 12px;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 20;
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    button {
+      border: 1px solid #aeb8c8;
+      background: rgba(255,255,255,0.94);
+      color: #16243a;
+      padding: 7px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .deck { display: block; padding: 0; }
+      .slide {
+        display: block !important;
+        width: 100vw;
+        height: 100vh;
+        border: none;
+        box-shadow: none;
+        page-break-after: always;
+      }
+      .controls { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <section class="slide title-slide active">
+      <div class="content">
+        <h1>观测缺失条件下多变量时间序列预测的多尺度图关系建模</h1>
+        <p class="subtitle">
+          面向高缺失率、中低变量维度场景，研究真实空间关系、变量时序关系与区域化聚类关系在缺失预测任务中的联合建模。
+        </p>
+        <div class="meta-line">
+          观测缺失、多尺度图关系、区域化变量建模
+        </div>
+      </div>
+      <div class="footer"><span>观测缺失条件下的多变量时间序列预测</span><span>1 / 8</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="header">
+        <h2>1. 背景</h2>
+        <div class="section-label">研究背景</div>
+      </div>
+      <div class="content">
+        <div class="figure-layout">
+          <div class="figure-frame">
+            <img src="figures/generated_research_slides/01_background_missing_mts.png" alt="背景：观测缺失下的多变量预测" />
+          </div>
+          <div class="notes">
+            <p class="lead">观测缺失同时影响时间动态、变量关系估计和图传播可靠性。</p>
+            <div class="box">
+              <h3>建模背景</h3>
+              <ul>
+                <li>历史观测值与缺失掩码共同决定模型可利用的信息。</li>
+                <li>缺失不仅影响数值层面，也会破坏变量关系层面的信息。</li>
+                <li>高缺失率下，细粒度变量关系估计更容易不稳定。</li>
+                <li>预测模型需要学习与未来预测相关且缺失可靠的变量关系。</li>
+              </ul>
+            </div>
+            <div class="formula">预测结果 = 预测模型(历史观测值, 缺失掩码, 变量关系结构)</div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>研究背景</span><span>2 / 8</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="header">
+        <h2>2. 相关工作</h2>
+        <div class="section-label">文献基础</div>
+      </div>
+      <div class="content">
+        <div class="figure-layout">
+          <div class="figure-frame">
+            <img src="figures/generated_research_slides/02_related_work_map.png" alt="相关工作文献支撑链" />
+          </div>
+          <div class="notes">
+            <p class="lead">文献支撑链可归纳为四类：缺失预测、图关系建模、不规则观测建模、多尺度时空建模。</p>
+            <div class="box">
+              <h3>代表工作</h3>
+              <ul>
+                <li><strong>CRIB / CoIFNet / MissTSM：</strong>支持预测导向的缺失感知表征。</li>
+                <li><strong>MTGNN / BiTGraph：</strong>支持变量图建模和缺失下图传播。</li>
+                <li><strong>GraFITi / T-PatchGNN / HyperIMTS：</strong>支持不完整观测结构化建模。</li>
+                <li><strong>HD-TTS / P-GUTS：</strong>支持粗尺度关系在缺失场景中的价值。</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>相关工作</span><span>3 / 8</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="header">
+        <h2>3. 研究缺口</h2>
+        <div class="section-label">问题凝练</div>
+      </div>
+      <div class="content">
+        <div class="figure-layout">
+          <div class="figure-frame">
+            <img src="figures/generated_research_slides/03_research_gap.png" alt="研究缺口" />
+          </div>
+          <div class="notes">
+            <p class="lead">研究缺口集中在缺失条件下的关系可靠性与多尺度关系融合。</p>
+            <div class="box">
+              <h3>关键问题</h3>
+              <ul>
+                <li>时序相关图依赖共同观测，缺失会削弱边权可靠性。</li>
+                <li>真实空间邻近与动态相似并不等价。</li>
+                <li>变量聚类关系需要面向预测目标设计。</li>
+                <li>区域粗粒度信息应受到缺失可靠性控制。</li>
+              </ul>
+            </div>
+            <div class="formula">物理关系 + 时序关系 + 区域关系 + 缺失可靠性</div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>研究缺口</span><span>4 / 8</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="header">
+        <h2>4. 问题定义</h2>
+        <div class="section-label">形式化问题</div>
+      </div>
+      <div class="content">
+        <div class="figure-layout">
+          <div class="figure-frame">
+            <img src="figures/generated_research_slides/04_problem_definition.png" alt="问题定义" />
+          </div>
+          <div class="notes">
+            <p class="lead">输入为部分观测历史窗口和缺失掩码，目标是直接预测未来序列。</p>
+            <div class="box">
+              <h3>形式化定义</h3>
+              <ul>
+                <li>观测序列由完整历史序列与缺失掩码逐元素相乘得到。</li>
+                <li>模型联合利用观测序列、缺失掩码和多类图关系预测未来。</li>
+                <li>训练目标以未来预测误差为主，而不是历史缺失值重构。</li>
+                <li>三类图视角：真实空间图、时序依赖图、区域图。</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>问题定义</span><span>5 / 8</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="header">
+        <h2>5. 缺失可靠的多尺度图关系预测方法</h2>
+        <div class="section-label">方法框架</div>
+      </div>
+      <div class="content">
+        <div class="figure-layout">
+          <div class="figure-frame">
+            <img src="figures/generated_research_slides/05_method_overview_mr_msgf.png" alt="缺失可靠的多尺度图关系预测方法框架" />
+          </div>
+          <div class="notes">
+            <p class="lead">该方法以缺失可靠的多尺度图关系作为预测表示的核心。</p>
+            <div class="box">
+              <h3>框架组成</h3>
+              <ul>
+                <li>输入编码：联合编码观测值、缺失掩码和时间信息。</li>
+                <li>细粒度图：融合真实空间关系与观测时序关系。</li>
+                <li>区域图：通过变量聚类构造粗粒度关系结构。</li>
+                <li>双路径传播：同时建模变量级关系与区域级关系。</li>
+                <li>残差融合：由缺失统计控制区域分支贡献。</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>方法框架</span><span>6 / 8</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="header">
+        <h2>6. 方法模块</h2>
+        <div class="section-label">模块设计</div>
+      </div>
+      <div class="content">
+        <div class="grid-2">
+          <div class="box">
+            <h3>观测鲁棒时序图</h3>
+            <div class="formula">ρᵢⱼ = |{t: M_{t,i}=1 ∧ M_{t,j}=1}| / T
+sᵢⱼ = corr(X_i, X_j | 共同观测)
+A_temp,ij = TopK(ReLU(sᵢⱼ) · g(ρᵢⱼ))</div>
+            <ul>
+              <li>共同观测比例用于衡量变量对关系估计的可信度。</li>
+              <li>低重叠观测对应的边权被主动削弱。</li>
+            </ul>
+          </div>
+          <div class="box blue">
+            <h3>物理-时序细粒度图</h3>
+            <div class="formula">A_fine = λA_phy + (1−λ)A_temp</div>
+            <ul>
+              <li>物理图来源于道路距离、传感器拓扑或真实空间信息。</li>
+              <li>时序图来源于观测值之间的动态相似性。</li>
+              <li>无真实空间图时，仅使用数据驱动的时序关系。</li>
+            </ul>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="box teal">
+            <h3>区域图分支</h3>
+            <div class="formula">H_reg = SᵀH_node
+A_reg = Normalize(SᵀA_fineS)
+Z_reg→node = S · GNN_reg(H_reg, A_reg)</div>
+          </div>
+          <div class="box">
+            <h3>缺失可靠性残差融合</h3>
+            <div class="formula">Z = Z_fine + α · Project(Z_reg→node)
+α = Gate(φ(M,S,A_fine))</div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>方法模块</span><span>7 / 8</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="header">
+        <h2>7. 总结</h2>
+        <div class="section-label">总结</div>
+      </div>
+      <div class="content">
+        <div class="grid-3">
+          <div class="box blue">
+            <h3>背景</h3>
+            <p>观测缺失同时破坏时间动态、变量关系估计和图传播可靠性。</p>
+          </div>
+          <div class="box">
+            <h3>相关工作</h3>
+            <p>已有工作分别支持缺失预测、图关系建模、不规则观测建模和多尺度时空建模。</p>
+          </div>
+          <div class="box teal">
+            <h3>研究缺口</h3>
+            <p>缺失条件下仍缺少统一建模物理关系、时序关系与区域关系的预测框架。</p>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="box">
+            <h3>问题定义</h3>
+            <p>从部分观测历史、缺失掩码与多类图关系中直接预测未来，不以历史插补作为主目标。</p>
+          </div>
+          <div class="box blue">
+            <h3>拟提方法</h3>
+            <p>提出缺失可靠的多尺度图关系预测方法，通过可靠时序图、区域图分支和残差融合建模多尺度变量关系。</p>
+          </div>
+        </div>
+        <p class="lead">核心观点：区域关系可作为缺失条件下的低频补充，但其引入强度应受到可靠性约束。</p>
+      </div>
+      <div class="footer"><span>总结</span><span>8 / 8</span></div>
+    </section>
+  </main>
+
+  <div class="controls">
+    <button id="prev" type="button">上一页</button>
+    <button id="next" type="button">下一页</button>
+  </div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    let current = 0;
+
+    function show(index) {
+      current = Math.max(0, Math.min(slides.length - 1, index));
+      slides.forEach((slide, i) => slide.classList.toggle("active", i === current));
+    }
+
+    document.getElementById("prev").addEventListener("click", () => show(current - 1));
+    document.getElementById("next").addEventListener("click", () => show(current + 1));
+    document.addEventListener("keydown", (event) => {
+      if (["ArrowRight", "PageDown", " "].includes(event.key)) {
+        event.preventDefault();
+        show(current + 1);
+      }
+      if (["ArrowLeft", "PageUp"].includes(event.key)) {
+        event.preventDefault();
+        show(current - 1);
+      }
+      if (event.key === "Home") show(0);
+      if (event.key === "End") show(slides.length - 1);
+    });
+  </script>
+</body>
+</html>
