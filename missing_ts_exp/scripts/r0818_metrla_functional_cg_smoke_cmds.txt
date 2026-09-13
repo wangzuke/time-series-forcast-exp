@@ -1,0 +1,4 @@
+python -m experiments.run_imputation --config imputation/r0818/la_func_raw_corr_pguts_36.yaml --dataset-name la_block --seed 1 --batch-size 16 --batches-epoch 2 --epochs 5 --patience 2
+python -m experiments.run_imputation --config imputation/r0818/la_func_residual_corr_pguts_36.yaml --dataset-name la_block --seed 1 --batch-size 16 --batches-epoch 2 --epochs 5 --patience 2
+python -m experiments.run_imputation --config imputation/r0818/la_func_lag_corr_pguts_36.yaml --dataset-name la_block --seed 1 --batch-size 16 --batches-epoch 2 --epochs 5 --patience 2
+python -m experiments.run_imputation --config imputation/r0818/la_func_random_pguts_36.yaml --dataset-name la_block --seed 1 --batch-size 16 --batches-epoch 2 --epochs 5 --patience 2

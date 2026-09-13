@@ -98,7 +98,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", required=True)
     parser.add_argument("--method", default="baseline",
-                        choices=["baseline", "simple", "saits", "misstsm", "crib", "coifnet"])
+                        choices=["baseline", "simple", "saits", "misstsm", "crib", "coifnet", "hdtts_reliable"])
     parser.add_argument("--predictor", default="iTransformer",
                         choices=["DLinear", "PatchTST", "iTransformer"])
     parser.add_argument("--impute", default="zero",
@@ -145,6 +145,14 @@ def main():
                         choices=["x_cat_mask", "xmask_cat_mask"])
     parser.add_argument("--coifnet_embed_type", default="shared",
                         choices=["shared", "independent"])
+    parser.add_argument("--hdtts_hidden", type=int, default=64)
+    parser.add_argument("--hdtts_temporal_layers", type=int, default=2)
+    parser.add_argument("--hdtts_pooling_layers", type=int, default=2)
+    parser.add_argument("--hdtts_dilation", type=int, default=2)
+    parser.add_argument("--hdtts_max_cluster_size", type=int, default=8)
+    parser.add_argument("--hdtts_physical_graph_weight", type=float, default=1.0)
+    parser.add_argument("--hdtts_temporal_graph_weight", type=float, default=1.0)
+    parser.add_argument("--hdtts_adaptive_graph_weight", type=float, default=0.5)
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -171,6 +179,14 @@ def main():
         coifnet_hidden=args.coifnet_hidden,
         coifnet_input_form=args.coifnet_input_form,
         coifnet_embed_type=args.coifnet_embed_type,
+        hdtts_hidden=args.hdtts_hidden,
+        hdtts_temporal_layers=args.hdtts_temporal_layers,
+        hdtts_pooling_layers=args.hdtts_pooling_layers,
+        hdtts_dilation=args.hdtts_dilation,
+        hdtts_max_cluster_size=args.hdtts_max_cluster_size,
+        hdtts_physical_graph_weight=args.hdtts_physical_graph_weight,
+        hdtts_temporal_graph_weight=args.hdtts_temporal_graph_weight,
+        hdtts_adaptive_graph_weight=args.hdtts_adaptive_graph_weight,
     )
 
     train_loader, _ = get_loader(args.dataset, "train", args.seq_len, args.pred_len,

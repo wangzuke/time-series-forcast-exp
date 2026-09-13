@@ -1,0 +1,3 @@
+# Fill with finished official P-GUTS exp directory names, one per line.
+# Example:
+# 20260818T120000_1_r0818_func_residual_corr_s1
