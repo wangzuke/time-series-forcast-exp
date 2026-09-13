@@ -106,6 +106,8 @@ bash scripts/run_experiments.sh scripts/smoke_cmds.txt 0 1 logs
 - **MissTSM**：核心 `MissTSMLayer` 用 `key_padding_mask` 让缺失位置不参与跨变量注意力；后接选定 backbone。
 - **CRIB**：紧凑版本，保留输入掩码、信息瓶颈（隐表征 KL 对 N(0,I)）；不实现原文的 patching/双重 ELBO，效果作为对照基线。
 - **CoIFNet**：紧凑版 TSMixer 风格 backbone，共享层同时输出 (impute, forecast)，损失=预测 MAE + α·补值重建 MAE。
+- **HD-TTS reliable prototype**：`src/models/hdtts_reliable.py` 是 PyTorch-only 快速实验版，适合在 `itransformer` 环境中做管线 smoke；它不是 HD-TTS 官方 baseline。
+- **Official HD-TTS overlay**：`src/models/hdtts_official_reliable.py` 直接继承 `external_repro/official/hdtts` 中的官方 `HDTTSModel`，只改图构造/图输入逻辑；需使用 `hd-tts` 环境，通过 `src/training/run_official_hdtts_local.py` 在本地 METR-LA/AQI36 上运行。
 
 如需 faithful 复现，可把 `src/models/<m>.py` 替换为外部仓库代码，再调整 `src/training/pipelines.py` 中的封装即可。
 

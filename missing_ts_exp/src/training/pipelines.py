@@ -25,6 +25,7 @@ from ..models.itransformer import iTransformer
 from ..models.misstsm import MissTSMModel
 from ..models.crib import CRIB
 from ..models.coifnet import CoIFNet
+from ..models.hdtts_reliable import ReliableHDTTSConfig, ReliableHDTTSForecaster
 from ..imputation.saits import SAITS, random_mit_mask, masked_mae
 from ..imputation.simple import apply_simple_imputer
 from ..data.timefeatures import time_feature_dim
@@ -96,6 +97,15 @@ class PipelineConfig:
     # CoIFNet 变体
     coifnet_input_form: str = "x_cat_mask"
     coifnet_embed_type: str = "shared"
+    # HD-TTS + reliability graph idea prototype
+    hdtts_hidden: int = 64
+    hdtts_temporal_layers: int = 2
+    hdtts_pooling_layers: int = 2
+    hdtts_dilation: int = 3
+    hdtts_max_cluster_size: int = 8
+    hdtts_physical_graph_weight: float = 1.0
+    hdtts_temporal_graph_weight: float = 1.0
+    hdtts_adaptive_graph_weight: float = 0.5
     # 训练超参
     d_model: int = 128
     n_heads: int = 8
@@ -282,6 +292,36 @@ class CoifnetPipeline(BasePipeline):
                 "aux_loss": self.cfg.aware_impute_weight * rec}
 
 
+class ReliableHdttsPipeline(BasePipeline):
+    """HD-TTS-based prototype with observed temporal graph reliability."""
+
+    def __init__(self, cfg: PipelineConfig):
+        super().__init__(cfg)
+        model_cfg = ReliableHDTTSConfig(
+            seq_len=cfg.seq_len,
+            pred_len=cfg.pred_len,
+            n_channels=cfg.n_channels,
+            hidden_size=cfg.hdtts_hidden,
+            temporal_layers=cfg.hdtts_temporal_layers,
+            pooling_layers=cfg.hdtts_pooling_layers,
+            dilation=cfg.hdtts_dilation,
+            max_cluster_size=cfg.hdtts_max_cluster_size,
+            dropout=cfg.dropout,
+            physical_graph_weight=cfg.hdtts_physical_graph_weight,
+            temporal_graph_weight=cfg.hdtts_temporal_graph_weight,
+            adaptive_graph_weight=cfg.hdtts_adaptive_graph_weight,
+        )
+        self.model = ReliableHDTTSForecaster(model_cfg)
+
+    def forward(self, batch):
+        forecast = self.model(batch["x_obs"], batch["mask"])
+        return {
+            "forecast": forecast,
+            "impute": batch["x_obs"] * batch["mask"],
+            "aux_loss": torch.tensor(0.0, device=forecast.device),
+        }
+
+
 def build_pipeline(cfg: PipelineConfig) -> BasePipeline:
     method = cfg.method.lower()
     if method in ("baseline", "no_missing", "simple"):
@@ -294,4 +334,6 @@ def build_pipeline(cfg: PipelineConfig) -> BasePipeline:
         return CribPipeline(cfg)
     if method == "coifnet":
         return CoifnetPipeline(cfg)
+    if method == "hdtts_reliable":
+        return ReliableHdttsPipeline(cfg)
     raise ValueError(f"unknown method {method}")

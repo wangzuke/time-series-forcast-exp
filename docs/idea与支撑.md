@@ -56,10 +56,14 @@ X_obs, M
 6. 以 forecasting-oriented 方式论证区域化关系
 ```
 
-最接近的工作覆盖的是子问题：
+最接近、也最能支撑当前 idea 的两篇工作是：
 
-- HD-TTS 覆盖“缺失预测 + 时空多尺度/层级粗化”，但不是“真实空间图 + 时序相关图 + 变量聚类区域图”的统一框架。
-- BiTGraph 覆盖“缺失预测 + 图传播 + mask bias”，但不做区域化粗图。
+- HD-TTS 覆盖“缺失预测 + 时空多尺度/层级粗化”，是当前最直接支撑 coarse / regional representation 的工作；但它不是“真实空间图 + observed-only 时序相关图 + 变量聚类区域图 + 可靠性融合”的统一框架。需要注意的是，HD-TTS 原文主实验数据集不是 METR-LA / PEMS-BAY，而是 GraphMSO、AQI、EngRAD、PV-US，因此它更直接支撑“缺失场景下时空粗化机制有价值”，不是直接证明该机制已经在本地交通数据上成立。
+- GinAR 覆盖“variable missing + predefined graph + adaptive graph + end-to-end forecasting”，是当前最直接支撑“缺失会破坏图关系、需要固定图与自适应图互补重建”的工作；但它不做区域化粗图，也没有 missingness-reliable fine/coarse fusion。
+
+其他相邻工作覆盖的是子问题：
+
+- BiTGraph 覆盖“缺失预测 + 图传播 + mask bias”，但不做区域化粗图，且更适合作为相邻 baseline / related work，而不是主干 base。
 - CRIB / CoIFNet / MissTSM 覆盖“缺失预测范式”，但不显式结合物理图和区域图。
 - HyperIMTS / GraFITi / T-PatchGNN 覆盖“不规则/缺失观测的图结构建模”，但不是物理-时序-区域多图融合。
 - MTGNN / ForecastGrapher / ESG 覆盖“变量关系图学习”，但默认缺失适配较弱。
@@ -67,6 +71,8 @@ X_obs, M
 因此，当前最稳妥的 novelty 表述是：
 
 > 现有工作分别研究了缺失预测、图式多变量预测、不规则时间序列图建模、多尺度时空下采样和图粗化；但尚缺少一种面向缺失多变量预测的统一框架，同时融合真实空间关系、观测鲁棒的变量时序关系和预测导向的区域化粗粒度关系，并显式考虑缺失模式对关系可靠性的影响。
+
+更具体地说，当前 idea 可以定位为：以 HD-TTS 的时空多尺度下采样/粗化框架为主要支撑，吸收 GinAR 在 variable missing 下使用 `predefined graph + adaptive graph` 重建空间依赖的思想，进一步引入 observed-only temporal relation、edge/region reliability 与 missingness-aware fine/coarse fusion。
 
 ## 3. 支撑文献图谱
 
@@ -96,6 +102,7 @@ X_obs, M
 
 | 文献 | 关键信息 | 支撑点 | 与我们不同 |
 |---|---|---|---|
+| GinAR / Graph Interpolation Attention Recursive Network | 面向 variable missing 的端到端 MTSF；通过 Interpolation Attention 用正常变量恢复缺失变量表示，并通过 `predefined graph + adaptive graph convolution` 重建空间关系。来源：https://github.com/ChengqingYu/GinAR | 强支撑“缺失会破坏空间/时序依赖建模”；强支撑“固定物理图不够，需要数据驱动图补充”；支撑端到端预测优于两阶段插补预测 | 主要处理 whole-variable missing；没有时空层级 downsampling，也没有 regional/coarse graph 和显式 reliability gate |
 | BiTGraph | 面向 time series forecasting with missing values，用 mask-biased temporal convolution graph network 处理缺失。来源：https://github.com/chenxiaodanhit/BiTGraph | 支撑缺失预测中图传播需要 mask-aware bias；重要 baseline | 主要是细粒度图，不显式区域化 |
 | GraFITi | 将 irregularly sampled time series with missing values 转为 sparsity structure graph，并把预测看作 edge weight prediction。来源：https://arxiv.org/abs/2305.12932 | 支撑保留原始观测稀疏结构，不必先补齐完整矩阵 | 图是观测事件图，不是变量空间/区域图 |
 | T-PatchGNN | ICML 2024；用 transformable patching + GNN 处理 asynchronous IMTS，建模异步变量相关。来源：https://proceedings.mlr.press/v235/zhang24bw.html | 支撑 patch 化和 GNN 可以结合处理缺失/不规则变量关系 | 专用 IMTS 架构，缺少真实空间图和区域图 |
@@ -126,6 +133,7 @@ X_obs, M
 - CoIFNet：两阶段目标错位，mask 和 timestamp 应进入预测表征。
 - Task-oriented imputation evaluation：插补应按下游任务效果评价。
 - S4M：block missing 下两阶段方法容易累积错误。
+- GinAR：针对 whole-variable missing 采用端到端 `Interpolation Attention + Adaptive Graph Convolution`，避免先补全再预测带来的目标错位。
 
 设计落点：
 
@@ -141,6 +149,7 @@ mask = 输入特征 / 可靠性信号
 
 - MTGNN：变量间潜在依赖对 MTSF 关键，且可结合外部知识。
 - STFGNN：给定 spatial graph 不够，data-driven temporal graph 可补充真实空间图未覆盖的隐依赖。
+- GinAR：`predefined graph` 与 `adaptive graph` 在缺失变量场景下互补；高变量缺失率下，自适应图对重建有效依赖更关键。
 - ForecastGrapher / MTSF-DG：变量关系可以动态或自适应学习。
 
 设计落点：
@@ -201,6 +210,7 @@ Z = Z_fine + alpha(M, S, reliability) * Project(Z_region_to_node)
 | CoIFNet | 是 | 否 | 隐式变量融合 | 否 | mask input | 是 |
 | MissTSM | 是 | 否 | 同时间步 masked attention | 否 | masked attention | 是/多任务 |
 | S4M | 是 | 否 | 隐式 S4 表征 | 否 | mask dual stream | 是 |
+| GinAR | 是，variable missing | 是，predefined graph | 是，自适应图 | 否 | interpolation attention + adaptive graph | 是 |
 | BiTGraph | 是 | 是/图结构 | 可学习图 | 否 | mask-biased graph | 是 |
 | HD-TTS | 是 | 是 | 隐式 | 是，时空下采样 | attention conditioned on missing patterns | 是 |
 | HyperIMTS | 是，不规则 | 否 | 超图 variable hyperedge | 否 | irregularity-aware | 是 |
@@ -219,6 +229,7 @@ Z = Z_fine + alpha(M, S, reliability) * Project(Z_region_to_node)
 
 - CRIB：缺失和插补会破坏变量相关性。
 - CoIFNet / S4M：高缺失与 block missing 会显著影响预测，需专门建模。
+- GinAR：whole-variable missing 会使常规 STGNN 捕获错误的 temporal dependency 与 spatial correlation，需要先恢复缺失变量表示并重建图关系。
 - 设计推断：`A_temp` 需要 observed overlap reliability。
 
 可验证实验：
@@ -233,6 +244,7 @@ Z = Z_fine + alpha(M, S, reliability) * Project(Z_region_to_node)
 
 - MTGNN：外部知识可与图学习结合。
 - STFGNN：spatial graph 不能覆盖所有 hidden dependencies，temporal graph 有补充价值。
+- GinAR：predefined graph 与 adaptive graph 互补，说明物理/先验关系和数据驱动关系不应互相替代。
 - MTSF-DG / ForecastGrapher：变量依赖可动态/自适应学习。
 
 可验证实验：
@@ -282,12 +294,13 @@ mask + reliability gate
 
 第一优先级，直接影响论文定位：
 
-1. CRIB：https://arxiv.org/abs/2509.23494
-2. HD-TTS：https://arxiv.org/abs/2402.10634
-3. CoIFNet：https://arxiv.org/abs/2506.13064
-4. BiTGraph：https://github.com/chenxiaodanhit/BiTGraph
-5. STFGNN：https://arxiv.org/abs/2012.09641
-6. ESG：https://arxiv.org/abs/2206.13816
+1. HD-TTS：https://arxiv.org/abs/2402.10634
+2. GinAR：https://github.com/ChengqingYu/GinAR
+3. CRIB：https://arxiv.org/abs/2509.23494
+4. CoIFNet：https://arxiv.org/abs/2506.13064
+5. BiTGraph：https://github.com/chenxiaodanhit/BiTGraph
+6. STFGNN：https://arxiv.org/abs/2012.09641
+7. ESG：https://arxiv.org/abs/2206.13816
 
 第二优先级，支撑不规则/缺失图建模：
 
@@ -314,11 +327,11 @@ mask + reliability gate
 
 为了让 idea 从“可讲”变成“可写论文”，下一步建议做三件事：
 
-1. **全文阅读 6 篇第一优先级论文**  
+1. **全文阅读 7 篇第一优先级论文**  
    输出每篇的 paper reading note：问题、方法、实验、局限、与我们差异。
 
 2. **补一个 novelty table**  
-   将 CRIB、CoIFNet、MissTSM、BiTGraph、HD-TTS、HyperIMTS、STFGNN、ESG 与我们的方法逐项对比，作为论文 introduction 和 related work 的基础表。
+   将 HD-TTS、GinAR、CRIB、CoIFNet、MissTSM、BiTGraph、HyperIMTS、STFGNN、ESG 与我们的方法逐项对比，作为论文 introduction 和 related work 的基础表。
 
 3. **先设计最小可验证模型，而不是一次性做复杂系统**  
    第一版只保留：
@@ -334,4 +347,3 @@ direct forecasting loss
 这样能最直接验证论文的核心假设：
 
 > 在高缺失率下，区域化变量关系是否能作为缺失可靠的多尺度补充，提升多变量时间序列预测？
-
