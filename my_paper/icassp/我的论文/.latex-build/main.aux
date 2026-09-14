@@ -8,43 +8,20 @@
 \citation{ginar}
 \citation{hdtts}
 \citation{pguts}
-\citation{crib}
-\citation{coifnet}
 \@writefile{toc}{\contentsline {section}{\numberline {1} Introduction}{1}{}\protected@file@percent }
-\citation{bitgraph}
-\citation{ginar}
-\citation{gcnm}
-\citation{graphunets}
 \citation{hdtts}
-\citation{pguts}
-\citation{higp}
-\citation{sdsc}
-\citation{hdtts}
-\@writefile{toc}{\contentsline {section}{\numberline {2} Related Work}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.1} Forecasting from Incomplete Multivariate History}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2} Graph Relations under Missingness}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.3} Hierarchical Graph Modeling}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {3} Problem Setup and Multi-Resolution Representation}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {4} Missingness-Reliable Fine-to-Coarse Relations}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1} Observation-Supported and Physical Fine Relations}{2}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overview of MR-MSGF. A mask-aware encoder forms multi-resolution representations from incomplete history. A physical graph and a co-observation-supported graph are fused before physically connected regional coarsening. Node, edge, and regional evidence regulates regional-message injection and multi-scale readout.}}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2} Method}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1} Problem Setup and Backbone}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2} Observation-Supported Relation Fusion}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3} Reliability-Controlled Regional Context}{2}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overview of MR-MSGF. A mask-aware encoder forms temporal states from incomplete history. A co-observation-supported graph is fused with the physical graph before physically connected regional coarsening. Reliability evidence regulates regional residual injection and multi-scale readout.}}{3}{}\protected@file@percent }
 \newlabel{fig:mrmsgf-overview}{{1}{3}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2} Physically Connected Regional Coarsening}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3} Reliability-Controlled Regional Injection and Readout}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5} Experiments}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1} Settings}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2} METR-LA Main Results}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3} AQI36 Transfer Setting}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.4} Mechanism Ablation}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.5} Horizon and Efficiency Analysis}{4}{}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces METR-LA results over five paired mask seeds. Lower is better; the best result within each mask-rate condition is in bold. Shaded rows identify \textbf  {MR-MSGF}.}}{5}{}\protected@file@percent }
-\newlabel{tab:metr-main}{{1}{5}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces AQI36 results over five seeds. Lower is better; the best result within each condition is in bold. Shaded rows identify \textbf  {MR-MSGF}. Under native missingness, the data validity mask is fixed and only initialization changes; Point conditions additionally use fixed extra masks.}}{5}{}\protected@file@percent }
-\newlabel{tab:aqi-main}{{2}{5}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces METR-LA Block-T mechanism ablation at 50\% missingness over five paired mask seeds. Lower is better; the best result in each column is in bold. The shaded row identifies the full \textbf  {MR-MSGF}{} model.}}{5}{}\protected@file@percent }
-\newlabel{tab:ablation}{{3}{5}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces METR-LA Block-T horizon decomposition over five paired mask seeds. Lower is better; the best result for each horizon and metric is in bold. Shaded cells identify \textbf  {MR-MSGF}.}}{6}{}\protected@file@percent }
-\newlabel{tab:horizon}{{4}{6}}
+\@writefile{toc}{\contentsline {section}{\numberline {3} Experiments}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1} Settings}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2} Main Results}{3}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces METR-LA results over five paired mask seeds. Lower is better; the best result within each condition is in bold.}}{3}{}\protected@file@percent }
+\newlabel{tab:metr-main}{{1}{3}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3} Cross-Domain and Horizon Analysis}{3}{}\protected@file@percent }
 \bibstyle{../template/IEEEbib}
 \bibdata{references}
 \bibcite{dcrnn}{1}
@@ -54,13 +31,15 @@
 \bibcite{coifnet}{5}
 \bibcite{bitgraph}{6}
 \bibcite{ginar}{7}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces AQI36 cross-domain results over five seeds.}}{4}{}\protected@file@percent }
+\newlabel{tab:aqi}{{2}{4}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces METR-LA Block-T horizon decomposition.}}{4}{}\protected@file@percent }
+\newlabel{tab:horizon}{{3}{4}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4} Ablation and Diagnostics}{4}{}\protected@file@percent }
+\newlabel{tab:ablation}{{4}{4}}
+\newlabel{tab:efficiency}{{5}{4}}
+\@writefile{toc}{\contentsline {section}{\numberline {4} Conclusion}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5} References}{4}{}\protected@file@percent }
 \bibcite{hdtts}{8}
 \bibcite{pguts}{9}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.6} Summary and Scope}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {6} Conclusion}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7} References}{7}{}\protected@file@percent }
-\bibcite{gcnm}{10}
-\bibcite{graphunets}{11}
-\bibcite{higp}{12}
-\bibcite{sdsc}{13}
-\gdef \@abspage@last{8}
+\gdef \@abspage@last{5}

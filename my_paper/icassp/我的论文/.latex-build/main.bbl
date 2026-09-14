@@ -1,4 +1,4 @@
-\begin{thebibliography}{10}
+\begin{thebibliography}{1}
 
 \bibitem{dcrnn}
 Yaguang Li, Rose Yu, Cyrus Shahabi, and Yan Liu,
@@ -61,32 +61,5 @@ Aman Atman and Santosh Nannuru,
   imputation,''
 \newblock in {\em Proceedings of the 31st ACM SIGKDD Conference on Knowledge
   Discovery and Data Mining}, 2025.
-
-\bibitem{gcnm}
-Jingwei Zuo, Karine Zeitouni, Yehia Taher, and Sandra Garcia-Rodriguez,
-\newblock ``Graph convolutional networks for traffic forecasting with missing
-  values,''
-\newblock {\em Data Mining and Knowledge Discovery}, vol. 37, no. 2, pp.
-  913--947, 2023.
-
-\bibitem{graphunets}
-Hongyang Gao and Shuiwang Ji,
-\newblock ``Graph {U}-nets,''
-\newblock in {\em Proceedings of the 36th International Conference on Machine
-  Learning}, 2019.
-
-\bibitem{higp}
-Andrea Cini, Danilo Mandic, and Cesare Alippi,
-\newblock ``Graph-based time series clustering for end-to-end hierarchical
-  forecasting,''
-\newblock in {\em Proceedings of the 41st International Conference on Machine
-  Learning}, 2024, vol. 235 of {\em Proceedings of Machine Learning Research},
-  pp. 8985--8999.
-
-\bibitem{sdsc}
-Siwei Wei, Yanan Song, Donghua Liu, Sichen Shen, Rong Gao, and Chunzhi Wang,
-\newblock ``Hierarchical dynamic spatio-temporal graph convolutional networks
-  with self-supervised learning for traffic flow forecasting,''
-\newblock {\em Inventions}, vol. 9, no. 5, pp. 102, 2024.
 
 \end{thebibliography}
