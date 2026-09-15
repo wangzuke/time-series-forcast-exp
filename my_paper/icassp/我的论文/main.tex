@@ -61,7 +61,7 @@ Let $X\in\mathbb{R}^{T\times N\times C}$ be a history window, $M\in\{0,1\}^{T\ti
 r_i=\frac{1}{T}\sum_t\bar M_{t,i},\qquad
 q_{ij}=\frac{1}{T}\sum_t\bar M_{t,i}\bar M_{t,j}.
 \end{equation}
-Here, $r_i$ denotes availability and $q_{ij}$ co-observation; all graphs are row-normalized. The retained encoder, temporal hierarchy, and multi-scale readout of \cite{hdtts} yield $H_{\ell}\in\mathbb{R}^{N\times d}$ and $B_{s,\ell}$. Here $\ell$ indexes temporal levels, $s=0$ is the finest spatial level, and $s>0$ are original coarser levels. Our branch modifies only $B_{0,\ell}$.
+Here, $r_i$ denotes availability and $q_{ij}$ co-observation; all graphs are row-normalized. A mask-aware temporal encoder first maps incomplete history to level-wise node states $H_{\ell}\in\mathbb{R}^{N\times d}$ and multi-resolution spatial states $B_{s,\ell}$. Here $\ell$ indexes temporal levels, $s=0$ denotes the finest spatial level, and $s>0$ denotes coarser spatial levels. MR-MSGF refines the finest-level state through relation fusion and regional propagation, while the coarser states provide complementary context to the multi-scale readout.
 
 Fig.~\ref{fig:mrmsgf-overview} outlines MR-MSGF: co-observation guides fine relations, whose regional context is reliability-gated for prediction.
 
