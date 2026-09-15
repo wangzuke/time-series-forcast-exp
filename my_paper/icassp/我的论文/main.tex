@@ -58,6 +58,8 @@ q_{ij}=\frac{1}{T}\sum_t\bar M_{t,i}\bar M_{t,j}.
 \end{equation}
 Here $r_i$ is node availability and $q_{ij}$ is pairwise co-observation, and $\norm(A)_{ij}=A_{ij}/(\sum_{j'} A_{ij'}+\epsilon)$. To distinguish the proposed relation modeling from the existing temporal representation, a mask-aware encoder and a dilated recurrent hierarchy first produce $H_{\ell}\in\mathbb{R}^{N\times d}$, which is passed to the original spatial hierarchy to obtain multi-resolution states $B_{s,\ell}$. Here, $\ell$ indexes temporal levels, $s=0$ denotes the finest spatial level, and $s>0$ denotes the original coarser spatial levels. This hierarchy adopts established missingness-aware temporal modeling and multi-scale readout \cite{hdtts}; our relation branch modifies only $B_{0,\ell}$, while all $B_{s,\ell}$ for $s>0$ remain available to the readout.
 
+Fig.~\ref{fig:mrmsgf-overview} outlines MR-MSGF: co-observation guides fine relations, whose regional context is reliability-gated for prediction.
+
 \begin{figure*}[t]
   \centering
   \includegraphics[width=0.98\textwidth]{figures/mr_msgf_overview.png}
