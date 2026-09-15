@@ -132,11 +132,11 @@ The gate is not interpreted as calibrated uncertainty. It is a forecasting-orien
 
 \subsection{Settings}
 
-We evaluate on METR-LA traffic speeds and AQI36 air quality. All experiments forecast 12 steps from 24 historical steps. For METR-LA, Point and Block-T masks are applied only to the historical input; future targets are evaluated on valid, unmasked raw values. Point masks simulate independent random sensor-value loss, while Block-T masks simulate contiguous temporal outages. AQI36 retains its native validity mask and adds optional Point masks on top. Each condition uses five paired mask seeds, and compared models share the same input masks. The model is trained only with the masked forecasting loss in Eq.~\eqref{eq:pred-loss}, without imputation or graph auxiliary losses. We fix $k=8$, $m=8$, initialize $\beta=1$, and initialize the five-dimensional $\gamma$ to ones. The physical connected assignment yields $K=31$ regions for METR-LA (24 regions of size 8, two of size 4, one of size 3, and four singletons) and $K=5$ for AQI36 (four regions of size 8 and one of size 4). HD-TTS-AMP is the main reference. METR-LA also includes BiTGraph connected to the common data, mask, and evaluation interface; because its original training schedule differs from HD-TTS, we interpret it only as a unified-protocol comparison.
+We evaluate on METR-LA traffic speeds and AQI36 air quality. All experiments forecast 12 steps from 24 historical steps. For METR-LA, Point and Block-T masks are applied only to the historical input; future targets are evaluated on valid, unmasked raw values. Point masks simulate independent random sensor-value loss, while Block-T masks simulate contiguous temporal outages. AQI36 retains its native validity mask and adds optional Point masks on top. Each condition uses five paired mask seeds, and compared models share the same input masks. The model is trained only with the masked forecasting loss in Eq.~\eqref{eq:pred-loss}, without imputation or graph auxiliary losses. We use $k=m=8$, initialize $\beta=1$ and $\gamma$ to ones, and obtain $K=31$ and $K=5$ physically connected regions for METR-LA and AQI36, respectively. HD-TTS-AMP is the main reference. METR-LA also includes BiTGraph connected to the common data, mask, and evaluation interface; because its original training schedule differs from HD-TTS, we interpret it only as a unified-protocol comparison.
 
 \subsection{Main Results}
 
-Table~\ref{tab:metr-main} reports METR-LA results. MR-MSGF lowers MAE over HD-TTS-AMP in all tested Block-T and Point settings. It also improves RMSE under Block-T 30\%/50\% and Point 30\%/50\%. At Block-T 70\%, MR-MSGF still improves MAE but has slightly worse RMSE, indicating that the benefit is not cross-metric consistent under extreme missingness. Table~\ref{tab:paired-mae} reports the matched-seed analysis: the MAE reduction is positive in all five paired runs for every condition and is significant under a two-sided paired $t$-test ($p<0.05$). We make no analogous across-condition significance claim for RMSE.
+Table~\ref{tab:metr-main} reports METR-LA results. MR-MSGF lowers MAE over HD-TTS-AMP in all tested Block-T and Point settings. It also improves RMSE under Block-T 30\%/50\% and Point 30\%/50\%. At Block-T 70\%, MR-MSGF still improves MAE but has slightly worse RMSE, indicating that the benefit is not cross-metric consistent under extreme missingness. Across all five conditions, MR-MSGF wins all five paired MAE runs and two-sided paired $t$-tests give $p\leq0.0379$; we make no analogous across-condition significance claim for RMSE.
 
 \begin{table}[!t]
 \centering
@@ -247,33 +247,6 @@ No readout bias & $3.3298 \pm 0.0249$ & $6.8512 \pm 0.0375$ \\
 \bottomrule
 \end{tabular}
 }
-\end{table}
-
-Figure~\ref{fig:reliability-diagnostics} shows the edge-level mechanism diagnostic. Across ten full-model checkpoint evaluations, the mean Pearson correlation between non-diagonal co-observation rates and physical-edge gates $g_{ij}$ is $-0.4051$; nine runs are negative, with one Block-T 50\% run close to zero. Since larger $g_{ij}$ assigns more weight to the physical graph, this association is consistent with more use of observation-supported relations when co-observation is available. It is not causal evidence and does not establish calibrated uncertainty. The full model also adds 7.7\% parameters (407,447 versus 378,351), a modest cost relative to the backbone.
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/reliability_region_diagnostics.pdf}
-  \caption{Edge-level reliability diagnostic. Each point is the Pearson correlation between co-observation $q_{ij}$ and the physical-edge gate $g_{ij}$ for one full-model checkpoint evaluation; horizontal lines denote rate-wise means.}
-  \label{fig:reliability-diagnostics}
-\end{figure}
-
-\begin{table}[t]
-\centering
-\scriptsize
-\caption{Paired METR-LA MAE evidence against HD-TTS-AMP. $\Delta$ is HD-TTS-AMP minus MR-MSGF; positive values favor MR-MSGF. CI and $p$ use two-sided paired $t$-tests over five matched seeds.}
-\label{tab:paired-mae}
-\begin{tabular}{l c c c c}
-\toprule
-Condition & $\Delta$MAE & 95\% CI & $p$ & Wins \\
-\midrule
-Block-T 30\% & 0.0284 & [0.0026, 0.0543] & 0.0379 & 5/5 \\
-Block-T 50\% & 0.0468 & [0.0242, 0.0693] & 0.0045 & 5/5 \\
-Block-T 70\% & 0.0191 & [0.0042, 0.0341] & 0.0238 & 5/5 \\
-Point 30\% & 0.0284 & [0.0144, 0.0424] & 0.0049 & 5/5 \\
-Point 50\% & 0.0189 & [0.0058, 0.0319] & 0.0160 & 5/5 \\
-\bottomrule
-\end{tabular}
 \end{table}
 
 \section{Conclusion}
