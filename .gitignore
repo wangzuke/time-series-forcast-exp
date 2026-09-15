@@ -25,6 +25,9 @@ Thumbs.db
 # Archives
 *.tar.gz
 
+# LaTeX build outputs
+.latex-build/
+
 # Codex skills (local only)
 .codex/skills/
 report/
