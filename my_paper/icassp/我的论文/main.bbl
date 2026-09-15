@@ -45,6 +45,16 @@ Kai Tang, Ji~Zhang, Hua Meng, Minbo Ma, Qi~Xiong, Fengmao Lv, Jie Xu, and Tianru
 \newblock ``{CoIFNet}: A unified framework for multivariate time series forecasting with missing values,''
 \newblock {\em arXiv preprint arXiv:2506.13064}, 2025.
 
+\bibitem{raindrop}
+Xiang Zhang, Marko Zeman, Theodoros Tsiligkaridis, and Marinka Zitnik,
+\newblock ``Graph-guided network for irregularly sampled multivariate time series,''
+\newblock in {\em International Conference on Learning Representations}, 2022.
+
+\bibitem{tgnn4i}
+Joel Oskarsson, Per Sid{\'e}n, and Fredrik Lindsten,
+\newblock ``Temporal graph neural networks for irregular data,''
+\newblock in {\em Proceedings of The 26th International Conference on Artificial Intelligence and Statistics}, 2023, vol. 206 of {\em Proceedings of Machine Learning Research}, pp. 4515--4531.
+
 \bibitem{bitgraph}
 Xiaodan Chen, Xiucheng Li, Bo~Liu, and Zhijun Li,
 \newblock ``Biased temporal convolution graph network for time series forecasting with missing values,''
