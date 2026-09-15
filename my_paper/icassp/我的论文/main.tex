@@ -35,28 +35,30 @@ Multivariate time series forecasting, missing observations, spatiotemporal graph
 
 \section{Introduction}
 
-Traffic, environmental, and industrial forecasting systems depend on both temporal context and inter-sensor relations. Spatiotemporal graph models commonly use physical topology or learned adjacency to represent such relations \cite{dcrnn,mtgnn}, and hybrid designs show that physical and data-driven dependencies can be complementary \cite{stfgnn}. In real sensor networks, however, missing observations caused by faults or communication interruptions weaken two information sources at once: the observed temporal history of each sensor and the evidence used to infer pairwise relations.
+Traffic, environmental, and industrial forecasting systems depend on temporal context and inter-sensor relations. Spatiotemporal graph models represent these relations with physical topology or learned adjacency \cite{dcrnn,mtgnn}, while hybrid designs combine physical and data-driven dependencies \cite{stfgnn}. Their relation estimates, however, are usually inferred from the available history. Faults and communication interruptions therefore damage both a node's temporal context and the evidence used to infer its edges.
 
-A common response is to reconstruct missing history, using bidirectional recurrent imputation \cite{brits}, temporal attention for irregular samples \cite{mtan}, or graph-based imputation \cite{grin,spin}. Direct forecasting methods instead encode values and masks jointly \cite{crib,coifnet}. For graph forecasting under missingness, BiTGraph injects missing-pattern biases into temporal and graph propagation \cite{bitgraph}, GinAR combines predefined and adaptive relations when variable missingness damages dependency estimation \cite{ginar}, and GCN-M studies graph learning with incomplete traffic observations \cite{gcnm}. Hierarchical models aggregate information across spatial and temporal resolutions \cite{hdtts,pguts,higp}. These advances improve missing-aware representations, yet the above routes do not explicitly use window-level joint observation as edge evidence or condition regional context on node-specific reliability.
+Missing-data research follows two broad routes. Imputation methods reconstruct history through bidirectional recurrent models \cite{brits}, temporal attention for irregular samples \cite{mtan}, or graph propagation \cite{grin,spin}; direct forecasting instead encodes values and masks jointly \cite{crib,coifnet}. These methods establish how a model can use incomplete node histories, but do not by themselves distinguish whether a learned node-pair relation is supported by sufficient joint observations.
 
-This paper studies relation reliability as a complementary issue to historical reconstruction. The key idea is simple: an edge inferred from two nodes that were rarely observed together should not be treated the same as an edge supported by dense co-observation. We therefore propose MR-MSGF, which directly forecasts from incomplete spatial history and regulates fine-to-coarse message passing by observation evidence. Our contributions are:
+This issue is especially relevant to graph forecasting with missing inputs. BiTGraph injects missing-pattern biases into temporal and graph propagation \cite{bitgraph}; GinAR combines predefined and adaptive graphs under variable missingness \cite{ginar}; and GCN-M studies graph learning with incomplete traffic observations \cite{gcnm}. Separately, hierarchical approaches aggregate representations across temporal and spatial resolutions \cite{hdtts,pguts,higp}. They improve missing-aware representations or enlarge receptive fields, but do not explicitly use window-level co-observation as edge evidence and then decide whether regional messages are reliable for a particular node.
+
+We study \emph{relation reliability} as complementary to historical reconstruction. An edge inferred from nodes rarely observed together should not be treated as one supported by dense co-observation. We therefore propose MR-MSGF, which directly forecasts from incomplete spatial history and regulates fine-to-coarse message passing by observation evidence. Our contributions are:
 \begin{itemize}
     \item We formulate \emph{relation reliability} as a window-level graph-learning condition: learned similarity is explicitly regularized by pairwise co-observation before sparse edge selection.
     \item We realize this condition through observation--physical relation fusion followed by physically connected regionalization, and use node-, edge-, and region-level evidence to control regional residual messages and multi-scale readout.
     \item We characterize both the support and boundary of the mechanism: paired METR-LA tests show consistent MAE reductions, whereas extreme contiguous missingness and AQI36 native missingness reveal that the bias is not uniformly beneficial.
 \end{itemize}
-MR-MSGF is complementary to imputation-first pipelines. Unlike adaptive graph methods that learn a relation from incomplete values alone, it exposes the amount of joint observation that supports each candidate edge. This distinction matters because the same learned similarity can have different reliability depending on how much of the two histories was actually observed.
+MR-MSGF is complementary to imputation-first pipelines: it exposes the joint-observation evidence supporting each candidate edge, so identical learned similarities need not receive identical trust.
 
 \section{Method}
 
 \subsection{Problem Setup and Backbone}
 
-Let $X\in\mathbb{R}^{T\times N\times C}$ be a single history window from $N$ sensors and let $M\in\{0,1\}^{T\times N\times C}$ indicate observed entries. The model receives $X^{\obs}=M\odot X$, $M$, and a physical adjacency $A^{\phy}\in\mathbb{R}^{N\times N}$, and predicts $Y\in\mathbb{R}^{H\times N\times C_y}$. In a mini-batch, relation graphs and reliability statistics are computed independently for each history window; we omit the batch index below. For graph construction, we use the channel-averaged mask $\bar M_{t,i}=C^{-1}\sum_cM_{t,i,c}$ and define
+Let $X\in\mathbb{R}^{T\times N\times C}$ be a history window, $M\in\{0,1\}^{T\times N\times C}$ its observation mask, and $A^{\phy}\in\mathbb{R}^{N\times N}$ the physical adjacency. The model predicts $Y\in\mathbb{R}^{H\times N\times C_y}$ from $X^{\obs}=M\odot X$, $M$, and $A^{\phy}$. Graphs and reliability statistics are computed per window; we omit the batch index. With channel-averaged mask $\bar M_{t,i}=C^{-1}\sum_cM_{t,i,c}$,
 \begin{equation}
 r_i=\frac{1}{T}\sum_t\bar M_{t,i},\qquad
 q_{ij}=\frac{1}{T}\sum_t\bar M_{t,i}\bar M_{t,j}.
 \end{equation}
-Here $r_i$ is node availability and $q_{ij}$ is pairwise co-observation, and $\norm(A)_{ij}=A_{ij}/(\sum_{j'} A_{ij'}+\epsilon)$. To distinguish the proposed relation modeling from the existing temporal representation, a mask-aware encoder and a dilated recurrent hierarchy first produce $H_{\ell}\in\mathbb{R}^{N\times d}$, which is passed to the original spatial hierarchy to obtain multi-resolution states $B_{s,\ell}$. Here, $\ell$ indexes temporal levels, $s=0$ denotes the finest spatial level, and $s>0$ denotes the original coarser spatial levels. This hierarchy adopts established missingness-aware temporal modeling and multi-scale readout \cite{hdtts}; our relation branch modifies only $B_{0,\ell}$, while all $B_{s,\ell}$ for $s>0$ remain available to the readout.
+Here, $r_i$ denotes availability and $q_{ij}$ co-observation; all graphs are row-normalized. The retained encoder, temporal hierarchy, and multi-scale readout of \cite{hdtts} yield $H_{\ell}\in\mathbb{R}^{N\times d}$ and $B_{s,\ell}$. Here $\ell$ indexes temporal levels, $s=0$ is the finest spatial level, and $s>0$ are original coarser levels. Our branch modifies only $B_{0,\ell}$.
 
 Fig.~\ref{fig:mrmsgf-overview} outlines MR-MSGF: co-observation guides fine relations, whose regional context is reliability-gated for prediction.
 
@@ -78,7 +80,7 @@ The observation-supported score combines learned similarity and co-observation:
 s_{ij}&=\frac{(W_qu_i)^\top(W_ku_j)}{\sqrt d},\\
 \tilde{s}_{ij}&=s_{ij}+\operatorname{softplus}(\beta)\log(q_{ij}+\epsilon).
 \end{align}
-Here $\beta$ is a learnable scalar. For each node, we retain the top-$k$ entries of $\tilde{s}_{ij}$, apply a row softmax, add self-loops, and row-normalize to obtain a window-specific directed sparse graph $A^{\obs}$; we set $k=8$ in all experiments. The logarithmic term is a soft evidence penalty: an edge with little joint observation is discouraged before sparsification, without imposing a hard correlation rule.
+Here $\beta$ is learnable. Retaining top-$k$ scores per node, applying row softmax, adding self-loops, and row-normalizing yields directed sparse $A^{\obs}$ ($k=8$). The logarithmic term softly discourages edges with little joint observation before sparsification.
 
 Let $\bar A^{\phy}$ denote the physical graph after adding self-loops and applying row normalization. A learned edge gate then forms the fine relation:
 \begin{align}
@@ -89,7 +91,7 @@ Thus, both physical structure and observation-supported relations participate in
 
 \subsection{Reliability-Controlled Regional Context}
 
-We construct a fixed hard assignment $S\in\{0,1\}^{N\times K}$ only from the physical graph, with each node assigned to exactly one region. We symmetrize the physical adjacency and remove self-loops, seed each region with the highest remaining physical-degree node, and greedily add the unassigned node with the largest positive affinity to any region member. A region stops growing if no such node exists or it reaches its maximum size $m$; we use $m=8$. This construction guarantees physical connectivity and does not group zero-affinity nodes merely to fill a region. With $n_k=\sum_iS_{ik}$, the fine state, regional state, and coarse relation are
+We construct a fixed hard assignment $S\in\{0,1\}^{N\times K}$ from the physical graph, with one region per node. After symmetrizing the adjacency and removing self-loops, we seed by remaining physical degree and greedily add the unassigned node with the largest positive affinity to a region member until no such node remains or size $m=8$ is reached. Thus regions are physically connected and do not absorb zero-affinity nodes. With $n_k=\sum_iS_{ik}$,
 \begin{align}
 Z^{\fine}_{\ell}&=\operatorname{ELU}(A^{\fine}H_{\ell}W_f+H_{\ell}W_s),\\
 H^{\reg}_{\ell,k}&=\frac{1}{n_k}\sum_iS_{ik}Z^{\fine}_{\ell,i},\\
@@ -132,7 +134,7 @@ The gate is not interpreted as calibrated uncertainty. It is a forecasting-orien
 
 \subsection{Settings}
 
-We evaluate on METR-LA traffic speeds and AQI36 air quality. All experiments forecast 12 steps from 24 historical steps. For METR-LA, Point and Block-T masks are applied only to the historical input; future targets are evaluated on valid, unmasked raw values. Point masks simulate independent random sensor-value loss, while Block-T masks simulate contiguous temporal outages. AQI36 retains its native validity mask and adds optional Point masks on top. Each condition uses five paired mask seeds, and compared models share the same input masks. The model is trained only with the masked forecasting loss in Eq.~\eqref{eq:pred-loss}, without imputation or graph auxiliary losses. We use $k=m=8$, initialize $\beta=1$ and $\gamma$ to ones, and obtain $K=31$ and $K=5$ physically connected regions for METR-LA and AQI36, respectively. HD-TTS-AMP is the main reference. METR-LA also includes BiTGraph connected to the common data, mask, and evaluation interface; because its original training schedule differs from HD-TTS, we interpret it only as a unified-protocol comparison.
+We evaluate METR-LA traffic speeds and AQI36 air quality, forecasting 12 steps from 24 histories. METR-LA Point and Block-T masks affect only history; valid, unmasked raw targets are evaluated. Point simulates independent loss and Block-T contiguous outages. AQI36 retains its native validity mask with optional Point masks. Conditions use five paired mask seeds and shared input masks. Training uses only Eq.~\eqref{eq:pred-loss}. We use $k=m=8$, initialize $\beta=1$ and $\gamma$ to ones, and obtain $K=31$ and $K=5$ connected regions for METR-LA and AQI36. HD-TTS-AMP is the main reference; BiTGraph uses the common data, mask, and evaluation interface.
 
 \subsection{Main Results}
 
