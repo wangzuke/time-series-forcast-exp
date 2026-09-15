@@ -26,7 +26,7 @@ for Spatial Time Series}
 \raggedbottom
 
 \begin{abstract}
-Missing observations in spatial time series not only shorten temporal context but also make learned sensor relations unreliable. We propose Missingness-Reliable Multi-Scale Graph Forecasting (MR-MSGF), a direct forecasting model that predicts from incomplete histories without a separately supervised imputation stage. MR-MSGF builds a window-specific relation graph whose learned similarities are regularized by pairwise co-observation, fuses it with physical topology, and coarsens the fused relation into physically connected regions. A lightweight reliability gate then controls when regional context should influence multi-scale prediction. Experiments on METR-LA show that MR-MSGF improves forecasting under medium-to-high contiguous and point-wise missing rates, demonstrating the value of co-observation-aware relation learning for incomplete spatial histories.
+Missing observations in spatial time series not only shorten temporal context but also make learned sensor relations unreliable. We propose MR-MSGF, a direct forecasting model that predicts from incomplete histories without a separately supervised imputation stage. MR-MSGF builds a window-specific relation graph whose learned similarities are regularized by pairwise co-observation, fuses it with physical topology, and coarsens the fused relation into physically connected regions. A lightweight reliability gate then controls when regional context should influence multi-scale prediction. On METR-LA, MR-MSGF yields consistent, paired-significant MAE reductions under contiguous and point-wise missingness. AQI36 native missingness and Block-T 70\% RMSE further characterize the mechanism as a missingness-aware bias rather than a cross-domain performance guarantee.
 \end{abstract}
 
 \begin{keywords}
@@ -37,15 +37,15 @@ Multivariate time series forecasting, missing observations, spatiotemporal graph
 
 Traffic, environmental, and industrial forecasting systems depend on both temporal context and inter-sensor relations. Spatiotemporal graph models commonly use physical topology or learned adjacency to represent such relations \cite{dcrnn,mtgnn}, and hybrid designs show that physical and data-driven dependencies can be complementary \cite{stfgnn}. In real sensor networks, however, missing observations caused by faults or communication interruptions weaken two information sources at once: the observed temporal history of each sensor and the evidence used to infer pairwise relations.
 
-A common solution is to impute missing history before forecasting, but unsupported reconstructions may introduce errors that are then propagated to prediction. Direct forecasting methods instead encode values and masks jointly \cite{crib,coifnet}. For graph forecasting under missingness, BiTGraph injects missing-pattern biases into temporal and graph propagation \cite{bitgraph}, while GinAR combines predefined and adaptive relations when variable missingness damages dependency estimation \cite{ginar}. Hierarchical models such as HD-TTS and P-GUTS further aggregate information across spatial and temporal resolutions \cite{hdtts,pguts}. These advances improve missing-aware representations, yet they rarely ask whether a learned edge in the current window is supported by enough joint observations, or whether regional context should be trusted for a particular node.
+A common response is to reconstruct missing history, using bidirectional recurrent imputation \cite{brits}, temporal attention for irregular samples \cite{mtan}, or graph-based imputation \cite{grin,spin}. Direct forecasting methods instead encode values and masks jointly \cite{crib,coifnet}. For graph forecasting under missingness, BiTGraph injects missing-pattern biases into temporal and graph propagation \cite{bitgraph}, GinAR combines predefined and adaptive relations when variable missingness damages dependency estimation \cite{ginar}, and GCN-M studies graph learning with incomplete traffic observations \cite{gcnm}. Hierarchical models aggregate information across spatial and temporal resolutions \cite{hdtts,pguts,higp}. These advances improve missing-aware representations, yet the above routes do not explicitly use window-level joint observation as edge evidence or condition regional context on node-specific reliability.
 
-This paper addresses the reliability of relations rather than historical reconstruction. The key idea is simple: an edge inferred from two nodes that were rarely observed together should not be treated the same as an edge supported by dense co-observation. We therefore propose \emph{Missingness-Reliable Multi-Scale Graph Forecasting} (MR-MSGF), which directly forecasts from incomplete spatial history and regulates fine-to-coarse message passing by observation evidence. The contributions are:
+This paper studies relation reliability as a complementary issue to historical reconstruction. The key idea is simple: an edge inferred from two nodes that were rarely observed together should not be treated the same as an edge supported by dense co-observation. We therefore propose MR-MSGF, which directly forecasts from incomplete spatial history and regulates fine-to-coarse message passing by observation evidence. Our contributions are:
 \begin{itemize}
-    \item We construct a window-specific observation-supported graph that combines learned similarity with pairwise co-observation evidence.
-    \item We fuse the observation-supported graph with a physical graph before projecting the relation to physically connected regions.
-    \item We use node-, edge-, and region-level reliability statistics to gate regional residual messages and bias multi-scale readout.
+    \item We formulate \emph{relation reliability} as a window-level graph-learning condition: learned similarity is explicitly regularized by pairwise co-observation before sparse edge selection.
+    \item We realize this condition through observation--physical relation fusion followed by physically connected regionalization, and use node-, edge-, and region-level evidence to control regional residual messages and multi-scale readout.
+    \item We characterize both the support and boundary of the mechanism: paired METR-LA tests show consistent MAE reductions, whereas extreme contiguous missingness and AQI36 native missingness reveal that the bias is not uniformly beneficial.
 \end{itemize}
-Unlike imputation-first pipelines, MR-MSGF does not ask the model to reconstruct missing history before prediction. Unlike adaptive graph methods that learn a relation from incomplete values alone, it exposes the amount of joint observation that supports each candidate edge. This distinction is important in missing-history forecasting because the same learned similarity can have different reliability depending on how much of the two histories was actually observed.
+MR-MSGF is complementary to imputation-first pipelines. Unlike adaptive graph methods that learn a relation from incomplete values alone, it exposes the amount of joint observation that supports each candidate edge. This distinction matters because the same learned similarity can have different reliability depending on how much of the two histories was actually observed.
 
 \section{Method}
 
@@ -56,7 +56,7 @@ Let $X\in\mathbb{R}^{T\times N\times C}$ be a single history window from $N$ sen
 r_i=\frac{1}{T}\sum_t\bar M_{t,i},\qquad
 q_{ij}=\frac{1}{T}\sum_t\bar M_{t,i}\bar M_{t,j}.
 \end{equation}
-Here $r_i$ is node availability and $q_{ij}$ is pairwise co-observation, and $\norm(A)_{ij}=A_{ij}/(\sum_j A_{ij}+\epsilon)$. To distinguish the proposed relation modeling from the existing temporal representation, a mask-aware encoder and a dilated recurrent hierarchy first produce $H_{\ell}\in\mathbb{R}^{N\times d}$, which is passed to the original spatial hierarchy to obtain multi-resolution states $B_{s,\ell}$. Here, $\ell$ indexes temporal levels, $s=0$ denotes the finest spatial level, and $s>0$ denotes the original coarser spatial levels. This hierarchy adopts established missingness-aware temporal modeling and multi-scale readout \cite{hdtts}; our relation branch replaces only $B_{0,\ell}$, while all $B_{s,\ell}$ for $s>0$ remain available to the readout.
+Here $r_i$ is node availability and $q_{ij}$ is pairwise co-observation, and $\norm(A)_{ij}=A_{ij}/(\sum_{j'} A_{ij'}+\epsilon)$. To distinguish the proposed relation modeling from the existing temporal representation, a mask-aware encoder and a dilated recurrent hierarchy first produce $H_{\ell}\in\mathbb{R}^{N\times d}$, which is passed to the original spatial hierarchy to obtain multi-resolution states $B_{s,\ell}$. Here, $\ell$ indexes temporal levels, $s=0$ denotes the finest spatial level, and $s>0$ denotes the original coarser spatial levels. This hierarchy adopts established missingness-aware temporal modeling and multi-scale readout \cite{hdtts}; our relation branch modifies only $B_{0,\ell}$, while all $B_{s,\ell}$ for $s>0$ remain available to the readout.
 
 \begin{figure*}[t]
   \centering
@@ -83,7 +83,7 @@ Let $\bar A^{\phy}$ denote the physical graph after adding self-loops and applyi
 g_{ij}&=\sigmoid\!\left(\psi_g([r_i,r_j,q_{ij},\bar A^{\phy}_{ij},A^{\obs}_{ij}])\right),\\
 A^{\fine}&=\norm\!\left(g\odot\bar A^{\phy}+(1-g)\odot A^{\obs}\right).
 \end{align}
-Thus, both physical structure and observation-supported relations participate in end-to-end learned relation fusion. The gate is intentionally edge-specific rather than a global mixing coefficient. When observation support is scarce, physical adjacency supplies stable structural information; with sufficient joint observations, an observation-supported edge can express dynamic dependence beyond physical proximity. In implementation, $\psi_g$ is a two-layer $5\!\rightarrow\!16\!\rightarrow\!1$ MLP with GELU activation.
+Thus, both physical structure and observation-supported relations participate in end-to-end learned relation fusion. The gate is intentionally edge-specific rather than a global mixing coefficient, allowing physical and observation-supported evidence to receive different weights for different edges. In implementation, $\psi_g$ is a two-layer $5\!\rightarrow\!16\!\rightarrow\!1$ MLP with GELU activation.
 
 \subsection{Reliability-Controlled Regional Context}
 
@@ -130,11 +130,11 @@ The gate is not interpreted as calibrated uncertainty. It is a forecasting-orien
 
 \subsection{Settings}
 
-We evaluate on METR-LA traffic speeds and AQI36 air quality. All experiments forecast 12 steps from 24 historical steps. For METR-LA, Point and Block-T masks are applied only to the historical input; future targets are evaluated on valid, unmasked raw values. Point masks simulate independent random sensor-value loss, while Block-T masks simulate contiguous temporal outages. AQI36 retains its native validity mask and adds optional Point masks on top. Each condition uses five paired mask seeds, and compared models share the same input masks. The model is trained only with the masked forecasting loss in Eq.~\eqref{eq:pred-loss}, without imputation or graph auxiliary losses. HD-TTS-AMP is the main reference. METR-LA also includes BiTGraph connected to the common data, mask, and evaluation interface; because its original training schedule differs from HD-TTS, we interpret it only as a unified-protocol comparison.
+We evaluate on METR-LA traffic speeds and AQI36 air quality. All experiments forecast 12 steps from 24 historical steps. For METR-LA, Point and Block-T masks are applied only to the historical input; future targets are evaluated on valid, unmasked raw values. Point masks simulate independent random sensor-value loss, while Block-T masks simulate contiguous temporal outages. AQI36 retains its native validity mask and adds optional Point masks on top. Each condition uses five paired mask seeds, and compared models share the same input masks. The model is trained only with the masked forecasting loss in Eq.~\eqref{eq:pred-loss}, without imputation or graph auxiliary losses. We fix $k=8$, $m=8$, initialize $\beta=1$, and initialize the five-dimensional $\gamma$ to ones. The physical connected assignment yields $K=31$ regions for METR-LA (24 regions of size 8, two of size 4, one of size 3, and four singletons) and $K=5$ for AQI36 (four regions of size 8 and one of size 4). HD-TTS-AMP is the main reference. METR-LA also includes BiTGraph connected to the common data, mask, and evaluation interface; because its original training schedule differs from HD-TTS, we interpret it only as a unified-protocol comparison.
 
 \subsection{Main Results}
 
-Table~\ref{tab:metr-main} reports METR-LA results. MR-MSGF lowers MAE over HD-TTS-AMP in all tested Block-T and Point settings. It also improves RMSE under Block-T 30\%/50\% and Point 30\%/50\%. At Block-T 70\%, MR-MSGF still improves MAE but has slightly worse RMSE, indicating that the benefit is not cross-metric consistent under extreme missingness.
+Table~\ref{tab:metr-main} reports METR-LA results. MR-MSGF lowers MAE over HD-TTS-AMP in all tested Block-T and Point settings. It also improves RMSE under Block-T 30\%/50\% and Point 30\%/50\%. At Block-T 70\%, MR-MSGF still improves MAE but has slightly worse RMSE, indicating that the benefit is not cross-metric consistent under extreme missingness. Table~\ref{tab:paired-mae} reports the matched-seed analysis: the MAE reduction is positive in all five paired runs for every condition and is significant under a two-sided paired $t$-test ($p<0.05$). We make no analogous across-condition significance claim for RMSE.
 
 \begin{table}[!t]
 \centering
@@ -172,7 +172,7 @@ Point & 30\% & HD-TTS-AMP & $3.1048 \pm 0.0074$ & $6.3592 \pm 0.0154$ \\
 
 \subsection{Cross-Domain and Horizon Analysis}
 
-AQI36 provides a cross-domain stress test with native missingness. Table~\ref{tab:aqi} shows that MR-MSGF is worse than HD-TTS-AMP under native missingness, improves both metrics with an additional 25\% Point mask, and lowers MAE but raises RMSE with an additional 50\% Point mask. We therefore treat AQI36 as mixed evidence rather than claiming dataset-independent gains.
+AQI36 provides a cross-domain stress test with native missingness. Table~\ref{tab:aqi} shows that MR-MSGF is worse than HD-TTS-AMP under native missingness, improves both metrics with an additional 25\% Point mask, and lowers MAE but raises RMSE with an additional 50\% Point mask. The heterogeneous native missingness need not make the current reliability statistics align with transferable relations; this is a hypothesis suggested by the result, not a causal explanation. We therefore treat AQI36 as a boundary condition rather than claiming dataset-independent gains.
 
 \begin{table}[t]
 \centering
@@ -224,10 +224,11 @@ Rate & Horizon & HD-TTS-AMP MAE/RMSE & \ours{} MAE/RMSE \\
 
 Table~\ref{tab:ablation} isolates the Block-T 50\% mechanisms. The full model is best on both metrics. Removing the co-observation score penalty, the reliability gate, or the readout bias all hurts performance, and using only one fine relation source is weaker than the fused graph. This supports the central design choice: co-observation-guided relation fusion and reliability-controlled regional context are complementary.
 
-\begin{center}
-\refstepcounter{table}\label{tab:ablation}
+\begin{table}[t]
+\centering
 \small
-\textbf{Table~\thetable.} METR-LA Block-T 50\% ablation over five paired seeds.
+\caption{METR-LA Block-T 50\% ablation over five paired seeds.}
+\label{tab:ablation}
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{l c c}
 \toprule
@@ -244,27 +245,38 @@ No readout bias & $3.3298 \pm 0.0249$ & $6.8512 \pm 0.0375$ \\
 \bottomrule
 \end{tabular}
 }
-\end{center}
+\end{table}
 
-As a diagnostic, the Pearson correlation between non-diagonal co-observation rates and physical-edge gates $g_{ij}$ is $-0.4051$ across 10 full-model checkpoint evaluations. Since larger $g_{ij}$ assigns more weight to the physical graph, this negative association is consistent with greater use of observation-supported relations when co-observation is available, though it is not causal evidence. Table~\ref{tab:efficiency} shows that MR-MSGF adds 7.7\% parameters while keeping measured inference time at a comparable scale.
+Figure~\ref{fig:reliability-diagnostics} shows the edge-level mechanism diagnostic. Across ten full-model checkpoint evaluations, the mean Pearson correlation between non-diagonal co-observation rates and physical-edge gates $g_{ij}$ is $-0.4051$; nine runs are negative, with one Block-T 50\% run close to zero. Since larger $g_{ij}$ assigns more weight to the physical graph, this association is consistent with more use of observation-supported relations when co-observation is available. It is not causal evidence and does not establish calibrated uncertainty. The full model also adds 7.7\% parameters (407,447 versus 378,351), a modest cost relative to the backbone.
 
-\begin{center}
-\refstepcounter{table}\label{tab:efficiency}
-\small
-\textbf{Table~\thetable.} Post-hoc efficiency statistics.
-\begin{tabular}{l c c}
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/reliability_region_diagnostics.pdf}
+  \caption{Edge-level reliability diagnostic. Each point is the Pearson correlation between co-observation $q_{ij}$ and the physical-edge gate $g_{ij}$ for one full-model checkpoint evaluation; horizontal lines denote rate-wise means.}
+  \label{fig:reliability-diagnostics}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\scriptsize
+\caption{Paired METR-LA MAE evidence against HD-TTS-AMP. $\Delta$ is HD-TTS-AMP minus MR-MSGF; positive values favor MR-MSGF. CI and $p$ use two-sided paired $t$-tests over five matched seeds.}
+\label{tab:paired-mae}
+\begin{tabular}{l c c c c}
 \toprule
-Method & Params & Test batch time (s) \\
+Condition & $\Delta$MAE & 95\% CI & $p$ & Wins \\
 \midrule
-HD-TTS-AMP & 378,351 & $0.2692 \pm 0.0907$ \\
-\ours & 407,447 & $0.2672 \pm 0.1065$ \\
+Block-T 30\% & 0.0284 & [0.0026, 0.0543] & 0.0379 & 5/5 \\
+Block-T 50\% & 0.0468 & [0.0242, 0.0693] & 0.0045 & 5/5 \\
+Block-T 70\% & 0.0191 & [0.0042, 0.0341] & 0.0238 & 5/5 \\
+Point 30\% & 0.0284 & [0.0144, 0.0424] & 0.0049 & 5/5 \\
+Point 50\% & 0.0189 & [0.0058, 0.0319] & 0.0160 & 5/5 \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 \section{Conclusion}
 
-MR-MSGF forecasts incomplete spatial histories by fusing co-observation-supported and physical relations, then gating regional context by reliability evidence. METR-LA gains validate the design, while 70\% Block-T and AQI36 show that it is a useful missingness-aware bias rather than a cross-domain guarantee.
+MR-MSGF forecasts incomplete spatial histories by making learned graph relations conditional on co-observation evidence, then fusing them with physical structure and gating regional context. The paired METR-LA results support relation reliability as a useful missingness-aware inductive bias. The mixed RMSE outcome at Block-T 70\% and AQI36 native-missingness result delimit this claim: the mechanism is not a cross-domain or cross-metric performance guarantee.
 
 \bibliographystyle{../template/IEEEbib}
 \bibliography{references}
