@@ -3,23 +3,22 @@ Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: main.aux
 The style file: ../template/IEEEbib.bst
 Database file #1: references.bib
-Warning--can't use both volume and number fields in stfgnn
 You've used 17 entries,
             1838 wiz_defined-function locations,
-            537 strings with 6846 characters,
-and the built_in function-call counts, 4715 in all, are:
+            536 strings with 6845 characters,
+and the built_in function-call counts, 4710 in all, are:
 = -- 367
 > -- 244
 < -- 11
 + -- 87
 - -- 70
-* -- 350
+* -- 347
 := -- 689
 add.period$ -- 17
 call.type$ -- 17
 change.case$ -- 17
 chr.to.int$ -- 0
-cite$ -- 18
+cite$ -- 17
 duplicate$ -- 248
 empty$ -- 485
 format.name$ -- 70
@@ -29,20 +28,19 @@ int.to.str$ -- 17
 missing$ -- 17
 newline$ -- 88
 num.names$ -- 17
-pop$ -- 91
+pop$ -- 92
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 0
 skip$ -- 134
 stack$ -- 0
 substring$ -- 225
-swap$ -- 96
+swap$ -- 95
 text.length$ -- 11
 text.prefix$ -- 0
 top$ -- 0
 type$ -- 0
-warning$ -- 1
+warning$ -- 0
 while$ -- 34
 width$ -- 19
 write$ -- 184
-(There was 1 warning)

@@ -68,13 +68,30 @@ def update_bucket(buckets: dict[str, list[float]], node_rate: torch.Tensor,
     valid = target_mask.sum(dim=(1, 3)).clamp_min(1.0)  # B,N
     node_mae = abs_error.sum(dim=(1, 3)) / valid
     for label, select in (
-        ("low_lt_0.4", node_rate < 0.4),
+        ("zero_eq_0", node_rate == 0),
+        ("low_gt_0_lt_0.4", (node_rate > 0) & (node_rate < 0.4)),
         ("medium_0.4_to_0.8", (node_rate >= 0.4) & (node_rate < 0.8)),
         ("high_ge_0.8", node_rate >= 0.8),
     ):
         values = node_mae[select]
         if values.numel():
             buckets[label][0] += float(values.sum().cpu())
+            buckets[label][1] += int(values.numel())
+
+
+def update_edge_selection_buckets(buckets: dict[str, list[int]], q_ij: torch.Tensor,
+                                  selected: torch.Tensor, off_diagonal: torch.Tensor) -> None:
+    """Accumulate top-k selection rates by pairwise co-observation bin."""
+    for label, lower, upper in (
+        ("[0.0,0.1)", 0.0, 0.1),
+        ("[0.1,0.3)", 0.1, 0.3),
+        ("[0.3,0.6)", 0.3, 0.6),
+        ("[0.6,1.0]", 0.6, 1.0 + 1e-6),
+    ):
+        in_bin = off_diagonal & (q_ij >= lower) & (q_ij < upper)
+        values = selected[in_bin]
+        if values.numel():
+            buckets[label][0] += int(values.sum().cpu())
             buckets[label][1] += int(values.numel())
 
 
@@ -96,6 +113,7 @@ def main() -> None:
         mr_variant=row.get("mr_variant") or "full",
         graph_topk=8,
         reliability_beta=1.0,
+        q_mode=row.get("q_mode") or "observed",
         disable_overlap_reliability=bool(row.get("disable_overlap_reliability", False)),
         disable_readout_reliability=bool(row.get("disable_readout_reliability", False)),
     )
@@ -120,10 +138,22 @@ def main() -> None:
 
     moments = {key: Moment() for key in (
         "node_observation_rate", "edge_common_observation_rate", "edge_gate",
-        "region_coverage", "coarse_gate", "block_fraction", "scale_attention",
+        "region_coverage", "coarse_gate", "regional_dispersion", "block_fraction", "scale_attention",
     )}
     edge_correlation = Correlation()
-    buckets = {key: [0.0, 0] for key in ("low_lt_0.4", "medium_0.4_to_0.8", "high_ge_0.8")}
+    gate_correlations = {
+        "node_observation_rate": Correlation(),
+        "physical_neighbor_co_observation": Correlation(),
+        "region_coverage": Correlation(),
+        "longest_missing_fraction": Correlation(),
+        "regional_dispersion": Correlation(),
+    }
+    edge_selection_buckets = {
+        label: [0, 0] for label in ("[0.0,0.1)", "[0.1,0.3)", "[0.3,0.6)", "[0.6,1.0]")
+    }
+    buckets = {key: [0.0, 0] for key in (
+        "zero_eq_0", "low_gt_0_lt_0.4", "medium_0.4_to_0.8", "high_ge_0.8"
+    )}
     n_batches = 0
     with torch.no_grad():
         for batch in datamodule.test_dataloader():
@@ -139,6 +169,18 @@ def main() -> None:
                 diagnostic["edge_common_observation_rate"].size(0), -1, -1
             )
             edge_correlation.add(diagnostic["edge_common_observation_rate"][off_diagonal], diagnostic["edge_gate"][off_diagonal])
+            update_edge_selection_buckets(
+                edge_selection_buckets,
+                diagnostic["edge_common_observation_rate"],
+                diagnostic["edge_selected"],
+                off_diagonal,
+            )
+            coarse_gate = diagnostic["coarse_gate"]
+            gate_correlations["node_observation_rate"].add(coarse_gate, diagnostic["node_observation_rate"])
+            gate_correlations["physical_neighbor_co_observation"].add(coarse_gate, diagnostic["physical_neighbor_co_observation"])
+            gate_correlations["region_coverage"].add(coarse_gate, diagnostic["region_coverage"])
+            gate_correlations["longest_missing_fraction"].add(coarse_gate, diagnostic["block_fraction"])
+            gate_correlations["regional_dispersion"].add(coarse_gate, diagnostic["regional_dispersion"])
             update_bucket(buckets, diagnostic["node_observation_rate"], prediction, target, target_mask.float())
             n_batches += 1
 
@@ -150,6 +192,11 @@ def main() -> None:
         "n_test_batches": n_batches,
         "diagnostic_moments": {key: value.output() for key, value in moments.items()},
         "edge_q_gate_correlation_off_diagonal": edge_correlation.output(),
+        "edge_selection_rate_by_q_bin": {
+            key: {"selected": selected, "candidates": total, "rate": selected / total if total else float("nan")}
+            for key, (selected, total) in edge_selection_buckets.items()
+        },
+        "coarse_gate_correlations": {key: value.output() for key, value in gate_correlations.items()},
         "mae_by_node_observation_rate": {
             key: {"n_nodes_across_windows": count, "mae": total / count if count else float("nan")}
             for key, (total, count) in buckets.items()
