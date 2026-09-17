@@ -53,6 +53,7 @@ def read_row(variant: str, seed: int) -> dict:
     path = RESULT / f"{tag(variant, seed)}.json"
     require(path.is_file(), f"missing result: {path}")
     row = json.loads(path.read_text())
+    row["_path"] = str(path)
     model, mr_variant, q_mode = expected_model(variant)
     require(row.get("protocol_id") == "r0917_protocol_closed", f"protocol mismatch: {path}")
     require(row.get("tag") == tag(variant, seed), f"tag mismatch: {path}")
@@ -89,7 +90,6 @@ def read_row(variant: str, seed: int) -> dict:
                             ("unmasked_test", ("test_mae_unmasked", "test_mse_unmasked"))):
         for field in fields:
             finite(row, section, field)
-    row["_path"] = str(path)
     return row
 
 
@@ -187,9 +187,9 @@ def main() -> None:
     statuses = {row["source_manifest"]["status_porcelain"] for group in rows.values() for row in group}
     require(len(source_heads) == len(source_hashes) == len(statuses) == 1, "runs do not share one frozen source manifest")
     for index, seed in enumerate(SEEDS):
-        paired = [rows[variant][index] for variant in VARIANTS]
-        require(len({row["mask_sha256"] for row in paired}) == 1, f"unpaired masks for seed {seed}")
-        require(len({row["data_sha256"] for row in paired}) == 1, f"unpaired data for seed {seed}")
+        paired_rows = [rows[variant][index] for variant in VARIANTS]
+        require(len({row["mask_sha256"] for row in paired_rows}) == 1, f"unpaired masks for seed {seed}")
+        require(len({row["data_sha256"] for row in paired_rows}) == 1, f"unpaired data for seed {seed}")
         observed, permuted = rows["full_observed"][index], rows["full_permuted_q"][index]
         require(full_config_signature(observed) == full_config_signature(permuted),
                 f"Full-observed and Permuted-Q configuration differs for seed {seed}")
