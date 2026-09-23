@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.9.14)  16 SEP 2026 12:50
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.9.14)  23 SEP 2026 16:35
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -193,6 +193,18 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 48
  (/home/wangzk/.TinyTeX/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Live
 ))
+LaTeX Font Info:    Trying to load font information for U+msa on input line 25.
+ (/home/wangzk/.TinyTeX/texmf-dist/tex/latex/amsfonts/umsa.fd
+File: umsa.fd 2013/01/14 v3.01 AMS symbols A
+)
+LaTeX Font Info:    Trying to load font information for U+msb on input line 25.
+ (/home/wangzk/.TinyTeX/texmf-dist/tex/latex/amsfonts/umsb.fd
+File: umsb.fd 2013/01/14 v3.01 AMS symbols B
+)
+LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 25.
+ (/home/wangzk/.TinyTeX/texmf-dist/tex/latex/psnfss/ot1pcr.fd
+File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
+)
 Underfull \hbox (badness 1902) in paragraph at lines 32--34
 []\OT1/ptm/b/it/10 Index Terms\OT1/ptm/b/n/10 --- \OT1/ptm/m/n/10 Mul-ti-vari-ate time se-ries fore-cast-ing,
  []
@@ -202,14 +214,7 @@ Underfull \hbox (badness 2237) in paragraph at lines 40--41
 []\OT1/ptm/m/n/10 Missing-data re-search pri-mar-ily ad-dresses the node-
  []
 
-LaTeX Font Info:    Trying to load font information for U+msa on input line 42.
-(/home/wangzk/.TinyTeX/texmf-dist/tex/latex/amsfonts/umsa.fd
-File: umsa.fd 2013/01/14 v3.01 AMS symbols A
-)
-LaTeX Font Info:    Trying to load font information for U+msb on input line 42.
- (/home/wangzk/.TinyTeX/texmf-dist/tex/latex/amsfonts/umsb.fd
-File: umsb.fd 2013/01/14 v3.01 AMS symbols B
-) [1{/home/wangzk/.TinyTeX/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/home/wangzk/.TinyTeX/texmf-dist/fonts/enc/dvips/base/8r.enc}
+[1{/home/wangzk/.TinyTeX/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/home/wangzk/.TinyTeX/texmf-dist/fonts/enc/dvips/base/8r.enc}
 
 
 
@@ -218,12 +223,12 @@ LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 50
  (/home/wangzk/.TinyTeX/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 )
-<figures/mr_msgf_overview.png, id=11, 1990.43625pt x 795.97375pt>
-File: figures/mr_msgf_overview.png Graphic file (type png)
-<use figures/mr_msgf_overview.png>
-Package pdftex.def Info: figures/mr_msgf_overview.png  used on input line 70.
+<figures/mr_msgf_overview_observation_supported.png, id=14, 1990.43625pt x 795.97375pt>
+File: figures/mr_msgf_overview_observation_supported.png Graphic file (type png)
+<use figures/mr_msgf_overview_observation_supported.png>
+Package pdftex.def Info: figures/mr_msgf_overview_observation_supported.png  used on input line 70.
 (pdftex.def)             Requested size: 496.3277pt x 198.48283pt.
- [2] [3 <./figures/mr_msgf_overview.png (PNG copy)>] (./main.bbl
+ [2] [3 <./figures/mr_msgf_overview_observation_supported.png (PNG copy)>] (./main.bbl
 Underfull \hbox (badness 3148) in paragraph at lines 4--7
 []\OT1/ptm/m/n/10 Yaguang Li, Rose Yu, Cyrus Sha-habi, and Yan
  []
@@ -240,18 +245,18 @@ L3 programming layer <2026-08-10>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 3193 strings out of 469028
- 46307 string characters out of 5457209
- 488719 words of memory out of 5000000
- 32228 multiletter control sequences out of 15000+600000
- 652069 words of font info for 94 fonts, out of 8000000 for 9000
+ 3251 strings out of 469028
+ 47223 string characters out of 5457209
+ 483837 words of memory out of 5000000
+ 32274 multiletter control sequences out of 15000+600000
+ 657257 words of font info for 110 fonts, out of 8000000 for 9000
  36 hyphenation exceptions out of 8191
- 57i,15n,83p,900b,324s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmbsy9.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx9.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmib10.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmmib9.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (5 pages, 1326948 bytes).
+ 57i,14n,83p,1243b,342s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmbsy9.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx9.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmib10.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmmib9.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></home/wangzk/.TinyTeX/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on main.pdf (5 pages, 1560240 bytes).
 PDF statistics:
- 127 PDF objects out of 1000 (max. 8388607)
- 76 compressed objects within 1 object stream
+ 142 PDF objects out of 1000 (max. 8388607)
+ 85 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
  6 words of extra memory for PDF output out of 10000 (max. 10000000)
 
