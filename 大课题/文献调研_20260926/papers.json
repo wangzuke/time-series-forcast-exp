@@ -1,0 +1,2679 @@
+[
+  {
+    "id": "P01",
+    "key": "BiTGraph2024",
+    "name": "BiTGraph",
+    "title": "Biased Temporal Convolution Graph Network for Time Series Forecasting with Missing Values",
+    "year": 2024,
+    "venue": "ICLR",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "散点"
+    ],
+    "domains": [
+      "交通",
+      "电力",
+      "大气"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维",
+      "高维"
+    ],
+    "datasets_dimensions": "ETTh1=7；BeijingAir=36；METR-LA=207；Electricity=321；PEMS-BAY=325",
+    "method": "图网络；部分时间卷积",
+    "contribution": "将缺失掩码融入时间卷积与跨变量图聚合，直接预测。",
+    "limitation": "随机散点缺失实验不能直接证明整变量缺失泛化。",
+    "source_url": "https://proceedings.iclr.cc/paper_files/paper/2024/hash/7f3b25e39e0f0330435d1ffc1d6fa193-Abstract-Conference.html",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/01_BiTGraph_ICLR2024.txt；Table 1及缺失率实验",
+    "doi": "",
+    "authors": "Xiaodan Chen and Xiucheng Li and Bo Liu and Zhijun Li",
+    "code_url": "https://github.com/chenxiaodanhit/BiTGraph",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/01_BiTGraph_ICLR2024.txt",
+    "local_pdf": "../../papers/已整理/时空缺失预测/01_BiTGraph_ICLR2024.pdf"
+  },
+  {
+    "id": "P02",
+    "key": "HDTTS2024",
+    "name": "HD-TTS",
+    "title": "Graph-based Forecasting with Missing Data through Spatiotemporal Downsampling",
+    "year": 2024,
+    "venue": "ICML",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "大气",
+      "能源",
+      "合成"
+    ],
+    "dimension_tags": [
+      "高维"
+    ],
+    "datasets_dimensions": "AQI=437×1；EngRAD=487×5；PV-US=1081×1（节点×特征）",
+    "method": "图网络；时空多尺度",
+    "contribution": "时间与空间下采样扩大可观测信息范围，再进行缺失感知的多尺度融合。",
+    "limitation": "Block-T与Block-ST需分开；空间相关掉线比独立随机遮蔽更困难。",
+    "source_url": "https://arxiv.org/abs/2402.10634",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/02_HD_TTS_ICML2024.txt；Table 3、missing-data settings",
+    "doi": "",
+    "authors": "Ivan Marisca and Cesare Alippi and Filippo Maria Bianchi",
+    "code_url": "https://github.com/marshka/hdtts",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/02_HD_TTS_ICML2024.txt",
+    "local_pdf": "../../papers/已整理/时空缺失预测/02_HD_TTS_ICML2024.pdf"
+  },
+  {
+    "id": "P03",
+    "key": "GinAR2024",
+    "name": "GinAR",
+    "title": "GinAR: An End-To-End Multivariate Time Series Forecasting Model Suitable for Variable Missing",
+    "year": 2024,
+    "venue": "KDD",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "变量"
+    ],
+    "domains": [
+      "交通",
+      "大气"
+    ],
+    "dimension_tags": [
+      "高维"
+    ],
+    "datasets_dimensions": "METR-LA=207；PEMS-BAY=325；PEMS04=307；PEMS08=170；ChinaAQI=350",
+    "method": "图网络；递归网络；插值注意力",
+    "contribution": "从可用变量推断跨变量关系，预测包括历史完全缺失变量在内的全部变量。",
+    "limitation": "固定变量集合内缺失不等于对训练中从未出现的新节点归纳预测。",
+    "source_url": "https://arxiv.org/abs/2405.11333",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/06_GinAR_End_To_End_MTS_Forecasting_Suitable_for_Variable_Missing.txt；Table 1、任务定义",
+    "doi": "10.1145/3637528.3672055",
+    "authors": "Chengqing Yu and Fei Wang and Zezhi Shao and Tangwen Qian and Zhao Zhang and Wei Wei and Yongjun Xu",
+    "code_url": "https://github.com/GestaltCogTeam/GinAR",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "3989-4000",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/06_GinAR_End_To_End_MTS_Forecasting_Suitable_for_Variable_Missing.txt",
+    "local_pdf": "../../papers/已整理/时空缺失预测/06_GinAR_End_To_End_MTS_Forecasting_Suitable_for_Variable_Missing.pdf"
+  },
+  {
+    "id": "P04",
+    "key": "S4M2025",
+    "name": "S4M",
+    "title": "S4M: S4 for Multivariate Time Series Forecasting with Missing Values",
+    "year": 2025,
+    "venue": "ICLR",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "块"
+    ],
+    "domains": [
+      "交通",
+      "电力",
+      "气象"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维",
+      "高维"
+    ],
+    "datasets_dimensions": "ETTh1=7；Weather=21；Electricity=321；Traffic=862",
+    "method": "状态空间；记忆库",
+    "contribution": "利用时间原型记忆与缺失感知双流S4处理长序列。",
+    "limitation": "附录D.2的time point missing和variable missing均删除连续5步；后者是逐变量块遮蔽，不是整列永久缺失。触发概率不等于最终缺失率。",
+    "source_url": "https://openreview.net/pdf?id=BkftcwIVmR",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/03_S4M_S4_for_Multivariate_Time_Series_Forecasting_with_Missing_Values.txt；Table 7、Appendix D.2",
+    "doi": "",
+    "authors": "Jing Peng and Meiqi Yang and Qiong Zhang and Xiaoxiao Li",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/03_S4M_S4_for_Multivariate_Time_Series_Forecasting_with_Missing_Values.txt",
+    "local_pdf": "../../papers/已整理/非时空缺失预测/03_S4M_S4_for_Multivariate_Time_Series_Forecasting_with_Missing_Values.pdf"
+  },
+  {
+    "id": "P05",
+    "key": "Merlin2025",
+    "name": "Merlin",
+    "title": "Merlin: Multi-View Representation Learning for Robust Multivariate Time Series Forecasting with Unfixed Missing Rates",
+    "year": 2025,
+    "venue": "KDD",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "散点"
+    ],
+    "domains": [
+      "交通",
+      "大气",
+      "能源"
+    ],
+    "dimension_tags": [
+      "高维"
+    ],
+    "datasets_dimensions": "METR-LA=207；PEMS04=307；ChinaAQI=1300；GlobalWind=2908",
+    "method": "对比学习；知识蒸馏",
+    "contribution": "用多视图表示和教师知识增强高缺失率下的鲁棒性，评估训练测试缺失率不一致。",
+    "limitation": "需要单独核对教师能获得的完整训练数据；ChinaAQI与GinAR同名数据的维度不同。",
+    "source_url": "https://arxiv.org/abs/2506.12459",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/04_Merlin_Multi_View_Representation_Learning_for_Robust_MTS_Forecasting.txt；Table 1及训练流程",
+    "doi": "10.1145/3711896.3737046",
+    "authors": "Chengqing Yu and Fei Wang and Chuanguang Yang and Zezhi Shao and Tao Sun and Tangwen Qian and Wei Wei and Zhulin An and Yongjun Xu",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/04_Merlin_Multi_View_Representation_Learning_for_Robust_MTS_Forecasting.txt",
+    "local_pdf": "../../papers/已整理/非时空缺失预测/04_Merlin_Multi_View_Representation_Learning_for_Robust_MTS_Forecasting.pdf"
+  },
+  {
+    "id": "P06",
+    "key": "CoIFNet2025",
+    "name": "CoIFNet",
+    "title": "CoIFNet: A Unified Framework for Multivariate Time Series Forecasting with Missing Values",
+    "year": 2025,
+    "venue": "arXiv",
+    "status": "预印本",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "电力",
+      "气象",
+      "金融"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维"
+    ],
+    "datasets_dimensions": "ETT各版本=7；Exchange=8；Weather=21",
+    "method": "MLP/混合器；联合插补预测",
+    "contribution": "观测值归一化和时间/变量交互模块联合学习重构与预测。",
+    "limitation": "已核实实验主要低中维；IEEE排版不构成期刊录用证据。",
+    "source_url": "https://arxiv.org/abs/2506.13064",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/05_CoIFNet_Unified_Framework_for_MTS_Forecasting_with_Missing_Values.txt；实验设置",
+    "doi": "",
+    "authors": "Kai Tang and Ji Zhang and Hua Meng and Minbo Ma and Qi Xiong and Fengmao Lv and Jie Xu and Tianrui Li",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/05_CoIFNet_Unified_Framework_for_MTS_Forecasting_with_Missing_Values.txt",
+    "local_pdf": "../../papers/已整理/非时空缺失预测/05_CoIFNet_Unified_Framework_for_MTS_Forecasting_with_Missing_Values.pdf"
+  },
+  {
+    "id": "P07",
+    "key": "MissTSM2026",
+    "name": "MissTSM",
+    "title": "Investigating a Model-Agnostic and Imputation-Free Approach for Irregularly-Sampled Multivariate Time-Series Modeling",
+    "year": 2026,
+    "venue": "TMLR",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "散点",
+      "块",
+      "不规则"
+    ],
+    "domains": [
+      "电力",
+      "气象",
+      "生态",
+      "能源"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维",
+      "高维"
+    ],
+    "datasets_dimensions": "ETT=7；Weather=21；Solar=137；FCR/Mendota湖泊维度需另查",
+    "method": "注意力；通用前端",
+    "contribution": "时间-特征独立嵌入与缺失特征感知注意力为不同骨干提供接口，并研究自然湖泊缺失。",
+    "limitation": "含分类任务，不能将所有分类数据计入预测证据；首次预印本为2025年。",
+    "source_url": "https://openreview.net/pdf?id=HgJ0DMVAA3",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/02_MissTSM_Investigating_Model_Agnostic_Imputation_Free_IMTS_Modeling.txt；首页TMLR日期、缺失设置、附录",
+    "doi": "",
+    "authors": "Abhilash Neog and Arka Daw and Sepideh Fatemi and Medha Sawhney and Aanish Pradhan and Mary E. Lofton and Bennett J. McAfee and Adrienne Breef-Pilz and Heather L. Wander and Dexter W. Howard and Cayelan C. Carey and Paul Hanson and Anuj Karpatne",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/02_MissTSM_Investigating_Model_Agnostic_Imputation_Free_IMTS_Modeling.txt",
+    "local_pdf": "../../papers/已整理/非时空缺失预测/02_MissTSM_Investigating_Model_Agnostic_Imputation_Free_IMTS_Modeling.pdf"
+  },
+  {
+    "id": "P08",
+    "key": "CRIB2025",
+    "name": "CRIB",
+    "title": "Revisiting Multivariate Time Series Forecasting with Missing Values",
+    "year": 2025,
+    "venue": "arXiv；2026修订",
+    "status": "预印本",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "散点",
+      "块",
+      "变量"
+    ],
+    "domains": [
+      "交通",
+      "电力",
+      "气象",
+      "金融",
+      "大气"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维",
+      "高维"
+    ],
+    "datasets_dimensions": "ETT=7；Exchange=8；Weather=21；METR-LA=207；Electricity=321；PEMS-BAY=325",
+    "method": "信息瓶颈；一致性学习；注意力",
+    "contribution": "围绕预测目标保留信息，以一致性正则约束不同缺失视图。",
+    "limitation": "未以官方录用记录确认会议归属；插补可能有害是条件性结论，不是所有数据和插补器的定理。",
+    "source_url": "https://arxiv.org/abs/2509.23494",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/01_CRIB_Revisiting_Multivariate_Time_Series_Forecasting_with_Missing_Values.txt；v3、Fig.3、实验章节",
+    "doi": "",
+    "authors": "Jie Yang and Yifan Hu and Kexin Zhang and Luyang Niu and Philip S. Yu and Kaize Ding",
+    "code_url": "https://github.com/Muyiiiii/CRIB",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/01_CRIB_Revisiting_Multivariate_Time_Series_Forecasting_with_Missing_Values.txt",
+    "local_pdf": "../../papers/已整理/非时空缺失预测/01_CRIB_Revisiting_Multivariate_Time_Series_Forecasting_with_Missing_Values.pdf"
+  },
+  {
+    "id": "P09",
+    "key": "IBN2025",
+    "name": "IBN",
+    "title": "IBN: An Interpretable Bidirectional-Modeling Network for Multivariate Time Series Forecasting with Variable Missing",
+    "year": 2025,
+    "venue": "arXiv",
+    "status": "预印本",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "变量"
+    ],
+    "domains": [
+      "交通"
+    ],
+    "dimension_tags": [
+      "高维"
+    ],
+    "datasets_dimensions": "METR-LA、PEMS-BAY、PEMS04、PEMS08；采用标准路网，节点规模约170–325；正文未另列统计表",
+    "method": "图网络；不确定性；双向递归",
+    "contribution": "不确定性感知插值与双向建模强化缺失变量的依赖重建。",
+    "limitation": "历史窗内双向计算可用，但不得跨预测起点使用未来值；发表状态尚未确认。",
+    "source_url": "https://arxiv.org/abs/2509.07725",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/08_IBN_Interpretable_Bidirectional_Modeling_Network_for_MTS_with_Variable_Missing.txt；Experiment setup、Table 1",
+    "doi": "",
+    "authors": "Shusen Ma and Tianhao Zhang and Qijiu Xia and Yun-Bo Zhao",
+    "code_url": "https://github.com/zhangth1211/NICLab-IBN",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/08_IBN_Interpretable_Bidirectional_Modeling_Network_for_MTS_with_Variable_Missing.txt",
+    "local_pdf": "../../papers/已整理/时空缺失预测/08_IBN_Interpretable_Bidirectional_Modeling_Network_for_MTS_with_Variable_Missing.pdf"
+  },
+  {
+    "id": "P10",
+    "key": "ChannelTokenFormer2026",
+    "name": "ChannelTokenFormer",
+    "title": "Towards Robust Real-World Multivariate Time Series Forecasting: A Unified Framework for Dependency, Asynchrony, and Missingness",
+    "year": 2026,
+    "venue": "ICLR",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "块",
+      "不规则"
+    ],
+    "domains": [
+      "能源",
+      "气象",
+      "大气",
+      "工业"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维",
+      "待核实"
+    ],
+    "datasets_dimensions": "ETT-practical=7；Weather-practical=21；SolarWind、EPA-Air、LNG CHS其余维度待核实",
+    "method": "Transformer；通道token",
+    "contribution": "同时表示异步通道、跨通道依赖和测试时块缺失，包含工业与空气监测应用。",
+    "limitation": "重采样的practical基准与原始ETT/Weather不同，不能直接混用结果。",
+    "source_url": "https://arxiv.org/abs/2506.08660",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/ChannelTokenFormer.txt；ICLR2026首页、Sec.4、Appendix",
+    "doi": "",
+    "authors": "Jinkwan Jang and Hyungjin Park and Jinmyeong Choi and Taesup Kim",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/ChannelTokenFormer.txt",
+    "local_pdf": "../../papers/已整理/非时空缺失预测/ChannelTokenFormer.pdf"
+  },
+  {
+    "id": "P11",
+    "key": "FDW2022",
+    "name": "FDW/VSF",
+    "title": "Multi-Variate Time Series Forecasting on Variable Subsets",
+    "year": 2022,
+    "venue": "KDD",
+    "status": "已发表",
+    "task": "可用子集预测",
+    "missing_patterns": [
+      "变量"
+    ],
+    "domains": [
+      "交通",
+      "能源",
+      "生理信号"
+    ],
+    "dimension_tags": [
+      "高维"
+    ],
+    "datasets_dimensions": "METR-LA=207；Solar=137；Traffic=862；ECG5000构造变量维度=140",
+    "method": "非参数包装器；距离加权",
+    "contribution": "定义推理时变量子集变化，按预测距离对已有模型输出进行加权。",
+    "limitation": "目标是仍可用的变量子集；ECG5000的140维是任务构造，不代表140条真实导联。",
+    "source_url": "https://arxiv.org/abs/2206.12626",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/VSF2022.txt；problem definition、datasets",
+    "doi": "10.1145/3534678.3539394",
+    "authors": "Jatin Chauhan and Aravindan Raghuveer and Rishi Saket and Jay Nandy and Balaraman Ravindran",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/VSF2022.txt",
+    "local_pdf": "sources/downloaded_pdf/VSF2022.pdf"
+  },
+  {
+    "id": "P12",
+    "key": "TRF2024",
+    "name": "TRF",
+    "title": "Reconstructing Missing Variables for Multivariate Time Series Forecasting via Conditional Generative Flows",
+    "year": 2024,
+    "venue": "IJCAI",
+    "status": "已发表",
+    "task": "可用子集预测",
+    "missing_patterns": [
+      "变量"
+    ],
+    "domains": [
+      "交通",
+      "能源",
+      "生理信号"
+    ],
+    "dimension_tags": [
+      "高维"
+    ],
+    "datasets_dimensions": "METR-LA=207；Solar=137；Traffic=862；ECG5000构造维度=140",
+    "method": "生成流；元学习",
+    "contribution": "条件生成流重构缺失变量，以变量无关元学习适配不同可用子集。",
+    "limitation": "需按VSF目标集合评测；不能与预测全部变量的GinAR直接横向排名。",
+    "source_url": "https://www.ijcai.org/proceedings/2024/228",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/TRF2024.txt；task definition、实验",
+    "doi": "10.24963/ijcai.2024/228",
+    "authors": "Xuanming Hu and Wei Fan and Haifeng Chen and Pengyang Wang and Yanjie Fu",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "2063-2071",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/TRF2024.txt",
+    "local_pdf": "sources/downloaded_pdf/TRF2024.pdf"
+  },
+  {
+    "id": "P13",
+    "key": "GCNM2023",
+    "name": "GCN-M",
+    "title": "Graph Convolutional Networks for Traffic Forecasting with Missing Values",
+    "year": 2023,
+    "venue": "Data Mining and Knowledge Discovery",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "交通"
+    ],
+    "dimension_tags": [
+      "高维"
+    ],
+    "datasets_dimensions": "METR-LA=207；PEMS-BAY=325",
+    "method": "图网络；记忆注意力",
+    "contribution": "用局部与全局信息、记忆和动态图联合处理交通缺失及预测。",
+    "limitation": "覆盖多种块长度与混合缺失；正式卷期2023，在线版本2022。",
+    "source_url": "https://link.springer.com/article/10.1007/s10618-022-00903-7",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/GCNM2023.txt；实验missing patterns",
+    "doi": "10.1007/s10618-022-00903-7",
+    "authors": "Jingwei Zuo and Karine Zeitouni and Yehia Taher and Sandra Garcia-Rodriguez",
+    "code_url": "https://github.com/JingweiZuo/GCN-M",
+    "access_date": "2026-09-26",
+    "volume": "37",
+    "issue": "2",
+    "page": "913-947",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/GCNM2023.txt",
+    "local_pdf": "sources/downloaded_pdf/GCNM2023.pdf"
+  },
+  {
+    "id": "P14",
+    "key": "GSTAE2023",
+    "name": "GSTAE",
+    "title": "Traffic Prediction With Missing Data: A Multi-Task Learning Approach",
+    "year": 2023,
+    "venue": "IEEE Transactions on Intelligent Transportation Systems",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "交通"
+    ],
+    "dimension_tags": [
+      "高维"
+    ],
+    "datasets_dimensions": "METR-LA=207；PEMSD7维度未单独核实",
+    "method": "图网络；自编码器；两阶段训练",
+    "contribution": "共享时空表示，先进行插补预训练，再训练交通预测。",
+    "limitation": "论文的多任务采用顺序学习；NRM指连续缺失，不足以证明统计意义的MNAR。",
+    "source_url": "https://file.jqyu.me/pub/traffic-prediction-with-missing-data-a-multi-task-learning-approach.pdf",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/MTLTraffic2023.txt；训练算法、RM/NRM设置",
+    "doi": "10.1109/TITS.2022.3233890",
+    "authors": "Ao Wang and Yongchao Ye and Xiaozhuang Song and Shiyao Zhang and James J. Q. Yu",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "24",
+    "issue": "4",
+    "page": "4189-4202",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/MTLTraffic2023.txt",
+    "local_pdf": "sources/downloaded_pdf/MTLTraffic2023.pdf"
+  },
+  {
+    "id": "P15",
+    "key": "OnlineTraffic2023",
+    "name": "在线图论插补",
+    "title": "Engineering Traffic Prediction With Online Data Imputation: A Graph-Theoretic Perspective",
+    "year": 2023,
+    "venue": "IEEE Systems Journal",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "未核实"
+    ],
+    "domains": [
+      "交通"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "两个真实数据集；摘要未提供建模维度",
+    "method": "统计模型；图优化",
+    "contribution": "结合STARIMA与图割，选择对当前预测有价值的在线插补。",
+    "limitation": "仅核实机构元数据和摘要；具体掩码及数据维度待全文复核。",
+    "source_url": "https://research.monash.edu/en/publications/engineering-traffic-prediction-with-online-data-imputation-a-grap/",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "10.1109/JSYST.2023.3268717",
+    "authors": "Wenwei Yue and Di Zhou and Shangbo Wang and Peibo Duan",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "17",
+    "issue": "3",
+    "page": "4485-4496",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P16",
+    "key": "UIGNN2023",
+    "name": "UIGNN",
+    "title": "Uncertainty-aware Traffic Prediction under Missing Data",
+    "year": 2023,
+    "venue": "ICDM",
+    "status": "已发表",
+    "task": "未见节点预测",
+    "missing_patterns": [
+      "变量"
+    ],
+    "domains": [
+      "交通"
+    ],
+    "dimension_tags": [
+      "高维"
+    ],
+    "datasets_dimensions": "METR-LA=207；PEMS-BAY=325；SeData=323",
+    "method": "归纳图网络；证据回归",
+    "contribution": "对缺少观测的位置进行预测并量化不确定性。",
+    "limitation": "区分训练未见节点和已知节点临时掉线；二者可利用的历史信息不同。",
+    "source_url": "https://arxiv.org/abs/2309.06800",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/UATraffic2023.txt；inductive setting、datasets",
+    "doi": "10.1109/ICDM58522.2023.00152",
+    "authors": "Hao Mei and Junxian Li and Zhiming Liang and Guanjie Zheng and Bin Shi and Hua Wei",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "1223-1228",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/UATraffic2023.txt",
+    "local_pdf": "sources/downloaded_pdf/UATraffic2023.pdf"
+  },
+  {
+    "id": "P17",
+    "key": "Laplacian2022",
+    "name": "T-TRGCGR",
+    "title": "Laplacian integration of graph convolutional network with tensor completion for traffic prediction with missing data in inter-city highway network",
+    "year": 2022,
+    "venue": "Physica A",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "未核实"
+    ],
+    "domains": [
+      "交通"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "江苏城际高速网络；维度待核实",
+    "method": "张量补全；图网络；GRU",
+    "contribution": "将图拉普拉斯约束融入张量补全及后续时空预测。",
+    "limitation": "传感器稀疏是应用动机；不能据此推断整变量遮蔽实验已验证。",
+    "source_url": "https://www.sciencedirect.com/science/article/abs/pii/S0378437121007470",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "10.1016/j.physa.2021.126474",
+    "authors": "",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "完整作者列表尚未整理；请通过原文/DOI导入补全。",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P18",
+    "key": "RDGCN2022",
+    "name": "强化动态图预测",
+    "title": "A novel reinforced dynamic graph convolutional network model with data imputation for network-wide traffic flow prediction",
+    "year": 2022,
+    "venue": "Transportation Research Part C",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "未核实"
+    ],
+    "domains": [
+      "交通"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "两个真实交通数据集；具体变量数待核实",
+    "method": "强化学习；动态图；插补",
+    "contribution": "多图插补与动态依赖学习结合，用于路网级交通流预测。",
+    "limitation": "摘要证据不足以标注具体缺失几何、比例或高维规模。",
+    "source_url": "https://www.sciencedirect.com/science/article/abs/pii/S0968090X22002431",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "10.1016/j.trc.2022.103820",
+    "authors": "Yong Chen and Xiqun (Michael) Chen",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "143",
+    "issue": "",
+    "page": "103820",
+    "article_number": "103820",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P19",
+    "key": "TensorDMD2022",
+    "name": "低秩张量DMD",
+    "title": "Traffic forecasting with missing data via low rank dynamic mode decomposition of tensor",
+    "year": 2022,
+    "venue": "IET Intelligent Transport Systems",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "未核实"
+    ],
+    "domains": [
+      "交通"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "道路交通张量；各模大小待全文核实",
+    "method": "低秩张量；动态模态分解",
+    "contribution": "用低秩结构与动态模态处理不完整交通观测，代表非深度学习路线。",
+    "limitation": "保留为期刊补充证据；未提取全文实验配置。",
+    "source_url": "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/itr2.12200",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "10.1049/itr2.12200",
+    "authors": "Xinyu Zhang and Yong Zhang and Xiulan Wei and Yongli Hu and Baocai Yin",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "16",
+    "issue": "9",
+    "page": "1164-1176",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P20",
+    "key": "Seq2Seq2021",
+    "name": "嵌入模块Seq2Seq",
+    "title": "The Sequence-to-Sequence Architecture with An Embedded Module for Long-Term Traffic Speed Forecasting with Missing Data",
+    "year": 2021,
+    "venue": "ICAC",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "未核实"
+    ],
+    "domains": [
+      "交通"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "交通速度；维度及人工掩码本次未完成提取",
+    "method": "Seq2Seq；图网络；Transformer",
+    "contribution": "在长时预测结构中嵌入处理空间关系和缺失信息的模块。",
+    "limitation": "作者公开接受稿已下载；不能因下载全文就将所有配置标成已核实。",
+    "source_url": "https://eprints.bournemouth.ac.uk/35723/1/ICAC2021_Accepted_version.pdf",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/Seq2Seq2021.txt；摘要与方法",
+    "doi": "10.23919/ICAC50006.2021.9594248",
+    "authors": "Ge Zheng and Wei Koong Chai and Vasilis Katos",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "1-6",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/Seq2Seq2021.txt",
+    "local_pdf": "sources/downloaded_pdf/Seq2Seq2021.pdf"
+  },
+  {
+    "id": "P21",
+    "key": "Enter2026",
+    "name": "Enter",
+    "title": "Effective and efficient incomplete multivariate time series forecasting",
+    "year": 2026,
+    "venue": "Expert Systems with Applications",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "通用时序"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "出版方摘要未充分列出数据及维度",
+    "method": "Transformer；缺失感知预训练",
+    "contribution": "预训练后进行不完整时序预测，同时考虑不完整训练目标。",
+    "limitation": "2026年新期刊论文；目前为摘要级分类，需核对全文和代码。",
+    "source_url": "https://www.sciencedirect.com/science/article/pii/S0957417426013254",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "10.1016/j.eswa.2026.132412",
+    "authors": "Han Shi and Yangyang Wu and Daozhan Pan and Jing Li and Guoqiang Qi and Xiaoye Miao and Jianwei Yin and Gang Yu",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "323",
+    "issue": "",
+    "page": "132412",
+    "article_number": "132412",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P22",
+    "key": "DynamicAttention2026",
+    "name": "动态注意力图预测",
+    "title": "Incomplete multivariate time series forecasting with dynamic attention graph network",
+    "year": 2026,
+    "venue": "Neurocomputing",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "未核实"
+    ],
+    "domains": [
+      "通用时序"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "未从原文实验表核实",
+    "method": "图网络；动态注意力",
+    "contribution": "结合时间依赖、变量关联和缺失信息进行不完整多变量预测。",
+    "limitation": "未根据引言举例推断实验领域；在线发表年份2026，具体实验待补。",
+    "source_url": "https://www.sciencedirect.com/science/article/pii/S092523122602093X",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "10.1016/j.neucom.2026.134695",
+    "authors": "Zheng Zhang and Xiaochen Lai and Liyong Zhang",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "702",
+    "issue": "",
+    "page": "134695",
+    "article_number": "134695",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P23",
+    "key": "WindFCS2024",
+    "name": "风电FCS",
+    "title": "Wind energy forecasting with missing values within a fully conditional specification framework",
+    "year": 2024,
+    "venue": "International Journal of Forecasting",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "能源"
+    ],
+    "dimension_tags": [
+      "低维"
+    ],
+    "datasets_dimensions": "WIND Toolkit 3风场；单场D=1/联合D=3；历史6步不是6个物理变量",
+    "method": "统计条件分布；多重插补；概率预测",
+    "contribution": "通过完全条件指定学习输入与目标关系，在不完整数据上进行预测。",
+    "limitation": "WIND Toolkit为模型生成风电序列，非纯现场实测；散点10/20%，连续块5–30步。在线2022、卷期2024。",
+    "source_url": "https://arxiv.org/abs/2203.08252",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/WindFCS2024.txt；Sec.5.1–5.2",
+    "doi": "10.1016/j.ijforecast.2022.12.006",
+    "authors": "Honglin Wen and Pierre Pinson and Jie Gu and Zhijian Jin",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "40",
+    "issue": "1",
+    "page": "77-95",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/WindFCS2024.txt",
+    "local_pdf": "sources/downloaded_pdf/WindFCS2024.pdf"
+  },
+  {
+    "id": "P24",
+    "key": "PV2025",
+    "name": "光伏多域协同",
+    "title": "Robust photovoltaic forecasting under severe data missingness via multi-domain collaboration and covariate interaction",
+    "year": 2025,
+    "venue": "Applied Energy",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "未核实"
+    ],
+    "domains": [
+      "能源"
+    ],
+    "dimension_tags": [
+      "低维",
+      "待核实"
+    ],
+    "datasets_dimensions": "中国4个光伏场；摘要核心变量PV、GHI、DNI、总太阳辐照度共4，最终输入组合待核实",
+    "method": "SSA重构；协变量交互；迁移学习",
+    "contribution": "利用跨站点合作与协变量信息增强严重缺失下的光伏预测。",
+    "limitation": "4个站点不自动等于4维；低维标签仅指摘要明确的核心物理变量。",
+    "source_url": "https://researchonline.jcu.edu.au/89193/",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "10.1016/j.apenergy.2025.126771",
+    "authors": "Ke Yan and Jian Liu and Jiazhen Zhang and Fan Yang and Yuan Gao and Yang Du",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "401",
+    "issue": "",
+    "page": "126771",
+    "article_number": "126771",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P25",
+    "key": "WindQuantile2026",
+    "name": "非参数风电概率预测",
+    "title": "Probabilistic Wind Power Forecasting With Missing Data Tolerance: An End-to-End Nonparametric Approach",
+    "year": 2026,
+    "venue": "IEEE Transactions on Sustainable Energy",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "未核实"
+    ],
+    "domains": [
+      "能源"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "风电；单场/多场建模维度待核实",
+    "method": "非参数；分位数；联合插补预测",
+    "contribution": "以概率预测损失协调插补和预测，强调在线缺失容忍。",
+    "limitation": "摘要级核实；DOI年份2025为在线时间，正式卷期2026。",
+    "source_url": "https://ira.lib.polyu.edu.hk/handle/10397/117725",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "10.1109/TSTE.2025.3611370",
+    "authors": "Zichao Meng and Ye Guo and Chenhao Zhao",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "17",
+    "issue": "2",
+    "page": "1202-1213",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P26",
+    "key": "AirBayes2025",
+    "name": "CGLU-BNF",
+    "title": "Tackling Incomplete Data in Air Quality Prediction: A Bayesian Deep Learning Framework for Uncertainty Quantification",
+    "year": 2025,
+    "venue": "arXiv",
+    "status": "预印本",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "散点",
+      "块",
+      "变量"
+    ],
+    "domains": [
+      "大气"
+    ],
+    "dimension_tags": [
+      "中维"
+    ],
+    "datasets_dimensions": "London=72节点×1(PM10)；Hong Kong=18节点×5污染物",
+    "method": "贝叶斯深度学习；频域；门控混合",
+    "contribution": "同时评估随机、节点、时间戳及区域时空缺失，并输出预测不确定性。",
+    "limitation": "期刊式模板不证明正式发表；空间位置与污染物种类应分别记录。",
+    "source_url": "https://arxiv.org/abs/2511.02175",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/AirBayes2025.txt；Table II、missing scenarios",
+    "doi": "",
+    "authors": "",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "完整作者列表尚未整理；请通过原文/DOI导入补全。",
+    "local_text": "downloaded_text/AirBayes2025.txt",
+    "local_pdf": "sources/downloaded_pdf/AirBayes2025.pdf"
+  },
+  {
+    "id": "P27",
+    "key": "CityAir2026",
+    "name": "稀疏城市空气预测",
+    "title": "Citywide Air Quality Forecasting over Sparse Sensor Networks: Cross-Location Generalization and Deep Learning Reliability Under Missing Data",
+    "year": 2026,
+    "venue": "Journal of Sensor and Actuator Networks",
+    "status": "已发表",
+    "task": "未见节点预测",
+    "missing_patterns": [
+      "散点",
+      "变量"
+    ],
+    "domains": [
+      "大气"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "Madrid、Cali；4种污染物；联合输入节点数待核实",
+    "method": "深度预测；跨位置泛化",
+    "contribution": "同时关注时间外推、留出站点和稀疏监测下的可靠性。",
+    "limitation": "需区分时间预测与空间回归结果；污染物种数并不直接决定全网络D。",
+    "source_url": "https://www.mdpi.com/2224-2708/15/4/52",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "10.3390/jsan15040052",
+    "authors": "Francisco-Jose Alvarado-Alcon and Rafael Asorey-Cacheda and Joan Garcia-Haro and Laura García and Antonio-Javier Garcia-Sanchez",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "15",
+    "issue": "4",
+    "page": "52",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P28",
+    "key": "DeepSIP2026",
+    "name": "DeepSIP",
+    "title": "DeepSIP: A Deep Learning Approach for Sensor Data Imputation and Time Series Forecasting",
+    "year": 2026,
+    "venue": "Aerosol and Air Quality Research",
+    "status": "已发表",
+    "task": "应用预测（时间协议待核）",
+    "missing_patterns": [
+      "自然缺失"
+    ],
+    "domains": [
+      "大气"
+    ],
+    "dimension_tags": [
+      "低维"
+    ],
+    "datasets_dimensions": "Amman 7站；单站4个低成本传感器及PM目标，另含时间协变量",
+    "method": "自编码器；聚类；DNN；两阶段",
+    "contribution": "将传感器重构与空气质量预测组合，面向实际低成本监测。",
+    "limitation": "明确的未来预测起点和horizon需要再核实，可能混入同时刻PM估计；不能直接作为严格未来预测的强证据。",
+    "source_url": "https://link.springer.com/article/10.1007/s44408-026-00145-y",
+    "evidence_level": "B",
+    "evidence_locator": "出版方全文网页；数据与方法部分",
+    "doi": "10.1007/s44408-026-00145-y",
+    "authors": "Ola Surakhi and Naser Hossein Motlagh and Maitane Iturrate-Garcia and Aseel Abu Tabbaneh and Sayyed Saleh and Ali Almashni and Mohammad AL-Refaie and Mario LovriĆ and Kan Huang and Yu Zhao and Tianyi Zhao and Lina Wang and Yutaka Matsumi and Tareq Hussein",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "26",
+    "issue": "8",
+    "page": "",
+    "article_number": "62",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P29",
+    "key": "TSDiff2023",
+    "name": "TSDiff",
+    "title": "Predict, Refine, Synthesize: Self-Guiding Diffusion Models for Probabilistic Time Series Forecasting",
+    "year": 2023,
+    "venue": "NeurIPS",
+    "status": "已发表",
+    "task": "缺失历史预测",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "电力",
+      "交通",
+      "金融",
+      "能源"
+    ],
+    "dimension_tags": [
+      "低维"
+    ],
+    "datasets_dimensions": "以单变量序列建模/全局跨序列训练；数据集序列条数不是单样本D",
+    "method": "扩散；自引导采样",
+    "contribution": "无条件扩散模型在推理时利用观测引导，测试随机和上下文首尾连续缺失。",
+    "limitation": "需报告采样成本；单变量全局训练不应标为数百维联合建模。",
+    "source_url": "https://arxiv.org/abs/2307.11494",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/TSDiff2023.txt；Forecasting with Missing Values、Table 2",
+    "doi": "",
+    "authors": "Marcel Kollovieh and Abdul Fatir Ansari and Michael Bohlke-Schneider and Jasper Zschiegner and Hao Wang and Yuyang Wang",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/TSDiff2023.txt",
+    "local_pdf": "sources/downloaded_pdf/TSDiff2023.pdf"
+  },
+  {
+    "id": "P30",
+    "key": "TACTiS2022",
+    "name": "TACTiS",
+    "title": "TACTiS: Transformer-Attentional Copulas for Time Series",
+    "year": 2022,
+    "venue": "ICML",
+    "status": "已发表",
+    "task": "概率预测/插值统一",
+    "missing_patterns": [
+      "不规则",
+      "未核实"
+    ],
+    "domains": [
+      "电力",
+      "金融",
+      "交通",
+      "能源",
+      "大气"
+    ],
+    "dimension_tags": [
+      "高维"
+    ],
+    "datasets_dimensions": "Electricity321；FRED-MD107；KDD-Cup270；Solar137；Traffic862",
+    "method": "Transformer；Copula",
+    "contribution": "学习多变量联合分布，统一异步不齐次采样、插值与预测。",
+    "limitation": "任意缺失的建模能力不表示三种人工缺失模式均完成实验。",
+    "source_url": "https://proceedings.mlr.press/v162/drouin22a.html",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/TACTiS2022.txt；实验与数据附录",
+    "doi": "",
+    "authors": "Alexandre Drouin and Étienne Marcotte and Nicolas Chapados",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/TACTiS2022.txt",
+    "local_pdf": "sources/downloaded_pdf/TACTiS2022.pdf"
+  },
+  {
+    "id": "P31",
+    "key": "TACTiS22024",
+    "name": "TACTiS-2",
+    "title": "TACTiS-2: Better, Faster, Simpler Attentional Copulas for Multivariate Time Series",
+    "year": 2024,
+    "venue": "ICLR",
+    "status": "已发表",
+    "task": "概率预测/插值统一",
+    "missing_patterns": [
+      "不规则",
+      "未核实"
+    ],
+    "domains": [
+      "电力",
+      "金融",
+      "交通",
+      "能源",
+      "大气"
+    ],
+    "dimension_tags": [
+      "高维"
+    ],
+    "datasets_dimensions": "Electricity321；FRED-MD107；KDD-Cup270；Solar137；Traffic862（Table 6；正文上界826疑似笔误）",
+    "method": "Transformer；Copula",
+    "contribution": "简化Copula目标和训练课程，改善联合分布估计的效率及优化。",
+    "limitation": "不把较好的常规预测结果直接当作缺失上下文的专门实验结果。",
+    "source_url": "https://proceedings.iclr.cc/paper_files/paper/2024/hash/63796148c99205adb0fcac069cc714d4-Abstract-Conference.html",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/TACTiS2_2024.txt；Table 6",
+    "doi": "",
+    "authors": "Arjun Ashok and Étienne Marcotte and Valentina Zantedeschi and Nicolas Chapados and Alexandre Drouin",
+    "code_url": "https://github.com/ServiceNow/TACTiS",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/TACTiS2_2024.txt",
+    "local_pdf": "sources/downloaded_pdf/TACTiS2_2024.pdf"
+  },
+  {
+    "id": "P32",
+    "key": "NeuralFlows2021",
+    "name": "Neural Flows",
+    "title": "Neural Flows: Efficient Alternative to Neural ODEs",
+    "year": 2021,
+    "venue": "NeurIPS",
+    "status": "已发表",
+    "task": "不规则预测",
+    "missing_patterns": [
+      "不规则"
+    ],
+    "domains": [
+      "医疗",
+      "合成"
+    ],
+    "dimension_tags": [
+      "中维",
+      "待核实"
+    ],
+    "datasets_dimensions": "MIMIC-III=96；PhysioNet=37、MuJoCo=14另含重构任务；MIMIC-IV的D待核实",
+    "method": "连续时间；可逆流",
+    "contribution": "直接参数化时间演化流，减少逐步求解ODE的开销。",
+    "limitation": "连续时间模型的表示能力和人工块缺失鲁棒性属于不同证据。",
+    "source_url": "https://arxiv.org/abs/2110.13040",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/NeuralFlows2021.txt；实验章节",
+    "doi": "",
+    "authors": "Marin Biloš and Johanna Sommer and Syama Sundar Rangapuram and Tim Januschowski and Stephan Günnemann",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/NeuralFlows2021.txt",
+    "local_pdf": "sources/downloaded_pdf/NeuralFlows2021.pdf"
+  },
+  {
+    "id": "P33",
+    "key": "CRU2022",
+    "name": "CRU",
+    "title": "Modeling Irregular Time Series with Continuous Recurrent Units",
+    "year": 2022,
+    "venue": "ICML",
+    "status": "已发表",
+    "task": "不规则预测",
+    "missing_patterns": [
+      "不规则"
+    ],
+    "domains": [
+      "医疗",
+      "气候",
+      "合成"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维"
+    ],
+    "datasets_dimensions": "USHCN=5；PhysioNet=41；另含图像摆锤任务",
+    "method": "连续时间；状态空间；Kalman滤波",
+    "contribution": "在连续线性随机动力系统与神经观测映射中递归融合不规则观测。",
+    "limitation": "插值与未来外推需分别比较，不能汇总成一个预测准确率。",
+    "source_url": "https://proceedings.mlr.press/v162/schirmer22a.html",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/CRU2022.txt；Sec.4.1、Table 1",
+    "doi": "",
+    "authors": "Mona Schirmer and Mazin Eltayeb and Stefan Lessmann and Maja Rudolph",
+    "code_url": "https://github.com/boschresearch/Continuous-Recurrent-Units",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/CRU2022.txt",
+    "local_pdf": "sources/downloaded_pdf/CRU2022.pdf"
+  },
+  {
+    "id": "P34",
+    "key": "GraFITi2024",
+    "name": "GraFITi",
+    "title": "GraFITi: Graphs for Forecasting Irregularly Sampled Time Series",
+    "year": 2024,
+    "venue": "AAAI",
+    "status": "已发表",
+    "task": "不规则预测",
+    "missing_patterns": [
+      "不规则"
+    ],
+    "domains": [
+      "医疗",
+      "气候"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维",
+      "高维"
+    ],
+    "datasets_dimensions": "USHCN=5；PhysioNet=37；MIMIC-III=96；MIMIC-IV=102",
+    "method": "二部图；稀疏观测建模",
+    "contribution": "时间和通道作为节点、观测作为边，以稀疏图执行预测。",
+    "limitation": "102维按本报告界限归高维；其他论文MIMIC-IV=100，不能统一替换。",
+    "source_url": "https://ojs.aaai.org/index.php/AAAI/article/download/29560/30939",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/GraFITi_aaai_2024.txt；Table 1",
+    "doi": "10.1609/aaai.v38i15.29560",
+    "authors": "Vijaya Krishna Yalavarthi and Kiran Madhusudhanan and Randolf Scholz and Nourhan Ahmed and Johannes Burchert and Shayan Jawed and Stefan Born and Lars Schmidt-Thieme",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "38",
+    "issue": "15",
+    "page": "16255-16263",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/GraFITi_aaai_2024.txt",
+    "local_pdf": "../../papers/已整理/非时空缺失预测/GraFITi_aaai_2024.pdf"
+  },
+  {
+    "id": "P35",
+    "key": "tPatchGNN2024",
+    "name": "t-PatchGNN",
+    "title": "Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach",
+    "year": 2024,
+    "venue": "ICML",
+    "status": "已发表",
+    "task": "不规则预测",
+    "missing_patterns": [
+      "不规则"
+    ],
+    "domains": [
+      "医疗",
+      "气候",
+      "人体活动"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维"
+    ],
+    "datasets_dimensions": "PhysioNet=41；MIMIC-III=96；Activity=12；USHCN=5",
+    "method": "图网络；自适应patch",
+    "contribution": "用可变形patch聚合不规则时间信息，再建模时变变量关系。",
+    "limitation": "USHCN的1114个站点是样本集合，不是单样本1114维；不同领域预测跨度不同。",
+    "source_url": "https://proceedings.mlr.press/v235/zhang24bw.html",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/03_t_PatchGNN_ICML2024.txt；Appendix A.5",
+    "doi": "",
+    "authors": "Weijia Zhang and Chenlong Yin and Hao Liu and Xiaofang Zhou and Hui Xiong",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/03_t_PatchGNN_ICML2024.txt",
+    "local_pdf": "../../papers/已整理/非时空缺失预测/03_t_PatchGNN_ICML2024.pdf"
+  },
+  {
+    "id": "P36",
+    "key": "HyperIMTS2025",
+    "name": "HyperIMTS",
+    "title": "HyperIMTS: Hypergraph Neural Network for Irregular Multivariate Time Series Forecasting",
+    "year": 2025,
+    "venue": "ICML",
+    "status": "已发表",
+    "task": "不规则预测",
+    "missing_patterns": [
+      "不规则"
+    ],
+    "domains": [
+      "医疗",
+      "气候",
+      "人体活动"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维"
+    ],
+    "datasets_dimensions": "USHCN=5；Activity=12；MIMIC-III=96；PhysioNet预处理需核对",
+    "method": "超图；观测级表示",
+    "contribution": "以观测为节点，用时间和变量超边建模高阶交互。",
+    "limitation": "高阶交互能力不意味着已评估高维路网整站掉线。",
+    "source_url": "https://arxiv.org/abs/2505.17431",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/07_HyperIMTS_ICML2025.txt；方法与数据集",
+    "doi": "",
+    "authors": "Boyuan Li and Yicheng Luo and Zhen Liu and Junhao Zheng and Jianming Lv and Qianli Ma",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/07_HyperIMTS_ICML2025.txt",
+    "local_pdf": "../../papers/已整理/非时空缺失预测/07_HyperIMTS_ICML2025.pdf"
+  },
+  {
+    "id": "P37",
+    "key": "HiPatch2025",
+    "name": "Hi-Patch",
+    "title": "Hi-Patch: Hierarchical Patch GNN for Irregular Multivariate Time Series",
+    "year": 2025,
+    "venue": "ICML",
+    "status": "已发表",
+    "task": "不规则预测",
+    "missing_patterns": [
+      "不规则"
+    ],
+    "domains": [
+      "医疗",
+      "气候",
+      "人体活动"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维"
+    ],
+    "datasets_dimensions": "预测任务USHCN=5、Activity=12、MIMIC-III=96；总数据集数还包括分类任务",
+    "method": "图网络；层级patch",
+    "contribution": "通过patch内和patch间的层级图聚合保留多尺度信息。",
+    "limitation": "八个数据集并非八个预测任务；变量丢弃附加实验与整变量协议需独立复核。",
+    "source_url": "https://proceedings.mlr.press/v267/luo25r.html",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/HiPatch2025.txt；datasets/task分组",
+    "doi": "",
+    "authors": "Yicheng Luo and Bowen Zhang and Zhen Liu and Qianli Ma",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/HiPatch2025.txt",
+    "local_pdf": "sources/downloaded_pdf/HiPatch2025.pdf"
+  },
+  {
+    "id": "P38",
+    "key": "ReIMTS2026",
+    "name": "ReIMTS",
+    "title": "Learning Recursive Multi-Scale Representations for Irregular Multivariate Time Series Forecasting",
+    "year": 2026,
+    "venue": "ICLR",
+    "status": "已发表",
+    "task": "不规则预测",
+    "missing_patterns": [
+      "不规则"
+    ],
+    "domains": [
+      "医疗",
+      "气候",
+      "人体活动"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维"
+    ],
+    "datasets_dimensions": "MIMIC-III=96；MIMIC-IV=100；PhysioNet=36；Activity=12；USHCN=5",
+    "method": "递归多尺度；不规则信息融合",
+    "contribution": "保留原始时间戳，以递归时间区间形成多尺度表示。",
+    "limitation": "与GraFITi的MIMIC-IV=102和t-PatchGNN的PhysioNet=41不是完全相同预处理。",
+    "source_url": "https://arxiv.org/abs/2602.21498",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/ReIMTS.txt；Table 1及ICLR2026首页",
+    "doi": "",
+    "authors": "Boyuan Li and Zhen Liu and Yicheng Luo and Qianli Ma",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/ReIMTS.txt",
+    "local_pdf": "../../papers/已整理/非时空缺失预测/ReIMTS.pdf"
+  },
+  {
+    "id": "P39",
+    "key": "TFMixer2026",
+    "name": "TFMixer",
+    "title": "Bridging Time and Frequency: A Joint Modeling Framework for Irregular Multivariate Time Series Forecasting",
+    "year": 2026,
+    "venue": "arXiv",
+    "status": "预印本",
+    "task": "不规则预测",
+    "missing_patterns": [
+      "不规则"
+    ],
+    "domains": [
+      "医疗",
+      "气候",
+      "人体活动"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维"
+    ],
+    "datasets_dimensions": "USHCN、Activity、MIMIC-III等；D=5/12/96的常见子集，具体各项以原文为准",
+    "method": "频域；非均匀傅里叶；混合器",
+    "contribution": "联合时间patch和非均匀频域表示进行预测。",
+    "limitation": "频率估计可能受采样密度与长空洞影响；正式发表状态尚未核实。",
+    "source_url": "https://arxiv.org/abs/2602.00582",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/TFMixer.txt；方法、datasets",
+    "doi": "",
+    "authors": "Xiangfei Qiu and Kangjia Yan and Xvyuan Liu and Xingjian Wu and Jilin Hu",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/TFMixer.txt",
+    "local_pdf": "../../papers/已整理/非时空缺失预测/TFMixer.pdf"
+  },
+  {
+    "id": "P40",
+    "key": "ProFITi2025",
+    "name": "ProFITi",
+    "title": "Probabilistic Forecasting of Irregularly Sampled Time Series with Missing Values via Conditional Normalizing Flows",
+    "year": 2025,
+    "venue": "AAAI",
+    "status": "已发表",
+    "task": "不规则概率预测",
+    "missing_patterns": [
+      "不规则"
+    ],
+    "domains": [
+      "医疗",
+      "气候"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "四个实验数据集；各版本实际D需核对",
+    "method": "条件生成流；三角注意力",
+    "contribution": "在不规则多变量观测下学习联合预测分布。",
+    "limitation": "正式版本为AAAI2025；早期ICLR投稿不等于该会议录用，联合密度和边际预测需分别评价。",
+    "source_url": "https://ojs.aaai.org/index.php/AAAI/article/view/35494",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "10.1609/aaai.v39i20.35494",
+    "authors": "Vijaya Krishna Yalavarthi and Randolf Scholz and Stefan Born and Lars Schmidt-Thieme",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "39",
+    "issue": "20",
+    "page": "21877-21885",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P41",
+    "key": "MOSES2026",
+    "name": "MOSES",
+    "title": "Reliable Probabilistic Forecasting of Irregular Time Series through Marginalization-Consistent Flows",
+    "year": 2026,
+    "venue": "ICLR",
+    "status": "已发表",
+    "task": "不规则概率预测",
+    "missing_patterns": [
+      "不规则"
+    ],
+    "domains": [
+      "医疗",
+      "气候"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "官方摘要未列各数据集D；初始预印本2024",
+    "method": "可分离生成流混合；边际一致性",
+    "contribution": "构造可以解析边缘化的随机过程分布，避免查询变量子集变化时概率结果不一致。",
+    "limitation": "作者报告边际预测更强，但联合预测不一定胜过ProFITi；不能简化为全面优越。",
+    "source_url": "https://proceedings.iclr.cc/paper_files/paper/2026/hash/899c6a43b9976e1077522fe5a39cafa3-Abstract-Conference.html",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "",
+    "authors": "Vijaya Krishna Yalavarthi and Randolf Scholz and Christian Klötergens and Kiran Madhusudhanan and Stefan Born and Lars Schmidt-Thieme",
+    "code_url": "https://github.com/yalavarthivk/separable_flows",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P42",
+    "key": "mTAN2021",
+    "name": "mTAN",
+    "title": "Multi-Time Attention Networks for Irregularly Sampled Time Series",
+    "year": 2021,
+    "venue": "ICLR",
+    "status": "已发表",
+    "task": "插补/表示学习",
+    "missing_patterns": [
+      "不规则"
+    ],
+    "domains": [
+      "医疗",
+      "人体活动"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "临床及人体活动；原文各维度本次未核实",
+    "method": "时间注意力；VAE",
+    "contribution": "通过连续时间嵌入和多时间注意力获得不规则序列表示。",
+    "limitation": "原论文主要插值与分类；后续论文采用的forecasting版本属于任务改造。",
+    "source_url": "https://arxiv.org/abs/2101.10318",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "",
+    "authors": "Satya Narayan Shukla and Benjamin M. Marlin",
+    "code_url": "https://github.com/reml-lab/mTAN",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P43",
+    "key": "HeTVAE2022",
+    "name": "HeTVAE",
+    "title": "Heteroscedastic Temporal Variational Autoencoder for Irregularly Sampled Time Series",
+    "year": 2022,
+    "venue": "ICLR",
+    "status": "已发表",
+    "task": "概率插补",
+    "missing_patterns": [
+      "不规则"
+    ],
+    "domains": [
+      "医疗",
+      "气候"
+    ],
+    "dimension_tags": [
+      "低维",
+      "待核实"
+    ],
+    "datasets_dimensions": "Climate预处理=7；临床等其他版本维度待核实",
+    "method": "异方差VAE；稀疏感知",
+    "contribution": "将观测稀疏程度传递至均值和异方差不确定性估计。",
+    "limitation": "主要是概率插值，不将其直接记作缺失历史未来预测；Climate不是所有文献中的USHCN=5。",
+    "source_url": "https://arxiv.org/abs/2107.11350",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "",
+    "authors": "Satya Narayan Shukla and Benjamin M. Marlin",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P44",
+    "key": "CSDI2021",
+    "name": "CSDI",
+    "title": "CSDI: Conditional Score-based Diffusion Models for Probabilistic Time Series Imputation",
+    "year": 2021,
+    "venue": "NeurIPS",
+    "status": "已发表",
+    "task": "插补/概率预测",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "医疗",
+      "大气",
+      "通用时序"
+    ],
+    "dimension_tags": [
+      "中维",
+      "待核实"
+    ],
+    "datasets_dimensions": "PhysioNet=35；空气质量=36站；预测任务数据维度另核",
+    "method": "条件扩散；时空注意力",
+    "contribution": "根据已观测条目生成缺失数据的条件分布，可把未来后缀作为待生成区域。",
+    "limitation": "后缀生成实验不自动证明缺失历史输入下的预测性能；采样次数影响成本和指标。",
+    "source_url": "https://arxiv.org/abs/2107.03502",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/CSDI2021.txt；Sec.6.1及预测附录",
+    "doi": "",
+    "authors": "Yusuke Tashiro and Jiaming Song and Yang Song and Stefano Ermon",
+    "code_url": "https://github.com/ermongroup/CSDI",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/CSDI2021.txt",
+    "local_pdf": "sources/downloaded_pdf/CSDI2021.pdf"
+  },
+  {
+    "id": "P45",
+    "key": "SSSD2023",
+    "name": "SSSD",
+    "title": "Diffusion-based Time Series Imputation and Forecasting with Structured State Space Models",
+    "year": 2023,
+    "venue": "TMLR",
+    "status": "已发表",
+    "task": "插补/概率预测",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "医疗",
+      "电力",
+      "交通",
+      "能源",
+      "合成"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维",
+      "高维"
+    ],
+    "datasets_dimensions": "ETTm1=7；PTB-XL=12；METR-LA=207；PEMS-BAY=325",
+    "method": "扩散；状态空间S4",
+    "contribution": "将结构化状态空间用于扩散去噪，处理随机、随机块及黑屏缺失。",
+    "limitation": "正式TMLR发表于2023；2022是预印本年份；插补表和预测表应分开读。",
+    "source_url": "https://openreview.net/forum?id=hHiIbk7ApW",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/SSSD2023.txt；Tables 17–23、RM/RBM/BM定义",
+    "doi": "",
+    "authors": "Juan Miguel Lopez Alcaraz and Nils Strodthoff",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/SSSD2023.txt",
+    "local_pdf": "sources/downloaded_pdf/SSSD2023.pdf"
+  },
+  {
+    "id": "P46",
+    "key": "GRIN2022",
+    "name": "GRIN",
+    "title": "Filling the G_ap_s: Multivariate Time Series Imputation by Graph Neural Networks",
+    "year": 2022,
+    "venue": "ICLR",
+    "status": "已发表",
+    "task": "插补",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "交通",
+      "大气"
+    ],
+    "dimension_tags": [
+      "中维",
+      "高维"
+    ],
+    "datasets_dimensions": "AQI36/437；METR-LA=207；PEMS-BAY=325",
+    "method": "双向图递归网络",
+    "contribution": "通过时空消息传递迭代重构缺失节点值。",
+    "limitation": "双向插补只能访问预测起点以前的历史；重构误差低不保证下游预测更好。",
+    "source_url": "https://openreview.net/forum?id=kOu3-S3wJ7",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/GRIN2022.txt；datasets及mask设置",
+    "doi": "",
+    "authors": "Andrea Cini and Ivan Marisca and Cesare Alippi",
+    "code_url": "https://github.com/Graph-Machine-Learning-Group/grin",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/GRIN2022.txt",
+    "local_pdf": "sources/downloaded_pdf/GRIN2022.pdf"
+  },
+  {
+    "id": "P47",
+    "key": "SPIN2022",
+    "name": "SPIN",
+    "title": "Learning to Reconstruct Missing Data from Spatiotemporal Graphs with Sparse Observations",
+    "year": 2022,
+    "venue": "NeurIPS",
+    "status": "已发表",
+    "task": "插补",
+    "missing_patterns": [
+      "散点",
+      "块",
+      "变量"
+    ],
+    "domains": [
+      "交通",
+      "大气"
+    ],
+    "dimension_tags": [
+      "中维",
+      "高维"
+    ],
+    "datasets_dimensions": "AQI36/437；METR-LA=207；PEMS-BAY=325",
+    "method": "图网络；稀疏注意力",
+    "contribution": "围绕实际观测进行传播，处理高度稀疏乃至无观测节点的重构。",
+    "limitation": "节点重构不同于其未来预测；稀疏程度和图可用性应共同报告。",
+    "source_url": "https://openreview.net/pdf?id=YXHoPO33rk",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "",
+    "authors": "Ivan Marisca and Andrea Cini and Cesare Alippi",
+    "code_url": "https://github.com/Graph-Machine-Learning-Group/spin",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P48",
+    "key": "SAITS2023",
+    "name": "SAITS",
+    "title": "SAITS: Self-Attention-based Imputation for Time Series",
+    "year": 2023,
+    "venue": "Expert Systems with Applications",
+    "status": "已发表",
+    "task": "插补",
+    "missing_patterns": [
+      "散点"
+    ],
+    "domains": [
+      "医疗",
+      "大气",
+      "电力"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维",
+      "高维"
+    ],
+    "datasets_dimensions": "ETT=7；PhysioNet=37；Air-Quality=132；Electricity=370",
+    "method": "Transformer；对角掩码注意力",
+    "contribution": "结合两组对角掩码注意力与加权混合进行插补。",
+    "limitation": "Electricity的370维不可自动替换为预测基准的321维；需另外接预测器才能评估本主题。",
+    "source_url": "https://arxiv.org/abs/2202.08516",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/SAITS2023.txt；Table 1",
+    "doi": "10.1016/j.eswa.2023.119619",
+    "authors": "Wenjie Du and David Côté and Yan Liu",
+    "code_url": "https://github.com/WenjieDu/SAITS",
+    "access_date": "2026-09-26",
+    "volume": "219",
+    "issue": "",
+    "page": "119619",
+    "article_number": "119619",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/SAITS2023.txt",
+    "local_pdf": "sources/downloaded_pdf/SAITS2023.pdf"
+  },
+  {
+    "id": "P49",
+    "key": "PriSTI2023",
+    "name": "PriSTI",
+    "title": "PriSTI: A Conditional Diffusion Framework for Spatiotemporal Imputation",
+    "year": 2023,
+    "venue": "ICDE",
+    "status": "已发表",
+    "task": "插补",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "交通",
+      "大气"
+    ],
+    "dimension_tags": [
+      "中维",
+      "高维"
+    ],
+    "datasets_dimensions": "AQI=36；METR-LA=207；PEMS-BAY=325",
+    "method": "条件扩散；图先验",
+    "contribution": "通过条件信息提取和时空依赖建模引导扩散插补。",
+    "limitation": "外部图与初始插值提供额外信息；与免插补预测比较时必须固定信息预算。",
+    "source_url": "https://arxiv.org/abs/2302.09746",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "",
+    "authors": "Mingzhe Liu and Han Huang and Hao Feng and Leilei Sun and Bowen Du and Yanjie Fu",
+    "code_url": "https://github.com/LMZZML/PriSTI",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P50",
+    "key": "ImputeFormer2024",
+    "name": "ImputeFormer",
+    "title": "ImputeFormer: Low Rankness-Induced Transformers for Generalizable Spatiotemporal Imputation",
+    "year": 2024,
+    "venue": "KDD",
+    "status": "已发表",
+    "task": "插补",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "交通",
+      "大气",
+      "能源"
+    ],
+    "dimension_tags": [
+      "中维",
+      "高维"
+    ],
+    "datasets_dimensions": "AQI36/437；METR-LA207；PEMS-BAY325；Solar137等",
+    "method": "Transformer；低秩归纳偏置",
+    "contribution": "在时空注意力中引入低秩结构，以改善缺失配置变化时的泛化。",
+    "limitation": "应比较完整下游流水线；不能仅用其插补排名推断预测排名。",
+    "source_url": "https://arxiv.org/abs/2312.01728",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/05_ImputeFormer_KDD2024.txt；实验及缺失泛化",
+    "doi": "",
+    "authors": "Tong Nie and Guoyang Qin and Wei Ma and Yuewen Mei and Jian Sun",
+    "code_url": "https://github.com/tongnie/ImputeFormer",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/05_ImputeFormer_KDD2024.txt",
+    "local_pdf": "../../papers/已整理/缺失插补/05_ImputeFormer_KDD2024.pdf"
+  },
+  {
+    "id": "P51",
+    "key": "LSCD2025",
+    "name": "LSCD",
+    "title": "LSCD: Lomb–Scargle Conditioned Diffusion for Time Series Imputation",
+    "year": 2025,
+    "venue": "ICML",
+    "status": "已发表",
+    "task": "概率插补",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "医疗",
+      "大气",
+      "合成"
+    ],
+    "dimension_tags": [
+      "中维"
+    ],
+    "datasets_dimensions": "PhysioNet=35；北京PM2.5=36站；另含合成正弦信号",
+    "method": "扩散；非均匀频谱",
+    "contribution": "利用Lomb–Scargle谱为缺失时序扩散插补提供频域条件。",
+    "limitation": "随机、子序列与块的实际缺失比例需按掩码统计；主任务不是未来预测。",
+    "source_url": "https://proceedings.mlr.press/v267/fons25a.html",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/08_LSCD_ICML2025.txt；Sec.5.1、数据附录",
+    "doi": "",
+    "authors": "Elizabeth Fons and Alejandro Sztrajman and Yousef El-Laham and Luciana Ferrer and Svitlana Vyetrenko and Manuela Veloso",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/08_LSCD_ICML2025.txt",
+    "local_pdf": "../../papers/已整理/缺失插补/08_LSCD_ICML2025.pdf"
+  },
+  {
+    "id": "P52",
+    "key": "CoFILL2025",
+    "name": "CoFILL",
+    "title": "Filling the Missings: Spatiotemporal Data Imputation by Conditional Diffusion",
+    "year": 2025,
+    "venue": "IJCAI",
+    "status": "已发表",
+    "task": "插补",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "交通",
+      "大气"
+    ],
+    "dimension_tags": [
+      "中维",
+      "高维"
+    ],
+    "datasets_dimensions": "AQI=36；METR-LA=207；PEMS-BAY=325",
+    "method": "扩散；时频双流",
+    "contribution": "联合时间域和频率域信息进行缺失重构。",
+    "limitation": "纯插补为主；时频协同带来的下游预测收益仍需外接预测器验证。",
+    "source_url": "https://www.ijcai.org/proceedings/2025/320",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/CoFILL_IJCAI.txt；首页、数据设置",
+    "doi": "10.24963/ijcai.2025/320",
+    "authors": "Wenying He and Jieling Huang and Junhua Gu and Ji Zhang and Yude Bai",
+    "code_url": "https://github.com/joyHJL/CoFILL",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "2874-2882",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/CoFILL_IJCAI.txt",
+    "local_pdf": "../../papers/已整理/缺失插补/CoFILL_IJCAI.pdf"
+  },
+  {
+    "id": "P53",
+    "key": "PGUTS2025",
+    "name": "P-GUTS",
+    "title": "Product Graph U-networks using Temporal pooling for Spatiotemporal imputation",
+    "year": 2025,
+    "venue": "KDD Undergraduate/Master’s Consortium",
+    "status": "学生论坛/稿件",
+    "task": "插补/预测扩展",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "交通",
+      "大气"
+    ],
+    "dimension_tags": [
+      "中维",
+      "高维"
+    ],
+    "datasets_dimensions": "AQI=437；AQI36=36；METR-LA=207；PEMS-BAY=325",
+    "method": "乘积图；U-Net；时间池化",
+    "contribution": "乘积图与时间池化进行多尺度插补；另在PEMS-BAY测试1小时预测。",
+    "limitation": "官方仅核实学生论坛；本地模板包含占位会议和DOI，不能记作KDD主会正式论文。",
+    "source_url": "https://kdd.org/kdd2025/undergraduate-and-masters-consortium/",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/P-GUTS_kdd2025.txt；Table 1、Table 5及官方论坛清单",
+    "doi": "",
+    "authors": "Aman Atman and Santosh Nannuru",
+    "code_url": "https://github.com/willtryagain/pguts",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/P-GUTS_kdd2025.txt",
+    "local_pdf": "../../papers/已整理/缺失插补/P-GUTS_kdd2025.pdf"
+  },
+  {
+    "id": "P54",
+    "key": "HELIX2026",
+    "name": "HELIX",
+    "title": "HELIX: Hybrid Encoding with Learnable Identity and Cross-dimensional Synthesis for Time Series Imputation",
+    "year": 2026,
+    "venue": "arXiv",
+    "status": "预印本",
+    "task": "插补",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "医疗",
+      "大气",
+      "电力",
+      "交通"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维",
+      "高维"
+    ],
+    "datasets_dimensions": "ETT=7；ItalyAir=13；PhysioNet=35；BeijingAir=132；PeMS=862",
+    "method": "混合注意力；特征身份嵌入",
+    "contribution": "学习变量身份并融合时间和变量方向注意力。",
+    "limitation": "块、子序列与整列缺失不应混称；目前按预印本记录。",
+    "source_url": "https://arxiv.org/abs/2605.02278",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/HELIX.txt；数据表、missing settings",
+    "doi": "",
+    "authors": "Fengming Zhang and Wenjie Du and Huan Zhang and Ke Yu and Shen Qu",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/HELIX.txt",
+    "local_pdf": "../../papers/已整理/缺失插补/HELIX.pdf"
+  },
+  {
+    "id": "P55",
+    "key": "TaskEval2024",
+    "name": "Task-oriented Imputation Evaluation",
+    "title": "Task-oriented Time Series Imputation Evaluation via Generalized Representers",
+    "year": 2024,
+    "venue": "NeurIPS",
+    "status": "已发表",
+    "task": "评测方法",
+    "missing_patterns": [
+      "未核实"
+    ],
+    "domains": [
+      "能源",
+      "建筑"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "GEF、BDG2等；具体任务维度待核实",
+    "method": "任务导向评估；广义表示",
+    "contribution": "强调应按下游目标评价插补，而不是只按被遮蔽点的重构误差排名。",
+    "limitation": "该结论不意味着插补必然无效；需要预测器固定、联合优化和Oracle多组对照。",
+    "source_url": "https://proceedings.neurips.cc/paper_files/paper/2024/hash/f88264fcc54775ee1706116e90fe351a-Abstract-Conference.html",
+    "evidence_level": "A",
+    "evidence_locator": "local_text/04_Task_Oriented_Imputation_NeurIPS2024.txt；方法及下游任务",
+    "doi": "",
+    "authors": "Zhixian Wang and Linxiao Yang and Liang Sun and Qingsong Wen and Yi Wang",
+    "code_url": "https://github.com/hkuedl/Task-Oriented-Imputation",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "local_text/04_Task_Oriented_Imputation_NeurIPS2024.txt",
+    "local_pdf": "../../papers/已整理/缺失插补/04_Task_Oriented_Imputation_NeurIPS2024.pdf"
+  },
+  {
+    "id": "P56",
+    "key": "NuwaTS2024",
+    "name": "NuwaTS",
+    "title": "NuwaTS: A Foundation Model Mending Every Incomplete Time Series",
+    "year": 2024,
+    "venue": "arXiv",
+    "status": "预印本",
+    "task": "插补/迁移",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "跨领域"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "跨数据集、跨变量设置；本次未逐项提取模型的D",
+    "method": "预训练语言模型；patch；对比学习",
+    "contribution": "把数值、缺失模式和统计特征嵌入预训练模型，研究跨领域及跨变量插补。",
+    "limitation": "时间切分内泛化和跨域泛化不同；v3题名已改变，正式会议归属未确认。",
+    "source_url": "https://arxiv.org/abs/2405.15317",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/NuwaTS2024.txt；v3首页、实验",
+    "doi": "",
+    "authors": "Jinguo Cheng and Chunwei Yang and Wanlin Cai and Yuxuan Liang and Qingsong Wen and Yuankai Wu",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/NuwaTS2024.txt",
+    "local_pdf": "sources/downloaded_pdf/NuwaTS2024.pdf"
+  },
+  {
+    "id": "P57",
+    "key": "DGCRIN2023",
+    "name": "DGCRIN",
+    "title": "Dynamic graph convolutional recurrent imputation network for spatiotemporal traffic missing data",
+    "year": 2023,
+    "venue": "Knowledge-Based Systems",
+    "status": "已发表",
+    "task": "插补",
+    "missing_patterns": [
+      "未核实"
+    ],
+    "domains": [
+      "交通"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "交通传感器；维度待全文核实",
+    "method": "动态图；递归网络",
+    "contribution": "用动态时空关联恢复交通缺失数据。",
+    "limitation": "主任务为插补；未获得充分实验表信息，不补写缺失率和D。",
+    "source_url": "https://www.sciencedirect.com/science/article/pii/S0950705122012849",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "10.1016/j.knosys.2022.110188",
+    "authors": "Xiangjie Kong and Wenfeng Zhou and Guojiang Shen and Wenyi Zhang and Nali Liu and Yao Yang",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "261",
+    "issue": "",
+    "page": "110188",
+    "article_number": "110188",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P58",
+    "key": "AirTransfer2024",
+    "name": "空气质量迁移自编码器",
+    "title": "A transferred spatio-temporal deep model based on multi-LSTM auto-encoder for air pollution time series missing value imputation",
+    "year": 2024,
+    "venue": "Future Generation Computer Systems",
+    "status": "已发表",
+    "task": "插补",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "大气"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "空气污染监测；站点×污染物维度待核实",
+    "method": "LSTM自编码器；迁移学习",
+    "contribution": "针对散点与长时连续缺失，将时空信息和迁移学习用于空气污染插补。",
+    "limitation": "仅为数据修复证据，未来预测收益需要外接预测器验证。",
+    "source_url": "https://www.sciencedirect.com/science/article/abs/pii/S0167739X24000839",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "10.1016/j.future.2024.03.015",
+    "authors": "Xiaoxia Zhang and Pengcheng Zhou",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "156",
+    "issue": "",
+    "page": "325-338",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P59",
+    "key": "CTMVP2026",
+    "name": "CT-MVP",
+    "title": "Imputing Missing Long-Term Spatiotemporal Multivariate Atmospheric Data With CNN-Transformer Machine Learning",
+    "year": 2026,
+    "venue": "JGR: Machine Learning and Computation",
+    "status": "已发表",
+    "task": "插补",
+    "missing_patterns": [
+      "块"
+    ],
+    "domains": [
+      "大气"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "SD-WACCM-X 13年；温度、纬向风、经向风3物理量×空间高度网格",
+    "method": "CNN；Transformer",
+    "contribution": "对长时间与高度方向的观测空缺进行多变量大气重构。",
+    "limitation": "3种物理量不意味着展平输入仅3维；空间网格规模须另核实。",
+    "source_url": "https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2025JH000656",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "10.1029/2025JH000656",
+    "authors": "Jiahui Hu and Wenjun Dong and Alan Z. Liu",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "3",
+    "issue": "2",
+    "page": "",
+    "article_number": "e2025JH000656",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P60",
+    "key": "Survey2025",
+    "name": "插补综述",
+    "title": "Deep Learning for Multivariate Time Series Imputation: A Survey",
+    "year": 2025,
+    "venue": "IJCAI",
+    "status": "已发表",
+    "task": "综述",
+    "missing_patterns": [
+      "散点",
+      "块",
+      "变量",
+      "不规则"
+    ],
+    "domains": [
+      "跨领域"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维",
+      "高维"
+    ],
+    "datasets_dimensions": "维度标签为综述覆盖范围，不代表作者完成全部实验",
+    "method": "方法综述；分类框架",
+    "contribution": "系统梳理深度插补路线，可用于回溯基础方法和扩充候选文献。",
+    "limitation": "这是一篇综述，不应与模型论文混算胜率或实验覆盖。",
+    "source_url": "https://www.ijcai.org/proceedings/2025/1187",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/Survey2025.txt；分类体系",
+    "doi": "10.24963/ijcai.2025/1187",
+    "authors": "Jun Wang and Wenjie Du and Yiyuan Yang and Linglong Qian and Wei Cao and Keli Zhang and Wenjia Wang and Yuxuan Liang and Qingsong Wen",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "10696-10704",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/Survey2025.txt",
+    "local_pdf": "sources/downloaded_pdf/Survey2025.pdf"
+  },
+  {
+    "id": "P61",
+    "key": "TSIBench2024",
+    "name": "TSI-Bench",
+    "title": "TSI-Bench: Benchmarking Time Series Imputation",
+    "year": 2024,
+    "venue": "arXiv",
+    "status": "预印本",
+    "task": "基准",
+    "missing_patterns": [
+      "散点",
+      "块"
+    ],
+    "domains": [
+      "医疗",
+      "大气",
+      "能源",
+      "交通"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "8数据集、4领域；维度需按各数据集版本读取",
+    "method": "统一插补基准",
+    "contribution": "统一多种插补模型和缺失设置，强调评测协议的重要性。",
+    "limitation": "以首次预印本年份入表；未用第三方汇总页推断正式会议录用；不直接测试全部下游预测。",
+    "source_url": "https://arxiv.org/abs/2406.12747",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "",
+    "authors": "",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "完整作者列表尚未整理；请通过原文/DOI导入补全。",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P62",
+    "key": "AirQualityBench2026",
+    "name": "AirQualityBench",
+    "title": "AirQualityBench: A Realistic Evaluation Benchmark for Global Air Quality Forecasting",
+    "year": 2026,
+    "venue": "arXiv",
+    "status": "预印本",
+    "task": "基准",
+    "missing_patterns": [
+      "自然缺失"
+    ],
+    "domains": [
+      "大气"
+    ],
+    "dimension_tags": [
+      "高维"
+    ],
+    "datasets_dimensions": "全球3720站×6污染物；并非所有单个模型都联合输入全部站点",
+    "method": "自然缺失基准；观测掩码评测",
+    "contribution": "利用2021—2025监测数据保留现实缺失，评估有可用未来真值的位置。",
+    "limitation": "数据规模与单模型输入D分别报告；真实缺失机制通常不可仅凭掩码识别。",
+    "source_url": "https://arxiv.org/abs/2605.05854",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/AirQualityBench2026.txt；数据说明、评估mask",
+    "doi": "",
+    "authors": "",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "完整作者列表尚未整理；请通过原文/DOI导入补全。",
+    "local_text": "downloaded_text/AirQualityBench2026.txt",
+    "local_pdf": "sources/downloaded_pdf/AirQualityBench2026.pdf"
+  },
+  {
+    "id": "P63",
+    "key": "Physiome2025",
+    "name": "Physiome-ODE",
+    "title": "Physiome-ODE: A Benchmark for Irregularly Sampled Multivariate Time Series Forecasting Based on Biological ODEs",
+    "year": 2025,
+    "venue": "ICLR",
+    "status": "已发表",
+    "task": "基准",
+    "missing_patterns": [
+      "不规则"
+    ],
+    "domains": [
+      "生物动力学",
+      "合成"
+    ],
+    "dimension_tags": [
+      "低维",
+      "中维"
+    ],
+    "datasets_dimensions": "50个筛选系统；Table 4例如DUP01=2、WOL01=9、DOK01=18、INA01=29；仅标已核实范围",
+    "method": "机理ODE；不规则采样基准",
+    "contribution": "基于多个生理动力学系统构建可控制的不规则观测实验。",
+    "limitation": "合成生理动力学不等同于真实ICU的MNAR采样过程；2026修订不另计一篇。",
+    "source_url": "https://arxiv.org/abs/2502.07489",
+    "evidence_level": "A",
+    "evidence_locator": "downloaded_text/Physiome2025.txt；首页、Table 4",
+    "doi": "",
+    "authors": "Christian Klötergens and Vijaya Krishna Yalavarthi and Randolf Scholz and Maximilian Stubbemann and Stefan Born and Lars Schmidt-Thieme",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "downloaded_text/Physiome2025.txt",
+    "local_pdf": "sources/downloaded_pdf/Physiome2025.pdf"
+  },
+  {
+    "id": "P64",
+    "key": "GRUD2018",
+    "name": "GRU-D",
+    "title": "Recurrent Neural Networks for Multivariate Time Series with Missing Values",
+    "year": 2018,
+    "venue": "Scientific Reports",
+    "status": "已发表",
+    "task": "基础：分类/表示",
+    "missing_patterns": [
+      "自然缺失",
+      "不规则"
+    ],
+    "domains": [
+      "医疗"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "MIMIC-III、PhysioNet；不同预处理维度需核对",
+    "method": "GRU；掩码；时间衰减",
+    "contribution": "把掩码和距上次观测的时间间隔作为信息，建立信息性缺失建模基础。",
+    "limitation": "主要结果为临床分类，不是多步数值预测；不计入近五年论文数。",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/29666385/",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "10.1038/s41598-018-24271-9",
+    "authors": "Zhengping Che and Sanjay Purushotham and Kyunghyun Cho and David Sontag and Yan Liu",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "8",
+    "issue": "1",
+    "page": "",
+    "article_number": "6085",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P65",
+    "key": "BRITS2018",
+    "name": "BRITS",
+    "title": "BRITS: Bidirectional Recurrent Imputation for Time Series",
+    "year": 2018,
+    "venue": "NeurIPS",
+    "status": "已发表",
+    "task": "基础：插补",
+    "missing_patterns": [
+      "散点",
+      "自然缺失"
+    ],
+    "domains": [
+      "医疗",
+      "大气",
+      "人体活动"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "空气质量、临床、活动定位；各版本D待核实",
+    "method": "双向RNN；一致性约束",
+    "contribution": "通过双向递归优化缺失值及表示，是常用插补基线。",
+    "limitation": "未来预测中仅能在历史窗内部双向计算；原始任务还包含分类。",
+    "source_url": "https://arxiv.org/abs/1805.10572",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "",
+    "authors": "Wei Cao and Dong Wang and Jian Li and Hao Zhou and Lei Li and Yitan Li",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P66",
+    "key": "GRUODE2019",
+    "name": "GRU-ODE-Bayes",
+    "title": "GRU-ODE-Bayes: Continuous Modeling of Sporadically-Observed Time Series",
+    "year": 2019,
+    "venue": "NeurIPS",
+    "status": "已发表",
+    "task": "基础：不规则预测",
+    "missing_patterns": [
+      "不规则"
+    ],
+    "domains": [
+      "医疗",
+      "气候",
+      "合成"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "临床、气候、随机动力系统；精确维度待核实",
+    "method": "连续时间；ODE；贝叶斯更新",
+    "contribution": "在观测之间演化隐状态，到达观测时进行贝叶斯式更新。",
+    "limitation": "动力学连续先验与求解成本需权衡；作为历史基础单独计数。",
+    "source_url": "https://arxiv.org/abs/1905.12374",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "",
+    "authors": "Edward De Brouwer and Jaak Simm and Adam Arany and Yves Moreau",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P67",
+    "key": "NeuralCDE2020",
+    "name": "Neural CDE",
+    "title": "Neural Controlled Differential Equations for Irregular Time Series",
+    "year": 2020,
+    "venue": "NeurIPS",
+    "status": "已发表",
+    "task": "基础：表示/分类",
+    "missing_patterns": [
+      "不规则"
+    ],
+    "domains": [
+      "医疗",
+      "轨迹",
+      "信号"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "原始实验含分类；维度随任务变化",
+    "method": "连续时间；受控微分方程",
+    "contribution": "使潜在动力学受新到观测驱动，是不规则序列表示的重要基础。",
+    "limitation": "路径构建常用插值；不能将其不加限定地称为完全免插值预测器。",
+    "source_url": "https://proceedings.neurips.cc/paper/2020/hash/4a5876b450b45371f6cfe5047ac8cd45-Abstract.html",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "",
+    "authors": "Patrick Kidger and James Morrill and James Foster and Terry Lyons",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  },
+  {
+    "id": "P68",
+    "key": "GPVAE2020",
+    "name": "GP-VAE",
+    "title": "GP-VAE: Deep Probabilistic Time Series Imputation",
+    "year": 2020,
+    "venue": "AISTATS",
+    "status": "已发表",
+    "task": "基础：概率插补",
+    "missing_patterns": [
+      "散点",
+      "不规则"
+    ],
+    "domains": [
+      "医疗",
+      "合成"
+    ],
+    "dimension_tags": [
+      "待核实"
+    ],
+    "datasets_dimensions": "临床等；本次未核实各预处理D",
+    "method": "高斯过程；VAE",
+    "contribution": "以高斯过程潜在先验结合深度生成模型表达时间相关与插补不确定性。",
+    "limitation": "属于插补基础方法，未来预测能力须单独实证。",
+    "source_url": "https://proceedings.mlr.press/v108/fortuin20a.html",
+    "evidence_level": "B",
+    "evidence_locator": "出版方/作者摘要",
+    "doi": "",
+    "authors": "Vincent Fortuin and Dmitry Baranchuk and Gunnar Rätsch and Stephan Mandt",
+    "code_url": "",
+    "access_date": "2026-09-26",
+    "volume": "",
+    "issue": "",
+    "page": "",
+    "article_number": "",
+    "bibliography_note": "",
+    "local_text": "",
+    "local_pdf": ""
+  }
+]

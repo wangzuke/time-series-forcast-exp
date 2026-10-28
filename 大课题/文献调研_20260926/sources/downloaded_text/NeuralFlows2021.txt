@@ -1,0 +1,1419 @@
+                                             Neural Flows: Efficient Alternative to Neural ODEs
+
+
+                                                            Marin Biloš1∗, Johanna Sommer1 , Syama Sundar Rangapuram2 ,
+                                                                     Tim Januschowski2 , Stephan Günnemann1
+                                                              1
+                                                                Technical University of Munich, 2 AWS AI Labs, Germany
+arXiv:2110.13040v1 [cs.LG] 25 Oct 2021
+
+
+
+
+                                                                                          Abstract
+                                                     Neural ordinary differential equations describe how values change in time. This
+                                                     is the reason why they gained importance in modeling sequential data, especially
+                                                     when the observations are made at irregular intervals. In this paper we propose an
+                                                     alternative by directly modeling the solution curves — the flow of an ODE — with
+                                                     a neural network. This immediately eliminates the need for expensive numerical
+                                                     solvers while still maintaining the modeling capability of neural ODEs. We propose
+                                                     several flow architectures suitable for different applications by establishing precise
+                                                     conditions on when a function defines a valid flow. Apart from computational effi-
+                                                     ciency, we also provide empirical evidence of favorable generalization performance
+                                                     via applications in time series modeling, forecasting, and density estimation.
+
+
+                                         1       Introduction
+                                         Ordinary differential equations (ODEs) are among the most important tools for modeling complex
+                                         systems, both in natural and social sciences. They describe the instantaneous change in the system,
+                                         which is often an easier way to model physical phenomena than specifying the whole system itself.
+                                         For example, the change of the pendulum angle or the change in population can be naturally expressed
+                                         in the differential form. Similarly, Chen et al. [11] introduce neural ODEs that describe how some
+                                         quantity of interest represented as a vector x, changes with time: ẋ = f (t, x(t)), where f is now a
+                                         neural network. Starting at some initial value x(t0 ) we can find the result of this dynamic at any t1 :
+                                                                             Z t1
+                                                           x(t1 ) = x(t0 ) +      f (t, x(t)) dt = ODESolve(x(t0 ), f, t0 , t1 ).           (1)
+                                                                                 t0
+                                         It is sufficient for f to be continuous in t and Lipschitz continuous      Neural ODE        Neural flow
+                                         in x to have a unique solution, by the Picard–Lindelöf theorem
+                                         [14]. This mild condition is already satisfied by a large family             ODESolve(·)      F (t, x0 )
+                                         of neural networks. In most practically relevant scenarios, the
+                                         integral in Equation 1 has to be solved numerically, requiring
+                                         a trade-off between computation cost and numerical precision.
+                                         Much of the follow up work to [11] focused on retaining expres-
+                                         sive dynamics while requiring fewer solver evaluations [22, 37].           f (t, x(t))
+                                         In the machine learning context we are given a set of initial
+                                         conditions (often at t0 = 0) and a loss function for the solution
+                                         evaluated at time t1 . One example is modeling time series where            x0              x0
+                                         the latent state is evolved in continuous time and is used to predict
+                                         the observed measurements [16]. Here, unlike in physics for             Figure 1: (Left) ODE requires nu-
+                                         example, the function f is completely unknown and needs to be           merical solver which evaluates f
+                                         learned from data. Thus, [11] used neural networks to model it,         at many points along the solution
+                                         for their ability to capture complex dynamics. However, note that       curve. (Right) Our approach re-
+                                         this comes at the cost of the ODE being non-interpretable.              turns the solutions directly.
+                                             ∗
+                                                 Work partially done during an internship at Amazon Research. Correspondence to: bilos@in.tum.de.
+
+
+                                         35th Conference on Neural Information Processing Systems (NeurIPS 2021).
+Since solving an ODE is expensive, we want to find a way to keep the desired properties of neural
+ODEs at a much smaller computation cost. If we take a step back, we see that neural ODEs take initial
+values as inputs and return non-intersecting solution curves (Figure 1). In this paper we propose to
+model the solution curves directly, with a neural network, instead of specifying the derivative. That
+is, given an initial condition we return the solution with a single forward pass through our network.
+Straight away, this leads to improvements in computation performance because we avoid using ODE
+solvers altogether. We show how our method can be used as a faster alternative to ODEs in existing
+models [9, 16, 34, 69], while improving the modeling performance. In the following, we derive the
+conditions that our method needs to satisfy and propose different architectures that implement them.
+
+2     Neural flows
+In this section, we present our method, neural flows, that directly models the solution curve of an
+ODE with a neural network. For simplicity, let us briefly assume that the initial condition x0 = x(t0 )
+is specified at t0 = 0. We handle the general case shortly. Then, Equation 1 can be written as
+x(t) = F (t, x0 ), where F is the solution to the initial value problem, ẋ = f (t, x(t)), x0 = x(0).
+We will model F with a neural network. For this, we first list the conditions that F must satisfy so
+that it is a solution to some ODE. Let F : [0, T ] × Rd → Rd be a smooth function satisfying:
+
+       i) F (0, x0 ) = x0 , (initial condition)
+      ii) F (t, ·) is invertible, ∀t. (uniqueness of the solution given the initial value x0 ; i.e., the curves
+          specified by F corresponding to different initial values should not intersect for any t)
+
+There is an exact correspondence between a function F with the above properties and an ODE defined
+                                  d
+with f such that the derivative dt  F (t, x0 ) matches f (t, x(t)) everywhere, given x0 = x(0) [47,
+Theorem 9.12]. In general, we can say that f defines a vector field and F defines a family of integral
+curves, also known as the flow in mathematics (not to be confused with normalizing flow). As F will
+be parameterized with a neural network, condition i) requires that its parameters must depend on t
+such that we have the identity map at t = 0.
+Note that by providing x0 we define a smooth trajectory F (·, x0 ) — the solution to some ODE with
+the initial condition at t0 = 0. If we relax the restriction t0 = 0 and allow x0 to be specified at an
+arbitrary t0 ∈ R, the solution can be obtained with a simple procedure. We first go back to the case
+t = 0 where we obtain the corresponding “initial” value x̂0 := x(0) = F −1 (t0 , x0 ). This then gives
+us the required solution F (·, x̂0 ) to the original initial value problem. Thus, we often prefer functions
+with an analytical inverse.
+Finally, we tackle implementing F . The second property instructs us that the function F (t, ·) is a
+diffeomorphism on Rd . We can satisfy this by drawing inspiration from existing works on normalizing
+flows and invertible neural networks [e.g., 17, 2]. In our case, the parameters must be conditioned
+on time, with identity at t = 0. As a starting example, consider a linear ODE f (t, x(t)) = Ax(t),
+with x(0) = x0 . Its solution can be expressed as F (t, x0 ) = exp(At)x0 , where exp is the matrix
+exponential. Here, the learnable parameters A are simply multiplied by t to ensure condition i); and
+given fixed t, the network behaves as an invertible linear transformation. In the following we propose
+other, more expressive functions suitable for applications such as time series modeling.
+
+2.1   Proposed flow architectures
+
+ResNet flow. A single residual layer xt+1 = xt + g(xt ) [30] bears a resemblance to Equation 1 and
+can be seen as a discretized version of a continuous transformation which inspired the development
+of neural ODEs. Although plain ResNets are not invertible, one could use spectral normalization [26]
+to enforce a small Lipschitz constant of the network, which guarantees invertibility [2, Theorem 1].
+Thus, ResNets become a natural choice for modeling the solution curve F resulting in the following
+extension — ResNet flow:
+                                       F (t, x) = x + ϕ(t)g(t, x),                                         (2)
+where ϕ : R → Rd . This satisfies properties i) and ii) from above when ϕ(0) = 0 and |ϕ(t)i | < 1;
+and g : Rd+1 → Rd is an arbitrary contractive neural network (Lip(g) < 1). One simple choice for
+ϕ is a tanh function. The inverse of F can be found via fixed point iteration similar to [2].
+
+
+                                                      2
+GRU flow. Time series data is traditionally modeled with recurrent neural networks, e.g., with a
+GRU [12], such that the hidden state ht−1 is updated at fixed intervals with the new observation xt :
+                    ht = GRUCell(ht−1 , xt ) = zt        ht−1 + (1 − zt )     ct ,                   (3)
+where zt and ct are functions of the previous state ht−1 and the new input xt .
+De Brouwer et al. [16] derived the continuous equivalent of this architecture called GRU-ODE (see
+Appendix A.1). Given the initial condition h0 = h(t0 ), they evolve the hidden state h(t) with an
+ODE, until they observe new xt1 at time t1 , when they use Equation 3 to update it:
+              h̄t1 = ODESolve(h0 , GRU-ODE, t0 , t1 ),       ht1 = GRUCell(h̄t1 , xt1 ).             (4)
+Here, we will derive the flow version of GRU-ODE. If we rewrite Equation 3 by regrouping terms:
+ht = ht−1 + (1 − zt ) (ct − ht−1 ), we see that GRU update acts as a single ResNet layer.
+Definition 1. Let fz , fr , fc : Rd+1 → Rd be any arbitrary neural networks and let z(t, h) =
+α · σ(fz (t, h)), r(t, h) = β · σ(fr (t, h)), c(t, h) = tanh(fc (t, r(t, h) h)), where α, β ∈ R and
+σ is a sigmoid function. Further, let ϕ : R → Rd be a continuous function with ϕ(0) = 0 and
+|ϕ(t)i | < 1. Then the evolution of GRU state in continuous time is defined as:
+                         F (t, h) = h + ϕ(t)(1 − z(t, h))      (c(t, h) − h).                        (5)
+Theorem 1. A neural network defined by Equation 5 specifies a flow when the functions fz , fr and
+fc are contractive maps, i.e., Lip(f· ) < 1, and α = 25 , β = 45 .
+We prove Theorem 1 in Appendix A.3 by showing that the second summand on the right hand side in
+Equation 5 satisfies Lipschitz constraint making the whole network invertible. We also show that
+the GRU flow has the same desired properties as GRU-ODE, namely, bounding the hidden state in
+(−1, 1) and having the Lipschitz constant of 2. Note that GRU flow (Equation 5) acts as a replacement
+to ODESolve in Equation 4. Alternatively, we can append xt to the input of fz , fr and fc , which
+would give us a continuous-in-time version of GRU.
+Coupling flow. The disadvantage of both ResNet flow and GRU flow is the missing analytical inverse.
+To this end, we propose a continuous-in-time version of an invertible transformation based on splitting
+the input dimensions into two disjoint sets A and B, A ∪ B = {1, 2, . . . , d} [17]. We copy the values
+indexed by B and transform the rest conditioned on xB which gives us the coupling flow:
+                       F (t, x)A = xA exp(u(t, xB )ϕu (t)) + v(t, xB )ϕv (t),                        (6)
+where u, v are arbitrary neural networks and ϕu (0) = ϕv (0) = 0. We can easily see that this satisfies
+condition i), and it is invertible by design regardless of t [17]. Since some values stay constant in a
+single layer, we apply multiple consecutive transformations, choosing different partitions A and B.
+For all three models we can stack multiple layers F = F1 ◦ · · · ◦ Fn and still define a proper flow
+since the composition of invertible functions is invertible, and consecutive identities give an identity.
+We can think of ϕ (including ϕu , ϕv ) as a time embedding function that has to be zero at t = 0. Since
+it is a function of a single variable, we would like to keep the complexity low and avoid using general
+neural networks in favor of interpretable and expressive basis functions. A simple example is linear
+dependence on time ϕ(t) = αt, or tanh(αt) for ResNet flow. We use theseP        in the experiments. An
+alternative, more powerful embedding consists of Fourier features ϕ(t)i = k αik sin(βik t).
+
+2.2   On approximation capabilities
+
+Previous works established that neural ODEs are sup-universal for diffeomorphic functions [76] and
+are Lp -universal for continuous maps when composed with terminal family [48]. A similar result also
+holds for affine coupling flows [75], whereas general residual networks can approximate any function
+[53]. The ResNet flow, as defined in Equation 2, can be viewed as an Euler discretization, meaning it
+is enough to stack appropriately many layers to uniformly approximate any ODE solution [48]. GRU
+flow can be viewed as a ResNet flow and coupling flow shares a similar structure, meaning that if
+we can set them to act as an Euler discretization we can match any ODE. However, this is of limited
+use in practice since we use finitely many layers, so the main focus of this paper is to provide the
+empirical evidence that we can outperform neural ODEs on relevant real-world tasks.
+Other results [20, 81] consider limitations of neural ODEs in modeling general homeomorphisms
+(e.g., x 7→ −x) and propose the solution that adds dimensions to the input x. Such augmented
+
+
+                                                   3
+networks can model higher order dynamics. This can be explicitly defined through certain constraints
+for further improvements in performance and better interpretability [59]. We can apply the same trick
+to our models. However, instead of augmenting x, a simpler solution is to relax the conditions on F
+given the task. For example, if we do not need invertibility, we can remove the Lipschitz constraint in
+Equation 2. Since neural flows offer such flexibility, they might be of more practical relevance in
+these use cases.
+
+
+3     Applications
+
+In this section we review two main applications of neural ODEs: modeling irregularly-sampled time
+series and density estimation. We describe the existing modeling approaches and propose extensions
+using neural flows. In Section 4 we will use models presented here to qualitatively and quantitatively
+compare neural flows with neural ODEs.
+
+3.1   Continuous-time latent variable models
+
+Autoregressive [62, 70] and state space models [32, 68] have achieved considerable success modeling
+regularly-sampled time series. However, many real-world applications do not have a constant
+sampling rate and may contain missing values, e.g., in healthcare we have very sparse measurements
+at irregular time intervals. Here we describe how our neural flow models can be used in such scenario.
+Encoder. In this setting, we are given a sequence of observations X = (x1 , . . . , xn ), xi ∈ Rd
+at times t = (t1 , . . . , tn ). To represent this type of data, previous RNN-based works relied on
+exponentially decaying hidden state [8], time gating [58], or simply adding time as an additional
+input [19]. More recently, various ODE-based models built on top of RNNs to evolve the hidden state
+between observations in continuous time, giving rise to, e.g., ODE-RNN [69], while outperforming
+previous approaches. Another model is GRU-ODE [16], which we already described in Equation 4.
+We proposed the GRU flow (Equation 5) that can be used as a straightforward replacement.
+Lechner and Hasani [46] showed that simply evolving the hidden state with a neural ODE can
+cause vanishing or exploding gradients, a known issue in RNNs [3]. Thus, they propose using an
+LSTM-based [31] model instead. The difference to ODE-RNN [69] is using an LSTMCell and
+introducing another hidden state that is not updated continuously in time, which in turn allows
+gradient propagation via internal LSTM gating. To adapt this to our framework, we simply replace
+the ODESolve with the ResNet or coupling flow to obtain a neural flow model.
+Decoder. Once we have a hidden state representation hi of the irregularly-sampled sequence up
+to xi , we are interested in making future predictions. The ODE based models continue evolving
+the hidden state using a numerical solver to get the representation at time ti+1 , with hi+1 =
+ODESolve(hi , f, ti , ti+1 ). With neural flows we can simply pass the next time point ti+1 into F
+and get the next hidden state directly. In the following we show how the presented encoder-decoder
+model is used in both the smoothing and filtering approaches for irregular time series modeling.
+Smoothing approach. The given sequence of observations (X, t) is modeled with latent variables
+or states (z1 , . . . , zn ) ∼ Rh , such that xi ∼ p(xi |zi ), conditionally independent of other xj [11, 69].
+There is a predesignated prior state z0 at t = 0 from which the latent state is assumed to evolve
+continuously. More precisely, if z0 is a sample from the initial latent state z0 , then a latent state
+sample at any future time step t is given by zt = F (t, z0 ).
+Since the exact inference on the initial state z0 , p(z0 |X, t), is intractable, we proceed by doing
+approximate inference following the variational auto-encoder approach [11, 69]. We use an LSTM-
+based neural flow encoder that processes (X, t) and outputs the approximate posterior parameters
+µ and σ from the last state, q(z0 |X, t) = N (µ, σ). The decoder returns all zi deterministically at
+times t with F (t, z0 ), with initial condition z0 ∼ q(z0 |X, t). For the latent state at an arbitrary ti ,
+the target is generated according to the model xi ∼ p(xi |zi ). Given p(z0 ) = N (0, 1), the overall
+model is trained by maximizing the evidence lower bound:
+                    ELBO = Ez0 ∼q(z0 |X,t)) [log p(X)] − KL[q(z0 |X, t)||p(z0 )].                         (7)
+Using continuous time models brings up multiple advantages, from handling irregular time points
+automatically to making predictions at any, and as many time points as required, allowing us to do
+
+
+                                                      4
+reconstruction, missing value imputation and forecasting. This holds whether we use neural flows or
+ODEs, but our approach is more computationally efficient, which matters as we scale to bigger data.
+Filtering approach. In contrast to the previous approach, we can alternatively do the inference in an
+online fashion at each of the observed time points, i.e., estimating the posterior p(zi |x1:i , t1:i ) after
+seeing observations until the current time step i. This is known as filtering. Here, the prediction for
+future time steps is done by evolving the posterior corresponding to the final observed time point
+p(zn |X, t) instead of the initial time point p(z0 |X, t), as was done in the smoothing approach.
+In this paper, we follow the general approach suggested by De Brouwer et al. [16] for capturing
+non-linear dynamics. We use GRU flow (instead of GRU-ODE) for evolving the hidden state hi ∈ Rh
+and we output the mean and variance of the approximate posterior q(zi |x1:i , t1:i ). The log-likelihood
+cannot be computed exactly under this model so [16] suggest using a custom objective that is the
+analogue to Bayesian filtering (see Appendix A.2 for details). Unlike [16], which needs to solve the
+ODE for every observation, our method only needs a single pass through the network per observation.
+
+3.2   Temporal point processes
+
+Sometimes temporal data is measured irregularly and the times at which we observe the events come
+from some underlying process modeled with temporal point processes (TPPs). For example, we can
+use TPPs to model the times of messages between users. One example type of behavior we want to
+capture is excitation [29], e.g., observing one message increases the chance of seeing other soon after.
+A realization of a TPP on an interval [0, T ] is an increasing sequence of arrival times t = (t1 , . . . , tn ),
+ti ∈ [0, T ], where n is a random variable. The model is defined with an intensity function λ(t) that
+tells us how many events we expect to see in some bounded area [15]. The intensity has to be positive.
+We define the history Hti as the events that precede ti , and further define the conditional intensity
+function λ∗ (t) which depends on history. For convenience, we can also work with inter-event times
+τi = ti − ti−1 , without losing generality. We train the model by maximizing the log-likelihood:
+                                          X n                 Z T
+                                                      ∗
+                               log p(t) =       log λ (ti ) −     λ∗ (s) ds.                                (8)
+                                              i                  0
+Previous works [72] used autoregressive models (e.g., RNNs) to represent the history with a fixed-size
+vector hi [19]. The intensity function can correspond to a simple distribution [19] or a mixture of
+distributions [71]. Then the integral in Equation 8 can be computed exactly. Another possibility
+is modeling λ(t) with an arbitrary neural network which requires Monte Carlo integration [6, 56].
+On the other hand, Jia and Benson [34] propose a jump ODE model that evolves the hidden state
+h(t) with an ODE and updates the state with new observations, similar to LSTM-ODE. In this case,
+obtaining the hidden state and solving the integral in Equation 8 can be done in a single solver call.
+Marked point processes. Often, we are also interested in what type of an event happened at time
+point ti . Thus, we can assign the observed type xi , also called mark, and model the arrival times and
+marks jointly: p(t, X) = p(t)p(X|t). Written like this, we can keep the model for arrival times as
+in Equation 8, and add a module that inputs the history hi and the next time point ti+1 and outputs
+the probabilities for each mark type. The special case of xi ∈ Rd is covered in the next section.
+
+3.3   Time-dependent density estimation
+
+Normalizing flows (NFs) define densities with invertible transformations of random variables. That
+is, given a random variable z ∼ q(z), z ∈ Rd and an invertible function F : Rd → Rd , we can
+compute the probability density function of x = F (z) with the change of variables formula [65]:
+p(x) = q(z)| det JF (z)|−1 , where JF is the Jacobian of F . As we can see, it is important to define
+a function F that is easily invertible and has a tractable determinant of the Jacobian. One example is
+the coupling NF [17], which we used to construct the coupling flow in Equation 6. Other tractable
+models include autoregressive [41, 64] and matrix factorization based NFs [4, 40].
+                                                                                            ∂
+In contrast to this, Chen et al. [11] define the transformation with an ODE: f (t, z(t)) = ∂t z(t). This
+allows them to define the instantaneous change in log-density as well as the continuous equivalent to
+the change of variables formula, giving rise to the continuous normalizing flow (CNF):
+                                                                        Z t1            
+         ∂                           ∂f                                               ∂f
+            log p(z(t)) = −tr               , log p(x) = log q(z(t0 )) −        tr            dt,    (9)
+        ∂t                          ∂z(t)                                  t0        ∂z(t)
+
+
+                                                       5
+where t0 = 0 and t1 = 1 are usually fixed. The neural network f can be arbitrary as long as it
+gives unique ODE solutions. This offers an advantage when we need special structure of f that
+cannot be easily implemented with the discrete NFs, e.g., in physics we often require equivariant
+transformations [5, 43]. Besides the cost of running the solver, calculating the trace at each step in
+Equation 9 becomes intractable as the dimension of data grows, so one resorts to stochastic estimation
+[27]. A similar approximation method is used for estimating the determinant in an invertible ResNet
+model [2]. We discuss the computation complexity in Appendix A.8. Again, if we consider a
+linear ODE, we can easily show that calculating the trace and calculating the determinant of the
+corresponding flow is equivalent (see Appendix A.7).
+However, we are not interested in comparison between different normalizing flows for stationary
+densities [see e.g., 42], since flow endpoints t0 and t1 are always fixed; thus, our models would
+be reduced to the discrete NFs. Recently, Chen et al. [9] demonstrated how CNFs can evolve the
+densities in continuous time, with varying t0 and t1 , which proves useful for spatio-temporal data. We
+will show how to do the same with our coupling flow, something that has not been explored before.
+Spatio-temporal processes. We reuse the notation from Section 3.2 to denote the arrival times with
+t and marks with X, xi ∈ Rd , which are now continuous variables. Values xi often correspond
+to locations of events, e.g., earthquakes [60] or disease outbreaks [57]. We use the temporal point
+processes from Section 3.2 to model p(t), and are only left with the conditional density p(X|t). Chen
+et al. [9] propose several models for this, the first one being the time-varying CNF where p(xi |ti ) is
+estimated by integrating Equation 9 from t0 = 0 to observed ti . Using our affine coupling flow as
+defined in Equation 6 we can write:
+                              p(xi |ti ) = q(F −1 (ti , xi ))| det JF −1 (xi )|,                     (10)
+where q is the base density (defined with any NF) and the determinant is the product of the diagonal
+values of the Jacobian w.r.t. xi , which are simply exp terms from Equation 6 [17]. The density p
+evolves with time, the same way as in the CNF model, but without using the solver or trace estimation.
+To generate new realizations at ti , we first sample from q to get x0 ∼ q(x0 ), then evaluate F (ti , x0 ).
+An alternative model, attentive CNF [9], is more expressive compared to the time-varying CNF
+and more efficient than jump ODE models [9, 34]. The probability density of xi depends on all
+the previous values xj<i through the attention mechanism [79]. In our model, we represent all the
+previous points xj<i with an attention encoder and define a conditional coupling NF p(xi |ti , xj<i ).
+We describe the full model in Appendix A.5. Both of the previous models can also use ResNet flow,
+but the benefits over ODEs vanish since the determinant and the inverse require iterative procedure.
+
+4       Experiments
+In this section we show that flow-based models can match or outperform ODEs at a smaller computa-
+tion cost, both in latent variable time series modeling, as well as TPPs and time-dependent density
+estimation. To make fair comparison, we used recently introduced reparameterization trick for ODEs
+that allows faster mini-batching [9], and the semi-norm trick for faster backpropagation [38], making
+the models more competitive compared to the original works. In all experiments we split the data into
+train, validation and test set; train with early stopping and report results on test set. We use Adam
+optimizer [39]. For training we use two different machines, one with 3.4GHz processor and 32GB
+RAM and another with 61GB RAM and NVIDIA Tesla V100 GPU 16GB [52]. All datasets are
+publicly available, we include the download links and release the code that reproduces the results.2
+Synthetic data. We compare the performance of neural ODEs and neural flows on periodic signals
+and data generated from autonomous ODEs. Full setup and results are presented in Appendix B. In
+short, we observe that training with adaptive solvers [18] is slower compared to fixed-step solvers,
+as expected. With the fixed step, however, we are not guaranteed invertibility [63], which can be
+an issue in, e.g., density estimation. Using the same setup, our models are an order of magnitude
+faster. Finally, neural ODEs struggle with non-smooth signals while neural flows perform much
+better, although they also only output smooth dynamics. Neural flows are also better at extrapolating,
+although none of the models excel in this task.
+Stiff ODEs. The numerical approach to solving ODEs is not only slow but it can be unstable. This
+can happen when the ODE becomes stiff, i.e., the solver needs to take very small steps even though
+    2
+        https://www.daml.in.tum.de/neural-flows
+
+
+                                                    6
+                      MuJoCo                    Activity                         Physionet
+                       MSE               MSE            Accuracy           MSE               AUC
+ Neural ODE         8.403±0.142       6.390±0.136     0.756±0.013      4.833±0.078     0.777±0.012
+ Coupling flow 4.217±0.147            6.579±0.049     0.752±0.012      4.860±0.070     0.788±0.004
+ ResNet flow        5.147±0.171       6.279±0.098     0.760±0.004      4.903±0.125     0.784±0.010
+Table 1: Test mean squared error (lower is better) and accuracy/area under curve (higher is better).
+Best result is bolded, result within one standard deviation is highlighted. Averaged over 5 runs.
+the solution curve is smooth. For neural ODEs, it can happen that the target dynamic is known to be
+stiff or the latent dynamic becomes stiff during training.
+                                                                  20         ODE
+To see the effects of this, we use the experiment from [24].                 Flow
+The ODE is given by: ẋ = −1000x+3000−2000e−t . We
+
+
+
+
+                                                               x
+                                                                  10         Data
+train a neural ODE model and a coupling flow to match the
+data, minimizing MSE. The data contains initial conditions
+and solutions, on small intervals with t2 − t1 = 0.125,            0
+                                                                      0   5      10     15   20      25
+t ∈ [0, 15]. The flow first finds the solution at t0 = 0 and
+                                                                                    t
+then solves for t2 (Section 2). We evaluate on an extended
+time interval given x0 = 0. Figure 2 shows that the neural Figure 2: Flows handle stiffness better.
+ODE with an adaptive solver does not match the correct solution, due to its stiffness. In contrast, flow
+captures the solution correctly, as expected, since it does not use a numerical solver.
+Smoothing approach. Following [69], we use three datasets: Activity, Physionet, and MuJoCo.
+Activity contains 6554 time series of 3d positions of 4 sensors attached to an individual. The goal is
+to classify one of the 7 possible activities (e.g., walking, lying, etc.). Physionet [73] contains 8000
+time series and 37 features of patients’ measurements from the first 48 hours after being admitted
+to ICU. The goal is to predict the mortality. MuJoCo is created from a simple physics simulation
+“Hopper” [74] by randomly sampling initial positions and velocities and letting dynamics evolve
+deterministically in time. There are 10000 sequences, with 100 time steps and 14 features.
+We use the encoder-decoder model (Section 3.1) and maximize Equation 7. We use the same number
+of hidden layers and the same size of latent states for both the neural ODE, coupling flow and ResNet
+flow, giving approximately the same number of trainable parameters. ODE models use either Euler
+or adaptive solvers and we report the best results. The results in Table 1 show the reconstruction error
+and the accuracy of prediction. For better readability, we scale MSE scores same as in [69]. Neural
+flows outperform ODE models everywhere (Physionet reconstruction within the confidence interval).
+We noticed that it is possible to further improve the results with bigger flow models but we focused
+on having similar sized models to show that we can get better results at a much smaller cost.
+Speed improvements. In the smoothing experiment, our method offers more than two times speed-up
+during training compared to an ODE using an Euler method (Figure 3, different boxes corresponding
+to different datasets, grouped by experiment types). The gap is even larger for adaptive solvers. Note
+that Figure 3 shows an average time to run one training epoch which includes other operations, such
+as data fetching, state update etc. This shows that ODESolve contributes significantly to long training
+times. When comparing ODEs and flows alone, our method is much faster. In the following we will
+discuss the results from Figure 3 for other experiments as well as other results.
+Filtering approach. Following De Brouwer et al. [16], we use clinical database MIMIC-III [35],
+pre-processed to contain 21250 patients’ time series, with 96 features. We also process newly released
+MIMIC-IV [25, 36] to obtain 17874 patients. The details are in Appendix D.2. The goal is to predict
+the next three measurements in the 12 hour interval after the observation window of 36 hours.
+Table 2 shows that our GRU flow model (Equation 5) mostly outperforms GRU-ODE [16]. Addition-
+ally, we show that the ordinary ResNet flow with 4 stacked transformations (Equation 2) performs
+worse. The reason might be because it is missing GRU flow properties, such as boundedness. Simi-
+larly, an ODE with a regular neural network does not outperform GRU-ODE [16]. Finally, we report
+that the model with GRU flow requires 60% less time to run one training epoch.
+Temporal point processes. As we saw in Section 3.2, most of the TPP models consist of two parts:
+the encoder that processes the history, and the network that outputs the intensity. In the context of
+neural ODEs, we would like to answer: 1) whether having continuous state h(t) outperforms RNNs,
+and 2) if intertwining the hidden state evolution with the intensity outperforms other approaches. For
+this purpose we propose the following models based on continuous intensity and mixture distributions.
+
+
+                                                   7
+                                       MIMIC-III                         MIMIC-IV
+                                 MSE               NLL             MSE              NLL
+              GRU-ODE        0.507±0.005     0.770±0.023      0.379±0.005     0.748±0.045
+              ResNet flow 0.508±0.007        0.779±0.023      0.379±0.005     0.774±0.059
+              GRU flow       0.499±0.004     0.781±0.041      0.364±0.008     0.734±0.054
+              Table 2: Forecasting on healthcare data averaged over 5 runs (lower is better).
+
+                                     MOOC                     Reddit                Wiki
+              Discrete GRU     -0.4448     2.7563        -0.9299   1.8468    -0.5832      8.0527
+              Jump ODE         0.8710      4.6118         0.1308   3.6654    -0.3115      10.6040
+      Cont.
+
+
+
+
+              Coupling flow    0.7694      5.5494        -0.1263   3.6312    -0.2807      9.7214
+              ResNet flow      -1.2379     2.9466        -1.2962   2.3932    -1.2907      10.4368
+          Jump ODE         -0.2626     3.0723      -1.0907    1.9057     -1.3635    7.5537
+      Mix.
+
+
+
+
+          Coupling flow -0.4026        2.5877      -1.0933    1.6817     -1.2702    8.8018
+          ResNet flow      -0.5664     3.0005      -1.0605    1.9491     -1.1937    8.5489
+Table 3: Test NLL for TPP (left columns, per dataset) and marked TPP (right columns); full results in
+Appendix C. Cont. denotes models with continuous intensity, and Mix. with mixture distribution.
+
+
+Jump ODE evolves h(t) continuously together with the intensity function λ(t) = g(h(t)) [34, 9],
+where g is a neural network. The neural flow version replaces an ODE with our proposed flow models
+to evolve h(t) and uses Monte Carlo integration to evaluate Equation 8. Note that this operation can
+be parallelized unlike solving an ODE.
+The mixture-based models keep the same continuous time encoders (ODEs and flows) but output the
+stationary log-normal mixture for the next arrival time. That is, instead of outputting the continuous
+intensity, they only use the hidden state at the last observation to define the probability density
+function [71]. As a baseline, we use a discrete GRU with the same mixture decoder.
+We use both synthetic and real-world data, following [61, 71]. We generate 4 synthetic datasets
+corresponding to homogeneous, renewal and self-correcting processes. For real-world data, we collect
+timesteps of forum posts (Reddit), interactions of students with an online course system (MOOC),
+and Wiki page edits [44]. The details of the data are in Appendix D.3.
+We report the test negative log-likelihood on real-world data in Table 3, for models trained both
+with and without marks. Full results, including synthetic data can be found in the Appendix C. We
+note that all the models capture the synthetic data, although continuous intensity models struggle
+compared to those with the mixture distribution. We can see this is the case for real-world data too,
+where the mixture distribution usually outperforms the corresponding continuous intensity model.
+In general, neural flows are better than ODE-based models, with the exception of one ODE model
+on Wiki dataset. We can conclude that having a continuous encoder is preferred to a discrete RNN
+because it can capture the irregular time sequence better. However, there is no benefit in parametrizing
+the intensity function in a continuous fashion, especially since this is a much slower approach.
+Table 8 in Appendix C shows the comparison of wall clock times. Comparing only continuous
+intensity models we can see that Monte Carlo integration is faster than solving an ODE. As expected,
+using the mixture distribution gives the best performance. Thus, our flow models offer more than an
+order of magnitude faster processing compared to ODEs with continuous intensity. Figure 3 shows
+the difference for continuous models on the respective real-world datasets, the gap is even bigger if
+we include mixture-based models, where the speed-up is over an order of magnitude.
+Spatial data. We compare the continuous normalizing flows with our continuous-time version of the
+coupling NF on time-dependent density estimation. We use two versions of each model: time-varying
+and attentive, as described in Section 3.3. Following Chen et al. [9], we use locations of bike rentals
+(Bikes), Covid cases for the state of New Jersey [77], and earthquake events in Japan (EQ) [78].
+Results in Table 4 show the test NLL for spatial data, that is, we do not report the TPP loss since this
+is shared between models. Our continuous coupling NF models perform better on all datasets. Since
+affine coupling is a simple transformation, we require bigger models with more parameters. At the
+same time, our models are still more than an order of magnitude faster. Adapting some other, more
+expressive normalizing flows to satisfy flow constraints might reduce the number of parameters.
+
+
+                                                     8
+                                                                                Smoothing Filtering   TPP       Density
+                         Bikes     Covid         EQ                       1.0
+
+
+
+
+                                                          Relative time
+    Time-var. CNF        2.315     1.984      1.709                       0.8
+                                                                                                            Neural ODE
+                                                                          0.6
+    Attentive CNF        2.371     1.973      1.668                                                         Neural flow
+                                                                          0.4
+    Time-var. coupling   2.280     1.916      1.633
+                                                                          0.2
+    Attentive coupling   2.330     1.926      1.457                       0.0
+       Table 4: Test NLL for spatial datasets.        Figure 3: Comparing per-epoch wall-clock times.
+                                                      Each box is dataset (order by appearance in text).
+
+5     Discussion
+In this paper we presented neural flows as an efficient alternative to neural ODEs. We retain all the
+desirable properties of neural ODEs, without using numerical solvers. Our method outperforms the
+ODE based models in time series modeling and density estimation, at a much smaller computation
+cost. This brings the possibility to scale to larger datasets and models in the future.
+Other related work. Early works on approximating the ODE solutions without numerical solvers
+used splines or radial basis functions [55, 50], or functions similar to modern ResNets [45]. More
+recently, [66] approximate the solution by minimizing the error of the solution points and of the
+boundary condition. Unlike these approaches, we do not approximate the solution to some given
+ODE but learn the solutions which corresponds to learning the unknown ODE. Also, our method
+guarantees that we always define a proper flow, as is required in certain applications.
+A similar problem is modeling the solutions to partial differential equations, e.g., with a model that is
+analogous to the classical discrete encoder-decoder [49]. Although we cannot compare these two
+settings directly, one could use our method to enhance modeling PDE solutions.
+ResNets were initially recognized as a discretization of dynamical systems [51, 80] and were used to
+tackle infinite depth [1, 54], stability [13, 28] and invertibility [7, 33]. We take a different approach
+and propose modified ResNets, among other, avoiding any iterative procedure. ResNets also lead
+to neural ODEs which have memory efficient backpropagation as one of the main features [21, 11].
+Further, to combat solver inefficiency, many improvements have been proposed, such as adding
+regularization [22, 24, 37], improving training [23, 38, 82] and having faster inference [67].
+Limitations. Defining a flow automatically defines an ODE, but since many ODEs do not have
+closed-form solutions, we cannot always find the exact flow corresponding to a particular ODE. This
+is usually not an issue since in most applications, such as those presented in Section 3, it is sufficient
+for both neural ODEs and neural flows to approximate an unknown dynamic. However, if we restrict
+ourselves to autonomous ODEs (fixed vector field in time), we cannot define a general neural flow
+that satisfies this condition. We further discuss this in Appendix A.6 and present a potential solution
+that involves a simple regularization.
+Since neural ODEs reuse the same function f in the solver, essentially defining implicit layers, they
+can be more parameter efficient. Sometimes we might need more parameters to represent the same
+dynamic, as we observed in the density estimation task. But even here, the results show neural flows
+are more efficient. In the special setting with limited memory, we can resort to existing solutions [10].
+Future work. In this work we designed neural flow models as invertible functions that satisfy initial
+condition using simple dependence on time. Although these models already outperform neural ODEs,
+it would be interesting to see if there are other ways to define a neural flow, and whether these
+architectures can outperform the ones we proposed here.
+We applied our method to the main applications of neural ODEs: time series modeling and density
+estimation. In the future we hope to see neural flows adapted for other use cases as well. Investigating
+flows that define the higher order dynamics might also be of interest.
+Broader impact. We introduced a new method to replace neural ODEs. As such, it has a wide
+variety of potential applications, some of which we explored in this paper. We used several healthcare
+datasets and hope to see further applications of our method in this domain. At the same time, it is
+important to pay attention to data privacy and fairness when building such models, especially for
+sensitive applications, such as healthcare. One of the main benefits of our method is the reduced
+computation cost, which may imply energy savings.
+
+
+                                                      9
+Acknowledgments
+We would like to thank Oleksandr Shchur for helpful discussions.
+
+References
+ [1] S. Bai, J. Z. Kolter, and V. Koltun. Deep equilibrium models. In NeurIPS, 2019.
+ [2] J. Behrmann, W. Grathwohl, R. T. Chen, D. Duvenaud, and J.-H. Jacobsen. Invertible residual
+     networks. In ICML, 2019.
+ [3] Y. Bengio, P. Simard, and P. Frasconi. Learning long-term dependencies with gradient descent
+     is difficult. IEEE transactions on neural networks, 5(2):157–166, 1994.
+ [4] R. v. d. Berg, L. Hasenclever, J. M. Tomczak, and M. Welling. Sylvester normalizing flows for
+     variational inference. In UAI 2018, 2018.
+ [5] M. Biloš and S. Günnemann. Scalable normalizing flows for permutation invariant densities. In
+     ICML, 2021.
+ [6] M. Biloš, B. Charpentier, and S. Günnemann. Uncertainty on asynchronous time event predic-
+     tion. In NeurIPS, 2019.
+ [7] B. Chang, L. Meng, E. Haber, L. Ruthotto, D. Begert, and E. Holtham. Reversible architectures
+     for arbitrarily deep residual neural networks. In AAAI, 2018.
+ [8] Z. Che, S. Purushotham, K. Cho, D. Sontag, and Y. Liu. Recurrent neural networks for
+     multivariate time series with missing values. Scientific reports, 8(1):1–12, 2018.
+ [9] R. T. Q. Chen, B. Amos, and M. Nickel. Neural spatio-temporal point processes. In ICLR,
+     2021.
+[10] T. Chen, B. Xu, C. Zhang, and C. Guestrin. Training deep nets with sublinear memory cost.
+     arXiv preprint arXiv:1604.06174, 2016.
+[11] T. Q. Chen, Y. Rubanova, J. Bettencourt, and D. K. Duvenaud. Neural ordinary differential
+     equations. In NeurIPS, 2018.
+[12] K. Cho, B. Van Merriënboer, D. Bahdanau, and Y. Bengio. On the properties of neural machine
+     translation: Encoder-decoder approaches. In Eighth Workshop on Syntax, Semantics and
+     Structure in Statistical Translation (SSST-8), 2014.
+[13] M. Ciccone, M. Gallieri, J. Masci, C. Osendorfer, and F. Gomez. NAIS-Net: Stable deep
+     networks from non-autonomous differential equations. In NeurIPS, 2018.
+[14] E. A. Coddington and N. Levinson. Theory of ordinary differential equations. Tata McGraw-Hill
+     Education, 1955.
+[15] D. Daley and D. Vere-Jones. An Introduction to the Theory of Point Processes: Volume I:
+     Elementary Theory and Methods. Springer Science & Business Media, 2007.
+[16] E. De Brouwer, J. Simm, A. Arany, and Y. Moreau. GRU-ODE-Bayes: Continuous modeling
+     of sporadically-observed time series. In NeurIPS, 2019.
+[17] L. Dinh, J. Sohl-Dickstein, and S. Bengio. Density estimation using Real NVP. In ICLR, 2017.
+[18] J. R. Dormand and P. J. Prince. A family of embedded Runge-Kutta formulae. Journal of
+     computational and applied mathematics, 6(1):19–26, 1980.
+[19] N. Du, H. Dai, R. Trivedi, U. Upadhyay, M. Gomez-Rodriguez, and L. Song. RMTPP:
+     Embedding event history to vector. In KDD, 2016.
+[20] E. Dupont, A. Doucet, and Y. W. Teh. Augmented neural ODEs. In NeurIPS, 2019.
+
+
+                                               10
+[21] P. E. Farrell, D. A. Ham, S. W. Funke, and M. E. Rognes. Automated derivation of the adjoint
+     of high-level transient finite element programs. SIAM Journal on Scientific Computing, 35(4):
+     C369–C393, 2013.
+[22] C. Finlay, J.-H. Jacobsen, L. Nurbekyan, and A. M. Oberman. How to train your neural ODE.
+     In ICML, 2020.
+[23] A. Gholami, K. Keutzer, and G. Biros. ANODE: Unconditionally accurate memory-efficient
+     gradients for neural ODEs. In IJCAI, 2019.
+[24] A. Ghosh, H. S. Behl, E. Dupont, P. H. Torr, and V. Namboodiri. STEER: Simple temporal
+     regularization for neural odes. In NeurIPS, 2020.
+[25] A. L. Goldberger, L. A. N. Amaral, L. Glass, J. M. Hausdorff, P. C. Ivanov, R. G. Mark, J. E.
+     Mietus, G. B. Moody, C.-K. Peng, and H. E. Stanley. Physiobank, Physiotoolkit, and Physionet:
+     Components of a new research resource for complex physiologic signals. Circulation, 101(23):
+     e215–e220, 2000.
+[26] H. Gouk, E. Frank, B. Pfahringer, and M. J. Cree. Regularisation of neural networks by
+     enforcing Lipschitz continuity. Machine Learning, 110(2):393–416, 2021.
+[27] W. Grathwohl, R. T. Chen, J. Bettencourt, I. Sutskever, and D. Duvenaud. FFJORD: Free-form
+     continuous dynamics for scalable reversible generative models. In ICLR, 2019.
+[28] E. Haber and L. Ruthotto. Stable architectures for deep neural networks. Inverse Problems, 34
+     (1):014004, 2017.
+[29] A. G. Hawkes. Spectra of some self-exciting and mutually exciting point processes. Biometrika,
+     58(1):83–90, 1971.
+[30] K. He, X. Zhang, S. Ren, and J. Sun. Deep residual learning for image recognition. In IEEE
+     CCVPR, 2016.
+[31] S. Hochreiter and J. Schmidhuber. Long short-term memory. Neural computation, 9(8):
+     1735–1780, 1997.
+[32] R. Hyndman, A. Koehler, K. Ord, and R. Snyder. Forecasting with exponential smooth-
+     ing. The state space approach. Springer Science & Business Media, 2008. doi: 10.1007/
+     978-3-540-71918-2.
+[33] J. Jacobsen, A. W. M. Smeulders, and E. Oyallon. i-revnet: Deep invertible networks. In ICLR,
+     2018.
+[34] J. Jia and A. R. Benson. Neural jump stochastic differential equations. In NeurIPS, 2019.
+[35] A. Johnson, T. Pollard, L. Shen, H. L. Li-Wei, M. Feng, M. Ghassemi, B. Moody, P. Szolovits,
+     L. A. Celi, and R. G. Mark. MIMIC-III, a freely accessible critical care database. Scientific
+     data, 3(1):1–9, 2016.
+[36] A. Johnson, L. Bulgarelli, T. Pollard, S. Horng, L. A. Celi, and R. Mark. MIMIC-IV (version
+     1.0). PhysioNet, 2021. doi: 10.13026/s6n6-xd98.
+[37] J. Kelly, J. Bettencourt, M. J. Johnson, and D. Duvenaud. Learning differential equations that
+     are easy to solve. In NeurIPS, 2020.
+[38] P. Kidger, R. T. Chen, and T. Lyons. "Hey, that’s not an ODE": Faster ODE adjoints via
+     seminorms. In ICML, 2021.
+[39] D. P. Kingma and J. Ba. Adam: A method for stochastic optimization. In ICLR, 2015.
+[40] D. P. Kingma and P. Dhariwal. Glow: Generative flow with invertible 1x1 convolutions. In
+     NeurIPS, 2018.
+[41] D. P. Kingma, T. Salimans, R. Jozefowicz, X. Chen, I. Sutskever, and M. Welling. Improved
+     variational inference with inverse autoregressive flow. In NeurIPS, 2016.
+
+
+                                                11
+[42] I. Kobyzev, S. Prince, and M. Brubaker. Normalizing flows: An introduction and review of
+     current methods. IEEE Transactions on Pattern Analysis and Machine Intelligence, 2020.
+[43] J. Köhler, L. Klein, and F. Noé. Equivariant flows: exact likelihood generative learning for
+     symmetric densities. In ICML, 2020.
+[44] S. Kumar, X. Zhang, and J. Leskovec. Predicting dynamic embedding trajectory in temporal
+     interaction networks. In Proceedings of the 25th ACM SIGKDD International Conference on
+     Knowledge Discovery & Data Mining, pages 1269–1278, 2019.
+[45] I. E. Lagaris, A. Likas, and D. I. Fotiadis. Artificial neural networks for solving ordinary and
+     partial differential equations. IEEE transactions on neural networks, 9(5):987–1000, 1998.
+[46] M. Lechner and R. Hasani. Learning long-term dependencies in irregularly-sampled time series.
+     In NeurIPS, 2020.
+[47] J. M. Lee. Introduction to Smooth Manifolds. Springer, 2012.
+[48] Q. Li, T. Lin, and Z. Shen. Deep learning via dynamical systems: An approximation perspective.
+     arXiv preprint arXiv:1912.10382, 2019.
+[49] Z. Li, N. Kovachki, K. Azizzadenesheli, B. Liu, K. Bhattacharya, A. Stuart, and A. Anandkumar.
+     Fourier neural operator for parametric partial differential equations. In ICLR, 2021.
+[50] Li Jianyu, Luo Siwei, Qi Yingjian, and Huang Yaping. Numerical solution of differential
+     equations by radial basis function neural networks. In IJCNN, 2002.
+[51] Q. Liao and T. Poggio. Bridging the gaps between residual learning, recurrent neural networks
+     and visual cortex. arXiv preprint arXiv:1604.03640, 2016.
+[52] E. Liberty, Z. Karnin, B. Xiang, L. Rouesnel, B. Coskun, R. Nallapati, J. Delgado, A. Sadoughi,
+     Y. Astashonok, P. Das, et al. Elastic machine learning algorithms in amazon sagemaker. In
+     Proceedings of the ACM SIGMOD International Conference on Management of Data, 2020.
+[53] H. Lin and S. Jegelka. ResNet with one-neuron hidden layers is a universal approximator. In
+     NeurIPS, 2018.
+[54] Y. Lu, A. Zhong, Q. Li, and B. Dong. Beyond finite layer neural networks: Bridging deep
+     architectures and numerical differential equations. In ICML, 2018.
+[55] A. J. Meade Jr and A. A. Fernandez. The numerical solution of linear ordinary differential
+     equations by feedforward neural networks. Mathematical and Computer Modelling, 19(12):
+     1–25, 1994.
+[56] H. Mei and J. M. Eisner. The neural hawkes process: A neurally self-modulating multivariate
+     point process. In NeurIPS, 2017.
+[57] S. Meyer, J. Elias, and M. Höhle. A space–time conditional intensity model for invasive
+     meningococcal disease occurrence. Biometrics, 68(2):607–616, 2012.
+[58] D. Neil, M. Pfeiffer, and S.-C. Liu. Phased LSTM: Accelerating recurrent network training for
+     long or event-based sequences. In NeurIPS, 2016.
+[59] A. Norcliffe, C. Bodnar, B. Day, N. Simidjievski, and P. Liò. On second order behaviour in
+     augmented neural ODEs. In NeurIPS, 2020.
+[60] Y. Ogata and D. Vere-Jones. Inference for earthquake models: A self-correcting model.
+     Stochastic processes and their applications, 17(2):337–347, 1984.
+[61] T. Omi, N. Ueda, and K. Aihara. Fully neural network based model for general temporal point
+     processes. In NeurIPS, 2019.
+[62] A. v. d. Oord, S. Dieleman, H. Zen, K. Simonyan, O. Vinyals, A. Graves, N. Kalchbrenner,
+     A. Senior, and K. Kavukcuoglu. Wavenet: A generative model for raw audio. In SSW, 2016.
+
+
+                                                 12
+[63] K. Ott, P. Katiyar, P. Hennig, and M. Tiemann. ResNet after all? Neural ODEs and their
+     numerical solution. ICLR, 2021.
+[64] G. Papamakarios, T. Pavlakou, and I. Murray. Masked autoregressive flow for density estimation.
+     In NeurIPS, 2017.
+[65] G. Papamakarios, E. Nalisnick, D. J. Rezende, S. Mohamed, and B. Lakshminarayanan. Nor-
+     malizing flows for probabilistic modeling and inference. arXiv:1912.02762, 2019.
+[66] M. L. Piscopo, M. Spannowsky, and P. Waite. Solving differential equations with neural
+     networks: Applications to the calculation of cosmological phase transitions. Phys. Rev. D, 2019.
+[67] M. Poli, S. Massaroli, A. Yamashita, H. Asama, and J. Park. Hypersolvers: Toward fast
+     continuous-depth models. In NeurIPS, 2020.
+[68] S. S. Rangapuram, M. W. Seeger, J. Gasthaus, L. Stella, Y. Wang, and T. Januschowski. Deep
+     state space models for time series forecasting. In NeurIPS, 2018.
+[69] Y. Rubanova, R. T. Chen, and D. Duvenaud. Latent ODEs for irregularly-sampled time series.
+     In NeurIPS, 2019.
+[70] D. Salinas, V. Flunkert, J. Gasthaus, and T. Januschowski. Deepar: Probabilistic forecasting
+     with autoregressive recurrent networks. International Journal of Forecasting, 36(3):1181–1191,
+     2020.
+[71] O. Shchur, M. Biloš, and S. Günnemann. Intensity-free learning of temporal point processes. In
+     ICLR, 2020.
+[72] O. Shchur, A. C. Türkmen, T. Januschowski, and S. Günnemann. Neural temporal point
+     processes: A review. In IJCAI, 2021.
+[73] I. Silva, G. Moody, D. J. Scott, L. A. Celi, and R. G. Mark. Predicting in-hospital mortality of
+     icu patients: The physionet/computing in cardiology challenge 2012. In 2012 Computing in
+     Cardiology, pages 245–248. IEEE, 2012.
+[74] Y. Tassa, Y. Doron, A. Muldal, T. Erez, Y. Li, D. d. L. Casas, D. Budden, A. Abdolmaleki,
+     J. Merel, A. Lefrancq, et al. Deepmind control suite. arXiv preprint arXiv:1801.00690, 2018.
+[75] T. Teshima, I. Ishikawa, K. Tojo, K. Oono, M. Ikeda, and M. Sugiyama. Coupling-based
+     invertible neural networks are universal diffeomorphism approximators. In NeurIPS, 2020.
+[76] T. Teshima, K. Tojo, M. Ikeda, I. Ishikawa, and K. Oono. Universal approximation property of
+     neural ordinary differential equations. In NeurIPS 2020 Workshop on Differential Geometry
+     meets Deep Learning, 2020.
+[77] The New York Times. Coronavirus (Covid-19) data in the United States, 2020. URL https:
+     //github.com/nytimes/covid-19-data.
+[78] U.S. Geological Survey. Earthquake catalogue (accessed May 15, 2021), 2020. URL https:
+     //earthquake.usgs.gov/earthquakes/search/.
+[79] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, Ł. Kaiser, and
+     I. Polosukhin. Attention is all you need. In NeurIPS, 2017.
+[80] E. Weinan. A proposal on machine learning via dynamical systems. Communications in
+     Mathematics and Statistics, 5(1):1–11, 2017.
+[81] H. Zhang, X. Gao, J. Unterman, and T. Arodz. Approximation capabilities of neural ODEs and
+     invertible residual networks. In ICML, pages 11086–11095, 2020.
+[82] J. Zhuang, N. Dvornek, X. Li, S. Tatikonda, X. Papademetris, and J. Duncan. Adaptive
+     checkpoint adjoint method for gradient estimation in neural ODE. In ICML, 2020.
+
+
+
+
+                                                 13
+A     Theoretical background
+A.1   GRU-ODE definition
+
+De Brouwer et al. [16] define the continuous time GRU-ODE model as an ODE that is solved for
+hidden state h(t):
+                              dh(t)
+                                    = (1 − z(t)) (c(t) − h(t)).                             (11)
+                               dt
+With new observation x, the hidden state is updated with discrete GRU (Equation 3), and between
+two observations we solve the ODE given by Equation 11.
+The interesting properties of this model are:
+       i) Boundedness: hidden state h(t) stays within range (−1, 1),
+      ii) Continuity: GRU-ODE is Lipschitz continuous with Lipschitz constant 2.
+In Appendix A.3 we show how our GRU flow model has the same properties without the need to use
+numerical solvers.
+
+A.2   Training loss for GRU-ODE-Bayes
+
+De Brouwer et al. [16] define an objective that mimics the Bayesian filtering. It consists of two parts:
+                                          L = Lpre + λLpost ,                                        (12)
+where Lpre is masked negative log-likelihood and Lpost is the Bayesian part of the loss. The model
+outputs the normal distribution for the observations, conditional on hidden state h(t). Since only
+some features are observed at a time, we mask out the missing values when calculating Lpre . We
+denote our predicted distribution with ppre , and predicted distribution after updating the state with
+ppost . Now, the Bayesian update can be written as pBayes ∝ ppre · pobs , with pobs being the noise of the
+observations. Lpost is defined as a KL-divergence between pBayes and ppost . This can be calculated in
+closed-form for normal distribution.
+
+A.3   Proof of Theorem 1
+
+Preliminaries. Function f has the Lipschitz constant L if |f (x) − f (y)| ≤ L|x − y|, ∀x, y. We first
+derive a few useful inequalities.
+For the sum of two Lipschitz functions f + g, the following holds:
+                  |f (x) + g(x) − f (y) − g(y)| ≤ |f (x) − f (y)| + |g(x) − g(y)|
+                                                ≤ Lip(f )|x − y| + Lip(g)|x − y|                     (13)
+                                                ≤ (Lip(f ) + Lip(g))|x − y|,
+by the triangle inequality and the definition of the Lipschitz function. Similarly, for the product of
+two Lipschitz functions f · g, the following holds:
+           |f (x)g(x) − f (y)g(y)| = |f (x)g(x) + f (x)g(y) − f (x)g(y) − f (y)g(y)|
+                                   = |f (x)(g(x) − g(y)) + g(y)(f (x) − f (y))|
+                                   ≤ |f (x)||g(x) − g(y)| + |g(y)||f (x) − f (y)|                    (14)
+                                   ≤ |f (x)| · Lip(g) · |x − y| + |g(y)| · Lip(f ) · |x − y|.
+                                   = (|f (x)| · Lip(g) + |g(y)| · Lip(f ))|x − y|.
+If f and g are bounded, we can bound the above term too.
+Let f be contractive function, Lip(f ) < 1. Then, for the composition of functions σ ◦ f , where
+σ(x) = (1 + exp(−x))−1 is the sigmoid activation, the following holds:
+                                                                1                  1
+           |σ(f (x)) − σ(f (y))| ≤ Lip(σ)|f (x) − f (y)| =        |f (x) − f (y)| ≤ |x − y|,
+                                                                4                  4
+where we used Lip(σ) = max(σ 0 ) = 41 , by the mean value theorem. Similarly, Lip(tanh) = 1.
+
+
+                                                   14
+Proof. (Theorem 1)
+Equation 3 defines GRU as: zt ht−1 + (1 − zt ) ct . Since zt is defined as σ(fc (·)), and acts as a
+gate, we can equivalently define GRU with: (1 − zt ) ht−1 + zt ct . This will slightly simplify
+further calculations. Then, the GRU flow is defined as:
+                          F (t, h) = h + ϕ(t)     z(t, h)    (c(t, h) − h).                        (5)
+F is invertible when the second summand on the right hand side is a contractive map, i.e., has a
+Lipschitz constant smaller than one. Since ϕ(t) is bounded to [0, 1] and does not depend on h, we
+only need to show that z(t, h) (c(t, h) − h) is contractive. From here, we denote with x and y the
+input to our functions.
+Following Definition 1, let r(x) = β · σ(fr (x)), with Lip(fr ) < 1. Then we can write:
+                           |r(x) − r(y)| = |β · σ(fr (x)) − β · σ(fr (y))|
+                                         ≤ β|σ(fr (x)) − σ(fr (y))|
+                                            1                                                     (15)
+                                         ≤ β|fr (x) − fr (y)|
+                                            4
+                                            1
+                                         < β|x − y|.
+                                            4
+Similarly, for z(x), where z(x) = α · σ(fz (x)), and Lip(fz ) < 1:
+                                                                      1
+                    |z(x) − z(y)| ≤ |α · σ(fz (x)) − α · σ(fz (y))| < α|x − y|.                   (16)
+                                                                      4
+Then for c(x) = tanh(fc (r(x) · x)), with Lip(fc ) < 1, we can write:
+                     |c(x) − c(y)| = | tanh(fc (r(x) · x)) − tanh(fc (r(y) · y))|
+                                   ≤ |fc (r(x) · x) − fc (r(y) · y)|
+                                   < |r(x) · x − r(y) · y|                                        (17)
+                                   < (|r(x)| · Lip(Id) + |x| · Lip(r))|x − y|,
+                                       | {z } | {z } |{z} | {z }
+                                          <β       =1        <1    < 14 β
+
+where we used Equation 14 in the last line. Then Lip(c) < 54 β. Now, for c(x) − x, and using
+Equation 13, we write:
+                            |c(x) − x − c(y) + y| ≤ (Lip(c) + 1)|x − y|,                          (18)
+meaning the whole term has Lipschitz constant 54 β + 1. Finally, for the term on the right hand side of
+Equation 5, the following holds:
+                     |z(x)(c(x) − x) − z(y)(c(y) − y)|
+                      < (|z(x)| · Lip(c(x) − x) + |c(x) − x| · Lip(z(x)) |x − y|.
+                         | {z } |      {z     } | {z } | {z }
+                           <α         < 54 β+1          <2          < 14 α
+
+If we set α = 52 , β = 45 , then the Lipschitz constant is smaller than 1, as required.
+
+A.3.1   Properties of GRU flow
+Our GRU flow has the same desired properties as GRU-ODE:
+      i) Boundedness: hidden state h stays within range (−1, 1),
+     ii) Continuity: the whole transformation h + g(h) has Lipschitz constant 1 + Lip(g) ≤ 2.
+The gating mechanism in discrete GRU helps with gradient propagation to enable learning long-term
+dependencies. We emphasize that both GRU flow and GRU-ODE update the hidden state in two
+distinct ways: 1) with discrete GRU when the new observation arrives, and 2) with continuous
+GRU between observations. Thus, the gates z and r do not have the same interpretation in discrete
+GRUCell and in continuous GRU flow or GRU-ODE.
+The same way, scalars α and β should not be interpreted as bounds to how much information can
+pass, but as a way to ensure invertibility. GRU flow has the ability to keep the old state h, and does
+so at the initial condition t = 0, but can also overwrite it completely.
+
+
+                                                   15
+A.4    ODE reparameterization
+
+The ODESolve operation is usually implemented such that it takes scalar start and end times, t0
+and t1 . However, we are often interested in processing the data in batches, to get speed-up from
+parallelism on modern hardware. When the previous works [11, 69, 16] received the vectors of start
+and end times, e.g., t0 = [0, 0, 0] and t1 = [5, 1, 4], they would concatenate all the values into a
+single vector and sort them to get a sequence of strictly ascending times, e.g., [0, 1, 4, 5]. The solver
+would then first solve 0 → 1, then 1 → 4, and finally 4 → 5. Note that for the element in the batch
+with the largest end time, this requires calling ODESolve multiple times (number of unique time
+values), instead of only once. Without this procedure, the adaptive solver could take larger steps then
+the ones imposed by the current batch, meaning we would get better performance.
+Chen et al. [9] propose a reparameterization, such that, instead of solving the ODE on the interval
+t ∈ [0, tmax ], they solve it on s ∈ [0, 1], with s = t/tmax . For the batch of size n, the joint system is:
+                                             x1       t1 f (st1 , x1 )
+                                                                    
+                                       d    x2   t2 f (st2 , x2 ) 
+                                           . =            ..        .
+                                      ds ..  
+                                                             .        
+                                            xn        tn f (stn , xn )
+This allows solving the system in parallel, in contrast to previous works. We used this reparameteriza-
+tion in all of our experiments.
+
+A.5    Attentive normalizing flow
+
+We follow the setup from Section 3.3, denoting times with t = (t1 , . . . , tn ), and marks with
+X = (x1 , . . . , xn ), xi ∈ Rd . We define the self-attention layer, following [79], as:
+                                                                              QK T
+                                                                                    
+                 SelfAttention(X) = Attention(Q, K, V ) = softmax √                     V,  (19)
+                                                                                 dk
+where Q ∈ Rn×dk , K ∈ Rn×dk , V ∈ Rn×dv are matrices that we obtain by transforming each
+element xi of X by a neural network. Chen et al. [9], in their attentive CNF model, define the
+function f from Equation 9 for each xi , as the ith output of Attention function. It is important that
+elements xj , j > i, do not influence xi to ensure we have a proper temporal model. This is achieved
+by placing −∞ for values above the diagonal of the QK T matrix so that softmax returns zero on
+these places.
+Discrete normalizing flows cannot define the transformation using attention and have tractable
+determinant of the Jacobian at the same time. However, since we actually need an autoregressive
+model, i.e., the dependence is strictly on the past values, not future, we can define a model similar to
+attentive CNF. We use Equation 19 with diagonal masking to embed the history of all the elements
+that preceded xi : hi = SelfAttention(X1:i−1 ). This is in contrast to [9], who used X1:i . Then, the
+conditioning vector hi is used as an additional input to neural networks u and v from Equation 6,
+essentially defining a conditional affine coupling normalizing flow.
+
+A.6    Autonomous ODEs
+
+Autonomous differential equations are defined with a vector field that is fixed in time ẋ = f (x(t)).
+Note that function f does not depend on time t like before. Therefore, the conditions i) and ii) from
+Section 2 are not enough to define the corresponding flow. To be precise, the flow F defines an
+autonomous ODE if it satisfies the additional condition:
+
+      iii) F (t1 + t2 , x0 ) = F (t2 , F (t1 , x0 )),
+
+meaning that solving for t1 first, then t2 , is the same as solving for t1 + t2 , given initial condition x0 .
+More formally, we defined flow F on set Rd as a group action of the additive group G = (R, +)
+(elements being time points). Equivalently, group action of G on Rd is a group homeomorphism
+from G to Sym(Rd ) (symmetric group, bijective functions and composition (φ, ◦)), i.e., some
+function ϕ : G → Sym(Rd ) maps time t to parameters of an invertible neural network φ, with
+
+
+                                                        16
+                        Without regularization               With regularization
+
+
+
+
+                 x2                x1                                 x1
+
+Figure 4: Comparison of the phase space for the same model trained with and without the autonomous
+regularization (Equation 20). Dots denote initial conditions. Note that the overlapping dynamic does
+not mean the solutions are not unique, only that the vector field is dependent on time.
+
+
+ϕ(t1 + t2 ) = ϕ(t1 ) ◦ ϕ(t2 ). Identity element of G, 0 is mapped to an identity function, inverse −t is
+mapped to an inverse function.
+It’s clear that our proposed architectures from Section 2 do not satisfy condition iii), unless we
+                                                                                        d
+redefine it to allow time-dependence. Therefore, one way to satisfy iii) is to have dt    F independent
+of time. Note, however, that if we define the ResNet flow as xt := F (t, x0 ) = x0 + t · h(x0 ), then
+                                                    d
+even though time disappears from the derivative dt    F , the derivative is expressed in terms of x0 , not
+xt . This means time is still implicitly included since starting at different x0 gives different values.
+Matrix exponential exp(At)x, as a solution to a linear ODE: ẋ = Ax, is one example of a closed-
+form solution to an autonomous ODE. Another potential autonomous flow is of the form x + ϕ(t),
+but not g(x) + ϕ(t), since this does not satisfy initial condition or g must depend on time. To the best
+of our knowledge, there is no general neural flow parametrization that can capture all autonomous
+ODEs. Therefore, we can try to learn the desired behavior instead of guaranteeing it.
+We can add the penalty to our loss that directly corresponds to condition iii). Given the loss function
+L and the current batch of n elements X ∈ Rn×d , t ∈ Rn , where we can represent each ti ∈ t as
+      (1)   (2)       (1) (2)
+ti = ti + ti , with ti , ti uniformly sampled on [0, ti ], the total loss is:
+                                     1X                        (2)     (1)
+                     Ltotal = L + γ        (F (ti , xi ) − F (ti , F (ti , xi )))2 ,               (20)
+                                     n i
+where γ is some positive value. The second term penalizes flows that do not satisfy iii), meaning
+we should get the flow that is closer to the underlying autonomous ODE. This can be calculated in
+parallel to other computations.
+Figure 4 shows the comparison between learning the data generated from an autonomous ODE (see
+next section for data details), using the regularization as defined in Equation 20 and without such
+regularization. We can see that the base model already learns good behavior but when we include the
+regularization, the trajectories overlap less frequently.
+
+A.7   Linear ODE and change of variables
+
+Consider a linear ODE f (t, z(t)) = Az(t), with z(0) = z and z(1) = x. Solving the ODE 0 → 1
+is the same as calculating exp(A)z, where exp is the matrix exponential. Suppose that z ∼ q(z),
+then the distribution p(x) that we get by transforming x with an ODE is defined as:
+                                          Z 1          
+                                                   ∂f
+                   log p(x) = log q(z) −      tr          dt = log q(z) − tr(A),           (21)
+                                            0     ∂z(t)
+or simply: p(x) = q(z) exp(tr(A))−1 .
+When using the Hutchinson’s trace estimator for the trace approximation we get the same result:
+       R1     ∂f
+Ep() [ 0 T ∂z(t)  dt] = Ep() [T A] = tr(A), where E() = 0 and Cov() = I.
+Similarly, applying the discrete change of variables, we get the same result for the matrix exponential:
+            p(x) = q(z)| det JF (z)|−1 = q(z)| det exp(A)|−1 = q(z) exp(tr(A))−1 .                   (22)
+
+
+                                                   17
+                              Ellipse         Sawtooth           Sink             Square            Triangle
+
+
+
+
+                                           Figure 5: Sample trajectories for synthetic data.
+
+
+                                            Neural ODE                                                     Neural ODE
+ Test error (MSE)
+
+
+
+
+                                            Coupling flow                     2                            True values
+                    0.2
+                                            ResNet flow                   x0 0                             Training region
+
+                    0.1
+                                                                            −2
+
+                    0.0
+                          Sink    Square    Sawtooth Triangle   Ellipse            0           10             20             30
+                                              Data                                                     t
+
+ Figure 6: (Left) Test error for synthetic data. (Right) All models fail when extrapolating in time.
+
+
+A.8                   Computation complexity of (continuous) normalizing flows
+
+In general, evaluating the trace of the Jacobian of function f : Rd → Rd requires O(d2 ) operations.
+In CNFs, this operation has to be performed at every solver step. Since the number of steps can be
+very large for more complicated distributions [27], this becomes prohibitively expensive. Because of
+this, Grathwohl et al. [27] introduce computing the approximation of the trace during training. This
+has the benefit of having a lower cost, O(d). The issue with this method is that the training becomes
+noisier and after training we have to again rely on exact trace to get the exact density.
+On the other hand, computing the determinant of the Jacobian is O(d3 ) operation in general. Because
+of this, regular normalizing flows do not use unconstrained functions f , but rather opt for those that
+produce triangular Jacobians, e.g., autoregressive [41] or coupling transformations [17], where the
+determinant is just the product of the diagonal elements, i.e., it is of linear cost O(d).
+
+B                   Synthetic experiments
+We first test the capabilities of our models on periodic signals:
+
+                      • Sine: f (t, x) = cos(t) which corresponds to flow F (t, x) = x + sin(t), x ∈ R,
+                      • Sawtooth: F (t, x) = x + t − btc,
+                      • Square: F (t, x) = x + sign(sin(t)),
+                                            Rt
+                      • Triangle: F (t, x) = 0 sign(sin(u)) du.
+
+We sample initial values x uniformly in (−2, 2) and set the time interval to (0, 10). We additionally
+check how well the models extrapolate by extending the initial condition interval to (−4, 4) and time
+to 30. We also use two datasets, generated as solutions to known ODEs:
+                                    
+                            −4 10 x1
+       • Sink: f (t, x) =                  ,
+                            −3 2 x2
+                             2              
+                                x − 2x x
+       • Ellipse: f (t, x) = 3 1 3 1 2 , which is a particular parametrization of Lotka-Volterra
+                                x1 x2 − x2
+         equations, also known as predator-prey equations,
+
+where we sample initial conditions x1 , x2 ∈ [0, 1] uniformly. For extrapolation, we use x1 , x2 ∈ [1, 2].
+Figure 5 shows the generated trajectories for all synthetic datasets.
+
+
+                                                                  18
+                                      Solver
+                                                                                                 0.10
+
+
+
+
+           Epoch duration (s)
+                                60       dopri5
+                                         rk4
+
+
+
+
+                                                                                    Test error
+                                40
+                                                                                                 0.05
+                                20
+
+                                 0                                                               0.00
+                                     1185     2241        4417           8577                             dopri5       rk4
+                                             Number of parameters                                               Solver
+
+Figure 7: Fixed solvers are faster to train on synthetic data (Left) but they still have similar accuracy
+compared to adaptive solvers (Right).
+
+
+B.1   Comparing adaptive and fixed-step solvers
+
+We ran an extensive hyperparameter search for Sine dataset. We test models with 2 or 3 hidden
+layers, each having dimension of 32 or 64, use tanh or ELU activations between them, and have
+tanh or identity as the final activation. For each of the model configurations we apply either no
+regularization or weigh the penalty term with 10−3 . Finally, we run each trial 5 times with different
+seeds and compare between Runge-Kutta fixed-step solver with 20 steps and an adaptive 5th order
+Dormand-Prince method [18].
+As expected, the vast majority of the trials fit the data very well. However, as Figure 7 shows,
+an adaptive solver always requires significantly longer training times, regardless of the size of the
+model, choice of the activations or regularization. We used default tolerance settings (rtol = 10−7 ,
+atol = 10−9 ) which is why we get such long training times. Therefore, in the other experiments,
+in the main text, whenever we use dopri5, we use rtol = 10−3 and atol = 10−4 to make training
+feasible. This once again shows the trade-off between speed and numerical accuracy.
+From the results, one would expect that we can safely
+use fixed-step solvers and achieve similar or better re-
+sults with smaller computational demand. However,
+as Ott et al. [63] showed, this can lead to overlapping
+trajectories which give non-unique solutions. Breaking
+the assumptions of our model can lead to misleading re-
+sults in some cases. Here, we tackle density estimation
+with continuous normalizing flows as an example.
+                                                                                                  Euler                      dopri5
+We construct a synthetic 2-dim. dataset as a mixture
+of zero-centered normal distribution (σ = 0.05) and                             Figure 8: Density learned with Euler and
+uniform points on the perimeter of a unit circle with                           dopri5 solver. The estimated area under the
+small noise (σ = 0.01). We test adaptive dopri5 solver                          curve for Euler method is 1.06, meaning it
+and Euler method with 20 steps.                                                 does not define a proper density.
+
+The fixed solver achieves better results but Figure 8 visually demonstrates that it is not really capturing
+the true distribution better. It cheats by not defining a proper density function that integrates to 1.
+Since it has more mass to distribute, it can achieve better results. This might be hard to detect in higher
+dimensions and it can be particularly problematic since most of the literature reports log-likelihood
+on test data. Even though we took Euler method as an extreme example, the same can be shown for
+other solvers as well.
+
+B.2   Comparing flow configurations
+
+Similar to Appendix B.1, we compare different flow models on synthetic sine data. We try coupling
+and ResNet models with linear and tanh for ϕ, as well as an embedding with 8 Fourier features
+(bounded to (0, 1) interval in ResNet model), see Section 2.1 for more details. Both models have
+either 2 or 4 stacked transformations, each with a two hidden layer neural network with 64 hidden
+dimensions. We run each configuration 5 times with and without weight regularization (10−3 ).
+
+
+                                                                    19
+                 MSE (×10−2 )          Ellipse       Sawtooth         Sink          Square      Triangle
+                 Neural ODE        25.59±3.19 8.74±1.10 1.38±0.17 24.34±0.3 2.76±0.09
+                 Coupling flow 14.16±4.80 1.25±0.33 0.50±0.06 3.38±0.4 0.19±0.02
+                 ResNet flow        9.48±2.64   1.38±0.13 0.40±0.04 3.56±0.1              0.0±0.0
+                   Table 5: Test error on synthetic data, lower is better. Best results in bold.
+
+                MSE (×10−2 )        Ellipse          Sawtooth         Sink           Square       Triangle
+          Neural ODE         19.82±1.34 10.64±1.76 18.0±1.18 32.96±3.0 4.22±0.56
+          Coupling flow 515.8±555.6 1.32±0.36 5.53±2.23 3.93±0.76                     0.2±0.04
+          ResNet flow        100.4±45.4       3.49±1.14 6.65±2.23 9.84±2.94 0.79±0.21
+Table 6: Error on trajectories that start at initial conditions out of training distribution. Some trials
+returned outliers that skew the results (e.g., coupling flow on ellipse dataset).
+
+                                       Ellipse      Sawtooth         Sink           Square      Triangle
+             Neural ODE         9.3±0.88   8.25±0.33 8.78±0.81 7.81±0.34 7.91±0.35
+             Coupling flow 0.7±0.11        0.46±0.22     0.6±0.05 0.49±0.14 0.58±0.16
+             ResNet flow       1.05±0.04 1.01±0.15 1.24±0.13 0.98±0.04 1.01±0.09
+    Table 7: Wall-clock time (in seconds) to run the last training epoch, using the same batch size.
+
+
+All the models capture the data perfectly, except for the coupling flow with linear function of time ϕ
+which does not converge. This could be due to inability of neural networks to process large input
+values. The issue can be fixed with different initialization or normalizing the input time values.
+Tables 5, 6 and 7 show that neural flows outperform neural ODEs in forecasting, extrapolation with
+different initial values, and are faster during training.
+
+C           Additional results
+Table 8 compares the training times for smoothing experiment. Neural ODE models use Euler method
+with 20 steps (the adaptive method is slower). Table 9 shows the average wall-clock time to run
+a single epoch for different TPP models. We include ablations for flow and ODE models that use
+different continuous RNN encoders, and a model without an encoder. Table 10 shows full negative
+log-likelihood results for the TPP experiment. Table 11 shows the full NLL results for marked TPPs.
+
+                                                 Activity         MuJoCo              Physionet
+                  Neural ODE       200.884±7.239 192.209±2.526 103.198±4.977
+                  Coupling flow 106.298±2.314 46.171±1.742         78.561±1.050
+                  ResNet flow      134.336±3.453 102.745±2.369 101.966±8.285
+Table 8: Average time (in seconds) to run a single epoch during training for different models, all
+other training parameters being the same.
+
+
+                              Poisson      Hawkes1          Hawkes2     Renewal        MOOC        Reddit    Wiki
+             Neural ODE         96.7         129.8           208.6          111.2       844.2       612.8    157.9
+  Cont.
+
+
+
+
+             Coupling flow      10.8          11.2            10.8           11.1       180.8       113.1     31.7
+             ResNet flow         7.1           7.1             7.2            7.3       130.0        83.8     19.9
+             GRU-ODE            39.7       42.3         55.9        39.3       600.0     419.5   97.9
+  Mixture
+
+
+
+
+             ODE-LSTM           35.9       39.0         37.8        43.8       569.4     443.6 109.4
+             Coupling flow       3.4        3.4          3.3         3.3        47.0      37.2    8.5
+             ResNet flow         5.9        5.9          5.8         5.9        96.5      64.9   16.1
+             GRU flow           3.6         3.5          3.3         3.7        52.8      36.4    9.7
+            Table 9: Average time (in seconds) to run a single epoch during training for TPP models.
+
+
+
+                                                             20
+      Synthetic data                  Poisson          Hawkes1            Hawkes2          Renewal
+              Ground truth             0.9996          0.6405               0.1192           0.2667
+              Without history          1.0046          0.7826               0.2354           0.2837
+              Discrete GRU          1.0097±0.005    0.6424±0.006         0.1267±0.006     0.2598±0.016
+
+      Cont.   Jump ODE              0.9945±0.016    0.6461±0.009         0.2246±0.042     0.3124±0.022
+              Coupling flow         1.0099±0.005    0.6441±0.007         0.1376±0.005     0.2720±0.017
+              ResNet flow           1.0105±0.005    0.6426±0.007         0.1813±0.025     0.2851±0.018
+              GRU-ODE               1.0100±0.005    0.6419±0.007         0.1239±0.005     0.2601±0.017
+      Mix.
+
+
+
+              ODE-LSTM              1.0108±0.005    0.6448±0.006         0.1253±0.005     0.2605±0.017
+              Coupling flow         1.0103±0.005    0.6450±0.008         0.1254±0.006     0.2605±0.016
+              GRU flow              1.0100±0.005    0.6439±0.007         0.1270±0.006     0.2608±0.016
+              ResNet flow           1.0104±0.005    0.6443±0.006         0.1249±0.005     0.2603±0.017
+
+      Real-word data                  MOOC             Reddit               Wiki
+              Without history          2.0623          1.5402           1.5813
+              Discrete GRU          -0.4448±0.294   -0.9299±0.118    -0.5832±0.321
+              Jump ODE              0.8710±0.157     0.1308±0.018    -0.3115±0.011
+      Cont.
+
+
+
+
+              Coupling flow         0.7694±0.172    -0.1263±0.273    -0.2807±0.500
+              ResNet flow           -1.2379±0.049   -1.2962±0.126    -1.2907±0.045
+          GRU-ODE             -0.2626±0.183     -1.0907±0.076 -1.3635±0.071
+      Mix.
+
+
+
+
+          ODE-LSTM            -0.2277±0.331     -1.0888±0.029 -1.3727±0.327
+          Coupling flow       -0.4026±0.584     -1.0933±0.161 -1.2702±0.178
+          GRU flow            -0.3509±0.220     -1.0605±0.113 -0.9852±0.105
+          ResNet flow         -0.5664±0.278     -1.0291±0.174 -1.1937±0.048
+        Table 10: Test negative log-likelihood (mean±standard deviation) for all TPP models.
+
+
+                                                MOOC            Reddit             Wiki
+                            Discrete GRU    2.7563±0.141    1.8468±0.016       8.0527±0.170
+                            Jump ODE        4.6118±0.070    3.6654±0.000      10.6040±0.304
+                    Cont.
+
+
+
+
+                            Coupling flow   5.5494±0.413    3.6312±0.324       9.7214±0.101
+                            ResNet flow     2.9466±0.000    2.3932±0.131      10.4368±0.034
+                     GRU-ODE           3.5344±0.242  2.3078±0.033     7.5537±0.065
+                    Mix.
+
+
+
+
+                     ODE-LSTM          3.0723±0.114  1.9057±0.164     8.3187±0.231
+                     Coupling flow 2.5877±0.176      1.6817±0.095     8.8018±0.057
+                     ResNet flow       3.0005±0.081  1.9491±0.008     8.5489±0.267
+    Table 11: Test negative log-likelihood (mean±standard deviation) for all marked TPP models.
+
+
+
+D     Data pre-processing
+D.1    Encoder-decoder datasets
+
+MuJoCo dataset. Using Deep Mind Control Suite and MuJoCo simulator, Rubanova et al. [69]
+generate 10000 sequences by sampling initial body position in R2 uniformly from [0, 0.5], limbs
+from [−2, 2], and velocities from [−5, 5] interval. We use this dataset without any changes.
+Activity dataset. Following [69], we round up the time measurements to 100ms intervals. This was
+done to reduce the size of the union of all the points when batching but is unnecessary when using
+our flow models, and also when using the reparameterization for ODEs [9].
+Original labels are: walking, falling, lying down, lying, sitting down, sitting, standing up from lying,
+on all fours, sitting on the ground, standing up from sitting, standing up from sitting on the ground.
+Rubanova et al. [69] combine similar positions into one group resulting in 7 classes: walking, falling,
+lying, sitting, standing up, on all fours, sitting on the ground. Data is split in train, validation and test
+set (75%–5%–20%).
+
+
+                                                       21
+Physionet dataset. We use PhysioNet Challenge 2012 [73], where the goal is to predict the mortality
+of patients upon being admitted to ICU. We process the data following [69] to exclude time-invariant
+features, and round the time stamps to one minute. Each feature is normalized to [0, 1] interval. Data
+is split the same way as for MuJoCo: 60%–20%–20%.
+When reporting MSE scores for the reconstruction task we scale the result by 102 for activity dataset
+and by 103 for others, for better readability. This is equivalent to scaling the data beforehand.
+
+D.2   MIMIC-III and MIMIC-IV
+
+We follow [16] for processing MIMIC-III dataset. We process MIMIC-IV in a similar vein.
+The publicly available MIMIC-IV database provides clinical data of intensive care unit (ICU) patients
+at the tertiary academic medical center in Boston [36, 25]. It builds upon the MIMIC-III database
+and contains de-identified patient records from 2008 to 2019 [35]. We use version MIMIC-IV 1.0,
+which was released March 16th, 2021.
+To preprocess the data, we first select the subset of patients who:
+
+       • are registered in the admissions table,
+       • stayed in the ICU for at least 2 days and no more than 30 days,
+       • are older than 15 years at the time of the admission, and
+       • have chart-event data available,
+
+which leaves us with 17874 patients.
+There are four types of data sources available for ICU patients: chart-events, inputs, outputs and
+prescriptions. The chart-events table contains the patient’s routine vital signs as well as any additional
+information such as laboratory tests. The input table documents drugs administered to the patient
+through, e.g., solutions and the prescription table stores information about medication given in any
+other form. Lastly, the outputs table contains any output data from, e.g., a catheter for the patient
+during their ICU stay.
+Because the medication in the input table is administered over time, the administered units and doses
+have to be unified and then split into entries which are spread out over time. We choose 30 minutes as
+our sampling window and, for all administered medications with duration longer than an hour, split
+them into fixed time injections.
+For all other tables, we only keep the most commonly used entries:
+
+       • Chart-events: Alanine Aminotransferase, Albumin, Alkaline Phosphatase, Anion Gap,
+         Asparate Aminotransferase, Base Excess, Basophils, Bicarbonate, Bilirubin, Calcium, Chlo-
+         ride, Creatinine, Eosinophils, Glucose, Hematocrit, Hemoglobin, Lactate, Lymphocytes,
+         Magnesium, MCH, MCV, Monocytes, Neutrophils, pCO2, pH, pO2, Phosphate, Platelet
+         Count, Potassium, PT, PTT, RDW, Red Blood Cells, Sodium, Specific Gravity, Total CO2,
+         Urea Nitrogen and White Blood Cells.
+       • Outputs: Chest Tube, Emesis, Fecal Bag, Foley, Jackson Pratt, Nasogastric, OR EBL, OR
+         Urine, Oral Gastric, Pre-Admission, Stool, Straight Cath, TF Residual, TF Residual Output
+         and Void.
+       • Prescriptions: Acetaminophen, Aspirin, Bisacodyl, D5W, Docusate Sodium, Heparin,
+         Humulin-R Insulin, Insulin, Magnesium Sulfate, Metoprolol Tartrate, Pantoprazole, Potas-
+         sium Chloride and Sodium Chloride 0.9% Flush.
+
+D.3   TPP datasets
+
+We follow previous works to generate and pre-process temporal point process data [61, 71, 44].
+Synthetic data. We use 4 synthetic datasets, for each we generate 1000 sequences, each sequence
+containing 100 elements. We generate Poisson dataset with constant intensity λ∗ (t) = 1; Renewal
+with stationary log-normal density function (µ = 1, σ = 6); and two Hawkes datasets with the
+
+
+                                                   22
+                                        PM
+conditional intensity λ∗ (t) = µ + ti <t j αj βj exp(−βj (t − ti )), with M = 1, µ = 0.02,
+                                  P
+
+α = 0.8 and β = 1 (Hawkes1), or M = 2, µ = 0.2, α = [0.4, 0.4] and β = [1, 20] (Hawkes2).
+Reddit. We use timestamps of posts from most active users to most active topic boards (subreddits)
+[44]. There are 984 unique subreddits that we use as marks. We have 1000 sequences in total, each
+sequence is truncated to contain at most 100 points. This is done to make training with ODE-based
+models feasible.
+MOOC is a dataset containing timestamps of events performed by users in interaction with a learning
+platform [44]. There are 7047 sequences, with at most 200 events. We have 97 different mark types
+corresponding to different interaction types.
+Wiki contains timestamps of edits of most edited pages from most active users [44]. There are 1000
+pages (sequences) with at most 250 events, and 984 users that we use as marks.
+In our implementation, we use inter-event times τi = ti − ti−1 and for real-world data, we normalize
+them by dividing them with the empirical mean τ̄ from the training set τi 7→ τi /τ̄ . This can
+still yield quite large values so for better numerical stability during training, we use log-transform
+τ 7→ log(τ + 1). We can think of log-transformation as a change of variables and include it in the
+negative log-likelihood loss using the probability change of variables formula (see Section 3.3).
+
+D.4   Spatial datasets
+
+For spatial data used in time-dependent density estimation experiment, we used the datasets from
+Chen et al. [9] with the same pre-processing pipeline. See [9] for further details.
+Earthquakes contains earthquakes gathered between 1990 and 2020 in Japan, with the magnitude of
+at least 2.5 [78]. Each sequence has length of 30 days, with the gap of 7 days between sequences.
+There are 950 training sequences, and 50 validation and test sequences.
+Covid data uses daily cases from March to July 2020 in New Jersey state [77]. The data is gathered
+on county level and dequantized. Each sequence covers 7 days. There are 1450 sequences in the
+training set, 100 in validation and 100 in test set.
+Bikes contains rental events from a bike sharing service in New York using data from April to August
+2019. Each sequence corresponds to a single day, starting at 5am. The data is split in training, test
+and validation set: 2440, 300, 320 sequences, respectively.
+All the spatial values are normalized to zero mean and unit variance. We also normalize the temporal
+component to [0, 1] interval.
+
+E     Hyperparameters
+All experiments: Adam optimizer, with weight decay 1e-4
+Smoothing experiments
+
+       • Batch size: 100
+       • Learning rate: 1e-3 with decay 0.5 every 20 epochs
+       • Hidden layers: 3
+       • Models
+           ◦ ODE models
+               - Solver: euler or dopri5
+           ◦ Flow models: ResNet or coupling flow
+               - Flow layers: 1 or 2
+               - ϕ(t): tanh for ResNet and linear for coupling (used in all experiments)
+       • Datasets
+           ◦ MuJoCo
+               - Encoder-decoder hidden dimension: 100-100
+               - Latent state dimension: 20
+
+
+                                                 23
+             - GRU dimension: 50
+          ◦ Activity
+             - Encoder-decoder hidden dimension: 30-100
+             - Latent state dimension: 20
+             - GRU dimension: 100
+          ◦ Physionet
+             - Encoder-decoder hidden dimension: 40-50
+             - Latent state dimension: 20
+             - GRU dimension: 50
+Filtering experiment
+      • Batch size: 100
+      • Learning rate: 1e-3 with decay 0.33 every 20 epochs
+      • Hidden dimension: 64
+      • Datasets: MIMIC-III or MIMIC-IV
+      • ODE models
+          ◦ Solver: euler or dopri5
+          ◦ Hidden layers: 3
+      • Flow models: GRU flow or ResNet flow
+          ◦ Flow layers: 1 or 4
+          ◦ Hidden layers: 2
+TPP experiment (With or without marks)
+      • Batch size: 50
+      • Learning rate: 1e-3
+      • Hidden dimension: 64
+      • Data: Reddit or MOOC or Wiki
+      • ODE models
+          ◦ Models: continuous or mixture
+              - Mixture models: ODE-LSTM or GRU-ODE
+          ◦ Hidden layers: 3
+      • Flow models
+          ◦ Models: continuous or mixture
+              - Continuous models: ResNet or coupling flow
+              - Mixture models: ResNet or coupling or GRU flow
+          ◦ Flow layers: 1
+          ◦ Hidden layers: 2
+      • RNN models: GRU
+Density estimation experiment
+      • Batch size: 50
+      • Learning rate: 1e-3
+      • Hidden dimension: 64
+      • Models: time-varying or attentive (for both CNFs and NFs)
+      • Continuous normalizing flows
+          ◦ Hidden layers: 4
+      • Coupling normalizing flows
+          ◦ Base density layers: 4 or 8
+          ◦ Time-dependent NF layers: 4 or 8
+
+
+                                              24
+

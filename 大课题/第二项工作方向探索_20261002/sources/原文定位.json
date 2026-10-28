@@ -1,0 +1,128 @@
+[
+  {
+    "id": "P02",
+    "source": "/media/data1/wangzk/time-series-forcast-exp/大课题/文献调研_20260926/sources/local_text/02_HD_TTS_ICML2024.txt",
+    "line_start": 360,
+    "line_end": 430,
+    "topic": "缺失模式条件的多尺度融合",
+    "sha256": "80ee87dff8ebe50da9bc0ce9c4350d360e4cb8532036ea25ce0293486b4d9471",
+    "note": "定位不等于逐句全文精读"
+  },
+  {
+    "id": "P04",
+    "source": "/media/data1/wangzk/time-series-forcast-exp/大课题/文献调研_20260926/sources/local_text/03_S4M_S4_for_Multivariate_Time_Series_Forecasting_with_Missing_Values.txt",
+    "line_start": 215,
+    "line_end": 280,
+    "topic": "原型记忆",
+    "sha256": "4aece2e5da1b375640a91a689f85ed1d82c41b6fcec352d557d8a4afcf17f54e",
+    "note": "定位不等于逐句全文精读"
+  },
+  {
+    "id": "P05",
+    "source": "/media/data1/wangzk/time-series-forcast-exp/大课题/文献调研_20260926/sources/local_text/04_Merlin_Multi_View_Representation_Learning_for_Robust_MTS_Forecasting.txt",
+    "line_start": 85,
+    "line_end": 125,
+    "topic": "完整教师与不同缺失率视图",
+    "sha256": "1980784e9d62a63bc9a9b19a43a850fc92757a0b2a3465ac1f3f600a6d82fd9f",
+    "note": "定位不等于逐句全文精读"
+  },
+  {
+    "id": "P06",
+    "source": "/media/data1/wangzk/time-series-forcast-exp/大课题/文献调研_20260926/sources/local_text/05_CoIFNet_Unified_Framework_for_MTS_Forecasting_with_Missing_Values.txt",
+    "line_start": 530,
+    "line_end": 580,
+    "topic": "损失假设和缺失设置",
+    "sha256": "2be813dd33d63062cb55952756f55ee633f782c3f09f0663d31777d3b5d1ed49",
+    "note": "定位不等于逐句全文精读"
+  },
+  {
+    "id": "P07",
+    "source": "/media/data1/wangzk/time-series-forcast-exp/大课题/文献调研_20260926/sources/local_text/02_MissTSM_Investigating_Model_Agnostic_Imputation_Free_IMTS_Modeling.txt",
+    "line_start": 805,
+    "line_end": 839,
+    "topic": "作者局限和简单插补适用条件",
+    "sha256": "5b5d66eb4b1bebea4f79d0a119e6f94f3093f79b08423fdfed78b731a8e3d28d",
+    "note": "定位不等于逐句全文精读"
+  },
+  {
+    "id": "P08",
+    "source": "/media/data1/wangzk/time-series-forcast-exp/大课题/文献调研_20260926/sources/local_text/01_CRIB_Revisiting_Multivariate_Time_Series_Forecasting_with_Missing_Values.txt",
+    "line_start": 285,
+    "line_end": 345,
+    "topic": "视图增强与一致性",
+    "sha256": "b4ec28f3d5fe3727182b7043a4baa72814956a98a964c8656ab684624b44312b",
+    "note": "定位不等于逐句全文精读"
+  },
+  {
+    "id": "P10",
+    "source": "/media/data1/wangzk/time-series-forcast-exp/大课题/文献调研_20260926/sources/local_text/ChannelTokenFormer.txt",
+    "line_start": 415,
+    "line_end": 465,
+    "topic": "测试块缺失与训练遮蔽",
+    "sha256": "80b8264441208642b13d545126145d1243029f1520297a8aa98f41b290ea2efb",
+    "note": "定位不等于逐句全文精读"
+  },
+  {
+    "id": "P23",
+    "source": "/media/data1/wangzk/time-series-forcast-exp/大课题/文献调研_20260926/sources/downloaded_text/WindFCS2024.txt",
+    "line_start": 140,
+    "line_end": 160,
+    "topic": "联合分布和缺失边缘化",
+    "sha256": "6f8db4f1ccddc1841af48edeb2b1d0fb79d127edd504fa9cf2ceb5aadbefb56a",
+    "note": "定位不等于逐句全文精读"
+  },
+  {
+    "id": "P26",
+    "source": "/media/data1/wangzk/time-series-forcast-exp/大课题/文献调研_20260926/sources/downloaded_text/AirBayes2025.txt",
+    "line_start": 490,
+    "line_end": 520,
+    "topic": "贝叶斯输出及数据",
+    "sha256": "76d6d07762d1d2bbd82c5b8b87a2778d99c2b2dc2bc0d41732cfb669e9a08734",
+    "note": "定位不等于逐句全文精读"
+  },
+  {
+    "id": "P29",
+    "source": "/media/data1/wangzk/time-series-forcast-exp/大课题/文献调研_20260926/sources/downloaded_text/TSDiff2023.txt",
+    "line_start": 499,
+    "line_end": 520,
+    "topic": "缺失历史推理与完整训练",
+    "sha256": "93823f278ac47da7e7ded88a4a668ecb02d5c02e349d53aa5e1a8facb8c1d0d7",
+    "note": "定位不等于逐句全文精读"
+  },
+  {
+    "id": "P30",
+    "source": "/media/data1/wangzk/time-series-forcast-exp/大课题/文献调研_20260926/sources/downloaded_text/TACTiS2022.txt",
+    "line_start": 1,
+    "line_end": 45,
+    "topic": "联合预测与缺失训练",
+    "sha256": "4ae71f409f8e1655606f0fe05e77bd78aeecbd90a2dbc1257d560d28b7ac2c23",
+    "note": "定位不等于逐句全文精读"
+  },
+  {
+    "id": "P34",
+    "source": "/media/data1/wangzk/time-series-forcast-exp/大课题/文献调研_20260926/sources/local_text/GraFITi_aaai_2024.txt",
+    "line_start": 120,
+    "line_end": 175,
+    "topic": "稀疏观测图",
+    "sha256": "42a222854d808fba1e64eab203f68e2f1a9a43ed090e6207c1a309e06ad2312a",
+    "note": "定位不等于逐句全文精读"
+  },
+  {
+    "id": "P50",
+    "source": "/media/data1/wangzk/time-series-forcast-exp/大课题/文献调研_20260926/sources/local_text/05_ImputeFormer_KDD2024.txt",
+    "line_start": 460,
+    "line_end": 550,
+    "topic": "低秩和跨场景插补",
+    "sha256": "5f2e3f582f67dd86496f816ad873abf3257febbde086a64452406c5cc8c32638",
+    "note": "定位不等于逐句全文精读"
+  },
+  {
+    "id": "P55",
+    "source": "/media/data1/wangzk/time-series-forcast-exp/大课题/文献调研_20260926/sources/local_text/04_Task_Oriented_Imputation_NeurIPS2024.txt",
+    "line_start": 150,
+    "line_end": 212,
+    "topic": "下游目标导向评价",
+    "sha256": "c62b94885d30070eca4d7661557814ec43b07b056aba51b2821777bec75c5c1d",
+    "note": "定位不等于逐句全文精读"
+  }
+]

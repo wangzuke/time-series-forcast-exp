@@ -1,0 +1,586 @@
+                                                    IBN: AN INTERPRETABLE BIDIRECTIONAL-MODELING NETWORK FOR
+                                                    MULTIVARIATE TIME SERIES FORECASTING WITH VARIABLE MISSING
+
+                                                                      Shusen Ma†1 , Tianhao Zhang†1 , Qijiu Xia1 and Yun-Bo Zhao∗1
+                                                                      1
+                                                                          University of Science and Technology of China, Hefei, China
+
+
+                                                                    ABSTRACT                                            STGNNs typically rely on complete datasets to construct
+                                                                                                                    variable graphs and learn spatial correlations. However, real-
+arXiv:2509.07725v1 [cs.LG] 9 Sep 2025
+
+
+
+
+                                        Multivariate time series forecasting (MTSF) often faces                     world data often contain missing values due to sensor fail-
+                                        challenges from missing variables, which hinder conven-                     ures. In some applications, such as air quality forecasting
+                                        tional spatial–temporal graph neural networks in modeling                   [8, 9], entire variables may be missing, posing challenges
+                                        inter-variable correlations. While GinAR addresses variable                 for conventional STGNNs [10] in modeling spatial depen-
+                                        missing using attention-based imputation and adaptive graph                 dencies between observed and missing variables. To tackle
+                                        learning for the first time, it lacks interpretability and fails            this, GinAR [8], the first work to investigate variable miss-
+                                        to capture more latent temporal patterns due to its simple                  ing, introduces an interpolation attention (IA) mechanism and
+                                        recursive units (RUs). To overcome these limitations, we                    an adaptive graph convolution module to reconstruct missing
+                                        propose the Interpretable Bidirectional-modeling Network                    variables and dynamically learn inter-variable graphs, while
+                                        (IBN), integrating Uncertainty-Aware Interpolation (UAI)                    using simple recursive units (RUs) for temporal modeling.
+                                        and Gaussian kernel-based Graph Convolution (GGCN).
+                                                                                                                        Although GinAR achieves state-of-the-art (SOTA) fore-
+                                        IBN estimates the uncertainty of reconstructed values us-
+                                                                                                                    casting performance, it lacks interpretability in reconstruct-
+                                        ing MC Dropout and applies an uncertainty-weighted strat-
+                                                                                                                    ing missing variables and in constructing inter-variable graph
+                                        egy to mitigate high-risk reconstructions. GGCN explicitly
+                                                                                                                    structures, and its simple RU module is insufficient to capture
+                                        models spatial correlations among variables, while a bidi-
+                                                                                                                    latent temporal patterns. Specifically, 1) While GinAR lever-
+                                        rectional RU enhances temporal dependency modeling. Ex-
+                                                                                                                    ages a learnable variable embedding matrix to model inter-
+                                        tensive experiments show that IBN achieves state-of-the-art
+                                                                                                                    variable correlations and uses an attention mechanism to im-
+                                        forecasting performance under various missing-rate scenar-
+                                                                                                                    pute missing values based on these correlations, it does not
+                                        ios, providing a more reliable and interpretable framework
+                                                                                                                    assess the reliability of the reconstructed results, where the
+                                        for MTSF with missing variables. Code is available at:
+                                                                                                                    uncertainty of the imputed values can compromise the stabil-
+                                        https://github.com/zhangth1211/NICLab-IBN.
+                                                                                                                    ity of temporal modeling. 2) The adaptive graph in GinAR
+                                           Index Terms— Multivariate Time Series Forecasting,                       captures spatial correlations between variables solely through
+                                        Variable Missing, Recursive Units, Graph Neural Networks,                   adaptive learning of the embedding matrix, without explic-
+                                        Uncertainty-Aware Interpolation                                             itly modeling the spatial relationships among variables. 3)
+                                                                                                                    The simple RU framework in GinAR considers only unidi-
+                                                                                                                    rectional temporal dependencies, failing to capture symmetric
+                                                              1. INTRODUCTION                                       dependency patterns.
+                                                                                                                        To address the aforementioned challenges, we propose
+                                        Time series forecasting (TSF) is widely used in real-world ap-
+                                                                                                                    an Interpretable Bidirectional-modeling Network (IBN) for
+                                        plications such as traffic flow [1] and weather prediction [2].
+                                                                                                                    MTSF with variable missing, built upon Uncertainty-Aware
+                                        Existing TSF methods are mostly based on end-to-end learn-
+                                                                                                                    Interpolation (UAI) and Gaussian kernel-based Graph Con-
+                                        ing frameworks (Transformer-based [3], CNN-based [4], and
+                                                                                                                    volution (GGCN). Technically, IBN first incorporates an
+                                        MLP-based [5]) or representation learning [6]. While effec-
+                                                                                                                    uncertainty-aware mechanism during the reconstruction of
+                                        tive in capturing temporal dependencies, these methods often
+                                                                                                                    missing variables: it leverages MC Dropout [11] to esti-
+                                        fall short in modeling spatial correlations among variables.
+                                                                                                                    mate the distribution of reconstructed values and adopts an
+                                        Recently, spatial–temporal graph neural networks (STGNNs)
+                                                                                                                    uncertainty-weighted strategy to attenuate the impact of high-
+                                        have integrated temporal and spatial modeling, achieving
+                                                                                                                    risk reconstructions. Next, IBN employs GGCN to construct
+                                        strong performance in multivariate time series forecasting
+                                                                                                                    a more interpretable distance space, explicitly modeling the
+                                        (MTSF) [7].
+                                                                                                                    variations of spatial correlations among variables. Finally,
+                                            This work was supported by the National Natural Science Foundation of   a bidirectional RU (Bi-RU) architecture is designed to fully
+                                        China (No. 62173317). ∗ Corresponding authors. † Equal contribution.        exploit temporal context information, thereby enhancing the
+                                                                                                                                𝑥𝑡                                   1
+                                                                                                                                                                    𝑐𝑡−1             Normal     Missing       Dropout         Interpolation
+
+
+
+
+                                                                                                                                                                                                                                                                   Fully Connected Layer
+                                                                                                                                                                                                                                                                                           Dropout
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                         …
+                                                                                                                                                                                                                                                                                                                                                                                           𝝈 ∈ ℝ𝑵×𝑫
+
+
+
+
+                                                                                                                                                                                                                                     Interpolation Attention
+                𝑐01                                                                                                                                                            𝒙𝟏𝒕
+                                                                                         𝑐02
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                     Concatenation
+                                                                                                                                                                                                                                                                                                                                                                                                             1+
+
+
+
+
+                                                                                                                                             GGCN
+                                                                                                                                                                                                                                                                                                                                                                                                   std
+
+
+
+
+                                                                                                                                                                                                                                                                                                                        …
+                                                                                                                                                        GELU
+                                                                                                                                                                               𝒙𝟐𝒕
+
+
+
+
+                                                                                                                               UAI
+                IBN                    IBN                                                                                                                          •
+    𝑥1                    ℎ11                        ℎ1′1                                IBN        ℎ12
+               Cell                   Cell                                                                                                                     𝑓𝑡
+
+
+
+
+                                                                                                                                                                                                          …
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                         …
+                                                                                                                                                                                                                                                                                           Dropout
+
+
+
+
+                                                                                                                                                                               …
+                                                                                         Cell
+               𝑐11                                                                                                                                                             𝒙𝒕𝑵−𝟏
+                                                                                                                                                                                                                                                                                                                                                                                                             /
+
+
+
+
+                                                                                                                                                                                                                                                                                                                        …
+                                               ′1                                                                                                                                                                                                                                                                                                                                            mean
+                                              𝑐𝑡−1
+                                                                                         𝑐12                 𝑌 ∈ ℝ𝑁×𝐿
+
+
+
+
+                                                                                                                                                        1-
+                                                                                                                                                                               𝒙𝑵
+                                                                                                                                                                                𝒕                                                                                                                                                                                                          𝝁 ∈ ℝ𝑵×𝑫
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                         …
+                IBN                    IBN
+
+
+
+
+                                                            Concatenation
+                                                                                                                                                                                                                                                                                           Dropout
+
+
+
+
+                                                                                                                                             GGCN
+   𝑥2                     ℎ12                        ℎ2′1
+                                                                                                    ℎ22
+               Cell                   Cell                                                IBN                                                            •          +                            𝒙𝒕 ∈ ℝ𝑵×𝑪
+                                                                                                                                                                                                                              𝒙𝒕𝑰𝑨 ∈ ℝ𝑵×𝑫
+                                                                                                                                                                                                                                                                                                                                                                 ℝ𝑺×𝑵×𝑫
+                                                                                                                                                                                                                                                                                                                                                                                                         ෝ𝑼𝑨𝑰
+                                                                                                                                                                                                                                                                                                                                                                                                         𝒙 𝒕  ∈ ℝ𝑵×𝑫
+                𝑐21                            ′1
+                                                                                         Cell                                                                                                                                                                                                                           (b1) UAI
+                                              𝑐𝑡−2                                                           𝑪𝒐𝒏𝒗𝟐𝑫
+                          …
+
+
+
+
+                                                     …                                   𝑐22                  𝒇𝒊𝒍𝒕𝒆𝒓: 𝟏 × 𝟏
+                                                                                                       ℎ𝑡2
+                                         ……
+               1                                     ℎ𝑡′1
+                  ……
+                         ℎ1𝑡
+
+
+
+
+                                                                                                                               GGCN
+              𝑐𝑡−1
+
+
+
+
+                                                                                                                                      GELU
+
+
+
+                                                                                                                                                             ELU
+                                              𝑐1′1
+   ……
+
+
+
+
+                                                                                               ……
+                                                                                                                                                    •
+
+
+
+
+                                                                                                                                                                                                                                                                                                                            Gaussian Kernel Similarity
+                                                                                                                                                                                                                                                                                            Euclidean Distance Matrix
+                                                                                         2
+                                                     …
+                                                                                        𝑐𝑡−1                                                                                                         ෡ 𝒕𝑼𝑨𝑰
+                                                                                                                                                                                                    ×𝑿
+                          …
+
+
+
+
+                IBN                    IBN                                                                                                   𝑟𝑡                                                                                    ෝ𝟏𝒕
+                                                                                                                                                                                                                                   𝒙                                                                                                                                                                         …
+   𝑥𝐻                                                 ′1                                                2
+                                                                                                                                                                                                                                                                                                                                                             …
+
+
+
+
+                                                                                                                                                                                                                 Add & Norm
+                          ℎ1𝐻                        ℎ𝐻                                  IBN           ℎ𝐻
+               Cell                   Cell                                                                                                                                                           ×𝑾
+                                                                                                                                                                                                                                   ෝ𝟐𝒕                                                                                                                                                                       …
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                     Self-loop &
+                                                                                                                                                                                𝑨𝑷𝒓𝒆 ∈ ℝ𝑵×𝑵                                        𝒙
+                                                                                         Cell                                                                                                                                                                                                                                                                …
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                      Softmax
+                                                                                                                                      1-
+                                                                                                             𝑪𝒐𝒏𝒗𝟐𝑫
+
+
+
+
+                                                                                                                                                                                                                                                                 …
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                 …
+                                                                                                                                                                                                                                                                                                                                                         …
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                   …
+                                                                                                                                                                                                     ×𝑾
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                         …
+                                              𝑐0′1                          ℎ1𝐻 : ℎ𝐻
+                                                                                   ′1                        𝒇𝒊𝒍𝒕𝒆𝒓: 𝟏 × 𝟐𝑫
+                                                                                                                                                                        ℎ1𝑡
+                                                                                                                                                                                                                              ෝ𝒕𝑵−𝟏
+                                                                                                                                                                                                                              𝒙                                                                                                                              …                                               …
+𝑿𝑴 ∈ ℝ𝑵×𝑯×𝑪            𝒉𝟏𝒕 , 𝒉′𝟏   𝟏 ′𝟏      𝑵×𝑫                                    𝒉𝟐𝒕 , 𝒄𝟐𝒕 ∈ ℝ𝑵×𝟐𝑫
+                                                                                                                                      •             +                                                ෡ 𝒕𝑼𝑨𝑰
+                                                                                                                                                                                                    ×𝑿
+                                                                                                                                                                                                                                                                                                                                                             …
+                              𝒕 , 𝒄𝒕 , 𝒄𝒕 ∈ ℝ                                                                                                                                                                                     ෝ𝒕𝑵
+                                                                                                                                                                                                                                  𝒙                                                                                                                                                                          …
+  Input                         First Layer                                             Second Layer         Decoder Layer
+                                                                                                                                                                                 𝑨𝑮𝒂𝒖 ∈ ℝ𝑵×𝑵                                                                   𝒙𝒕 ∈ ℝ𝑵×𝑫
+                                                                                                                                                                                                                                                               ෝ                                                                                                                                         𝑨𝑮𝒂𝒖 ∈ ℝ𝑵×𝑵
+                                                                                                                                                                     𝑐𝑡1
+                                     (a) The Structure of IBN                                                                         (b) IBN Cell                                            (b2) GGCN
+
+
+
+
+                                                                                                                         Fig. 1. The structure of the IBN.
+
+
+temporal modeling capacity of the network. The main con-                                                                                                                      poral and spatial modules. LGnet [16] jointly models local
+tributions of this work are as follows: (1) We propose a                                                                                                                      and global temporal dynamics using a memory network and
+more interpretable bidirectional forecasting framework, IBN,                                                                                                                  adversarial training for scenarios with missing data. How-
+tailored for scenarios with variable missing patterns; (2) By                                                                                                                 ever, these works primarily focus on random missing values,
+integrating UAI and GGCN, IBN improves both the reliability                                                                                                                   whereas in practice, a more extreme form—variable missing-
+of reconstructed values for missing variables and the explicit                                                                                                                ness [8, 9]—also occurs. In such cases, certain variables are
+modeling of spatial correlations among variables; (3) Exten-                                                                                                                  entirely absent, making it challenging for existing approaches
+sive experiments demonstrate that IBN consistently achieves                                                                                                                   to effectively model the synergy between missing and ob-
+SOTA forecasting performance across various missing rates                                                                                                                     served variables. Although GinAR [8] is the first to introduce
+on four public datasets.                                                                                                                                                      a novel predictive framework for variable missingness, its re-
+                                                                                                                                                                              construction of missing variables and graph learning strate-
+                                                                                                                                                                              gies still lack sufficient interpretability and robustness.
+          2. BACKGROUND AND RELATED WORK
+
+Recent MTSF models primarily focus on capturing temporal                                                                                                                                                                            3. METHODOLOGY
+dependencies within sequences [5]. While some studies have
+also considered inter-variable correlations, they typically                                                                                                                   3.1. Problem Statement
+model such relationships by learning the mutual influences                                                                                                                    In MTSF, the evolution of each variable is influenced by both
+among features intrinsic to each variable [3], overlooking the                                                                                                                its own history and the dynamics of other variables. Such
+physical connections that exist in real-world scenarios. These                                                                                                                dependencies can be represented by a graph structure G =
+physical connections are reflected in the inherent and ob-                                                                                                                    (V, E), parameterized via an adjacency matrix A ∈ RN ×N .
+servable topological structures among variables. In contrast,                                                                                                                 Here, V denotes the nodes of the graph with ∥V ∥ = N , E
+models based on STGNNs explicitly construct such physical                                                                                                                     represents the edges between nodes, and N is the total num-
+topologies in the form of graphs and dynamically learn them,                                                                                                                  ber of variables. MTSF aims to predict future values Y ∈
+thereby enabling a more faithful modeling of the actual phys-                                                                                                                 RN ×L from historical observations X ∈ RN ×H×C , where
+ical relationships among variables. For example, GTS [12]                                                                                                                     L represents the forecasting length, H denotes the histori-
+leverages historical observations across all variables to infer                                                                                                               cal window, and C is the feature dimension. In the variable-
+the underlying discrete probabilistic graph structure, while                                                                                                                  missing scenario, certain variables exhibit complete historical
+MegaCRN [13] proposes a novel spatio-temporal meta-graph                                                                                                                      absence, with their missing values replaced by zeros to obtain
+learning framework that improves traffic forecasting by ad-                                                                                                                   XM ∈ RN ×H×C . The objective is to learn a predictive map-
+dressing spatio-temporal heterogeneity and non-stationarity.                                                                                                                  ping from XM to Y .
+    While the aforementioned studies are all conducted un-
+der the assumption of complete data, real-world datasets often
+                                                                                                                                                                              3.2. Framework
+suffer from missing values due to factors such as equipment
+failures or human errors. To address this issue, HSPGNN [14]                                                                                                                  As shown in Fig. 1(a), the IBN mainly consists of the first
+integrates physical dynamics with dynamic graph learning to                                                                                                                   layer (Bi-RU), the second layer (simple RU), and the de-
+accurately impute missing values. BiTGraph [15] proposes                                                                                                                      coder layer. The input XM is processed by the Bi-RU
+a Biased Temporal Convolution Graph Network that explic-                                                                                                                      to obtain hidden features with different temporal infor-
+itly captures missing patterns by incorporating biased tem-                                                                                                                   mation: Hid1 = {h11 , h12 , . . . , h1t , . . . , h1H } and Hid2 =
+   ′    ′             ′         ′                     ′
+{hH1 , hH−1
+          1
+              , . . . , ht1 , . . . , h11 }, where {h1t , ht1 } ∈ RN ×D ,   3.2.2. GGCN
+and D denotes the dimension of the feature space. The
+number of RU cells equals H. Hid1 and Hid2 are con-                         As shown in Fig. 1(b2), GGCN is built upon the prede-
+catenated along the last dimension to form the input of the                 fined graph AP re and the dynamic graph AGau constructed
+unidirectional RU (Uni-RU), xt ∈ RN ×2D , whose hidden                      using a Gaussian kernel. The predefined graph AP re is con-
+output is h2t ∈ RN ×2D . The decoder input is constructed                   structed based on known information (i.e., the geographical
+by concatenating the last hidden outputs from the Bi-RU,                    distances between nodes), which captures the direct connec-
+        ′
+[h1H , hH1 ] ∈ RN ×2D , with h2H ∈ RN ×2D . The decoder con-                tions among different nodes. However, relying solely on
+tains two 2D convolutional layers, with kernel sizes of 1×2D                distance information between nodes is insufficient to fully
+and 1 × 1, respectively, and the number of kernels in both                  capture the spatial dependencies embedded in the node fea-
+layers is L. The structure of the IBN Cell is illustrated in Fig.           tures themselves. Therefore, it is necessary to construct a
+1(b): the UAI module is adopted as the input reconstructor                  learnable dynamic graph based on node features to further
+of the simple RU, and the internal fully connected layer is                 explore the underlying spatial information. Unlike GinAR,
+replaced with the GGCN module to capture spatial correla-                   which directly learns an adaptive graph through a variable-
+tions among variables. The formulation of the IBN Cell is as                embedded matrix (leading to poor interpretability and insta-
+follows:                                                                    bility), GGCN first computes the spatial distance between the
+                                                                          features of nodes i and j using the Euclidean distance matrix
+               ft = GeLU GGCNft (UAI (xt )) ,                         (1)   Di,j = x̂it − x̂jt , x̂it ∈ RD . Since Euclidean distances can
+                                                                                               2
+                                                                            be very large (especially in high-dimensional feature spaces),
+                rt = GeLU (GGCNrt (UAI (xt ))) ,                     (2)
+                                                                            directly applying the distance or its negative value to softmax
+                                                ct
+   ct = ft ⊙ ct−1 + (1 − ft ) ⊙ (GGCN (UAI (xt ))) ,                 (3)    may cause gradient explosion or vanishing. To address this,
+            ht = (1 − rt ) ⊙ UAI (xt ) + rt ⊙ ELU (ct ) .            (4)    GGCN adopts a Gaussian kernel function to compress pos-
+                                                                            sible extreme values into the range [0, 1], thereby stabilizing
+Among them, ft denotes the forget gate, rt denotes the re-                  gradients during training and facilitating model  convergence,
+set gate, ct denotes the cell state, and ht denotes the hidden                                                      (Di,j )2
+                                                                                                                 
+                                                                            as formulated below: Ai,j = exp − 2γ               , where γ de-
+state. GeLU(·) and ELU(·) represent activation functions.
+The following Section 3.2.1 and Section 3.2.2 will introduce                notes the embedding size. Finally, the matrix A is processed
+the structural principles of UAI and GGCN, respectively.                    with the self-loop and softmax to obtain the adjacency ma-
+                                                                            trix AGau ∈ RN ×N , which reflects the spatial correlation
+                                                                            variations among nodes, as shown in the following formula:
+3.2.1. UAI
+                                                                                                            
+Let xIA
+      t  = IA (xt ) ∈ RN ×D denote the IA-completed input,                                        exp Ãi,j
+where IA(·) is the Interpolation Attention [8]. We then apply                       AGaui,j = P                  , Ã = A + IN .       (8)
+                                                                                                 N
+a linear transformation parameterized by W ∈ RD×D and                                            k=1 exp Ãi,k
+b ∈ RD , followed by a dropout operator Dp (·) with drop rate
+p (set to 0.1 in this paper). For the s-th stochastic forward               After obtaining AP re and AGau , we assign them learnable
+pass, we have:                                                              weight matrices respectively and then combine them for joint
+                                                                            training. This allows the model not only to perceive the static
+        m(s) = Dp xIA
+                                 
+                       t ·W +b ,      s = 1, 2, . . . , S, (5)              spatial dependencies between nodes, but also to capture the
+                                                                            dynamic spatial relationships among the features contained
+where S is the total number of Monte Carlo samples [11] and                 in the nodes. The formulation is as follows:
+is set to 10 in this paper. Stacking all sampled hidden repre-
+sentations yields:                                                           xGGCN  = Norm AP re · x̂UAI      · W + AGau · x̂UAI
+                                                                                                                                      
+                                                                              t                         t                      t    ·W ,
+                                                                                                                                        (9)
+            M = {m(1) , m(2) , . . . , m(S) } ∈ RS×N ×D .            (6)                     N ×D
+                                                                            where x̂UAI
+                                                                                     t  ∈  R       denotes the  output of the UAI module.
+The predictive mean µ and standard
+                                 q deviation σ are computed
+               S                    PS                2
+as: µ = S1 s=1 m(s) , σ = S1 s=1 m(s) − µ . The                                                 4. EXPERIMENTS
+            P
+
+UAI outputs the pair (µ, σ) as the prediction value and its
+uncertainty estimate. Finally, UAI uses the following formula               Experiment setup. We use four public datasets (METR-LA,
+to obtain the final values:                                                 PEMS-BAY, PEMS04, and PEMS08 [8]) as our benchmarks.
+                                                                            Six recent models—MegaCRN [13], LGnet [16], GC-VRNN
+                                  µ
+                         x̂UAI
+                           t   =      ,                   (7)               [17], TriD-MAE [18], BiTGraph [15], and GinAR [8]—are
+                                 1+σ                                        selected as the baseline models for comparison. Three eval-
+which means that the greater the uncertainty, the lower the                 uation metrics (RMSE, MAPE, and MAE) are used to com-
+model’s attention weight assigned to the imputation result.                 prehensively assess the prediction performance of different
+baselines and IBN. We randomly mask variables at rates of                                                                    GGCN with AGCN [8], and replacing Bi-RU with a unidi-
+25%, 50%, and 75% to evaluate the model’s generalization                                                                     rectional RU [8]. The results in Table 2 show that, compared
+ability [8]. The hyperparameter settings of IBN for different                                                                with the core components in GinAR, the corresponding im-
+tasks can be found in our publicly available code.                                                                           proved modules proposed in this work achieve better predic-
+                                                                                                                             tive performance while offering stronger interpretability and
+                                                                                                                             robustness, thereby demonstrating the rationality of the IBN
+Table 1. Performance comparison results of all baselines and                                                                 component design.
+the proposed model on all datasets. The best results are shown
+in bold, and the second best are underlined.
+                               Missing rate 25%                Missing rate 50%                  Missing rate 75%
+  Datasets     Methods
+                             RMSE    MAPE       MAE      RMSE       MAPE        MAE        RMSE           MAPE      MAE
+
+              MegaCRN        7.43    10.47      3.81      7.87       11.02       3.94          8.28       12.13     4.24
+                LGnet        7.52    10.97      3.95      8.03       11.83       4.17          8.52       13.09     4.42
+              GC-VRNN        7.04    10.51      3.68      7.73       10.98       3.87          8.19       11.71     4.17
+ METR-LA      TriD-MAE       7.15    10.37      3.64      7.58       11.07       3.79          7.92       11.13     3.92
+              BiTGraph       6.74    10.25      3.61      7.32       10.79       3.69          7.63       11.04     3.74              (a) Error & Uncertainty             (b) Static graph & Dynamic graph
+
+                GinAR        6.55    10.12      3.56      7.14       10.42       3.61          7.39       10.71     3.70
+                 IBN         6.84     9.78      3.53      7.09       10.30       3.61          7.23       10.98     3.72
+
+              MegaCRN        5.93     7.03      2.85      7.36       7.75        3.02          7.75       8.77      3.35
+                                                                                                                                Fig. 2. Interpretability analysis of the UAI and GGCN.
+                LGnet        6.02     7.19      2.88      6.74       8.15        3.14          8.08       9.18      3.43
+              GC-VRNN        4.93     5.37      2.39      5.34       5.86        2.64          6.08       6.94      2.87
+ PEMS-BAY     TriD-MAE
+              BiTGraph
+                             5.17
+                             4.52
+                                      5.48
+                                      5.16
+                                                2.46
+                                                2.17
+                                                          5.53
+                                                          5.06
+                                                                     6.12
+                                                                     6.07
+                                                                                 2.69
+                                                                                 2.44
+                                                                                               5.97
+                                                                                               5.79
+                                                                                                          6.85
+                                                                                                          6.68
+                                                                                                                    2.79
+                                                                                                                    2.61
+                                                                                                                                 Interpretability analysis. To validate the interpretability
+                GinAR        4.34     4.90      2.10      4.78       5.88        2.35          5.48       6.17      2.54     of IBN, we visualized the error–uncertainty relationship of
+                 IBN         4.53     5.03      2.22      4.69       5.32        2.27          5.34       6.02      2.53
+                                                                                                                             UAI and the inter-node attention weights learned by GGCN,
+              MegaCRN        42.22   20.18      28.26    47.07       21.29      31.48          47.95      22.03     33.58
+                LGnet        42.64   18.42      26.53    46.39       21.30      30.81          52.05      24.83     33.94
+                                                                                                                             as shown in the Fig. 2. Specifically, Fig. 2(a) illustrates that
+  PEMS04
+              GC-VRNN        39.75   16.82      23.57    41.34       17.83      26.43          43.82      18.67     27.72    as the reconstruction error of UAI increases, the model’s
+              TriD-MAE       39.83   16.98      24.15    40.65       17.52      25.89          41.90      18.04     26.95
+              BiTGraph       38.94   16.75      23.01    40.03       17.34      24.15          41.69      17.92     26.33    estimated uncertainty for the corresponding prediction also
+                GinAR        38.22   16.45      22.52    39.02       17.04      23.78          41.53      17.58     25.98
+                 IBN         36.51   16.17      22.51    36.54       16.89      22.66          37.26      17.22     23.26
+                                                                                                                             rises, thereby reducing the attention weight assigned to that
+              MegaCRN        39.29   17.42      26.04    43.43       21.30      30.68          48.37      21.34     32.23
+                                                                                                                             reconstructed value in the overall prediction. This demon-
+                LGnet        37.54   22.18      26.51    47.23       21.91      32.04          50.38      21.43     33.65    strates the model’s adaptive regulation capability in uncer-
+              GC-VRNN        35.17   14.69      23.25    36.40       15.85      24.27          39.67      16.06     26.32
+  PEMS08      TriD-MAE       33.15   14.25      21.53    35.95       15.32      23.18          37.64      15.58     24.89    tainty modeling. Fig. 2(b) presents the inter-node attention
+              BiTGraph       31.89   14.05      20.65    35.06       14.62      22.44          36.98      15.04     23.38
+                GinAR        31.34   13.76      20.41    34.53       14.21      22.01          36.04      14.77     23.10
+                                                                                                                             weights learned by GGCN, where the left subfigure depicts
+                 IBN         29.84   13.15      19.40    37.35       13.79      21.86          36.14      14.59     22.07    stable static spatial topologies among nodes, while the right
+                                                                                                                             subfigure captures the dynamic spatial dependencies among
+                                                                                                                             node features over time. Together, the two subfigures demon-
+                                                                                                                             strate that GGCN can effectively capture and distinguish
+Table 2. Ablation study of IBN components on diverse                                                                         multi-level spatial structures, thereby enhancing the model’s
+datasets under the 50% variable missing.                                                                                     representational capacity and interpretability.
+                     IBN                     UAI → IA              GGCN → AGCN                         Bi-RU →Uni-RU
+ Datasets
+             RMSE    MAPE    MAE     RMSE      MAPE     MAE      RMSE       MAPE     MAE         RMSE      MAPE      MAE
+
+METR-LA      7.09    10.30    3.61   7.45      10.69    3.70      7.12       10.46      3.58      7.20      10.60     3.69
+                                                                                                                                                                5. CONCLUSION
+PEMS-BAY     4.69    5.32     2.27   4.94      5.48     2.34      4.79       5.34       2.32      4.88      5.58      2.37
+
+ PEMS04      36.54   16.89   22.66   37.14     17.09    23.01    36.71       17.01   22.88        37.06     16.55    23.05
+                                                                                                                             We propose a novel model, IBN, to address the prevalent issue
+ PEMS08      37.35   13.79   21.86   36.72     14.92    21.85    38.50       14.51   22.47        36.12     14.59    21.59
+                                                                                                                             of variable missingness in multivariate time series forecasting
+                                                                                                                             tasks. Compared with existing approaches, IBN demonstrates
+    Main results. The results in Table 1 demonstrate that                                                                    significant advantages in both predictive performance and in-
+IBN achieves overall superior performance compared to Gi-                                                                    terpretability. Specifically, IBN incorporates the UAI mecha-
+nAR. Specifically, IBN attains average MAE improvements                                                                      nism, enabling the model to effectively evaluate the reliabil-
+of 1.89% (12.15 → 11.92), 2.63% (12.94 → 12.60), and                                                                         ity of interpolation results and thereby enhance their credi-
+6.72% (13.83 → 12.90) over GinAR on 25%, 50%, and 75%                                                                        bility. In addition, IBN introduces a new graph neural net-
+missing rates, respectively, where the average MAE refers                                                                    work structure, GGCN, constructed on Gaussian kernels and
+to the mean MAE across four different datasets. This sig-                                                                    node features, which not only strengthens model stability but
+nificant performance gain can be largely attributed to IBN’s                                                                 also further improves interpretability. Moreover, IBN adopts
+uncertainty-aware reconstruction and its stronger modeling                                                                   a bidirectional recursive unit to build the overall framework,
+capacity for spatiotemporal dependencies.                                                                                    effectively enhancing the capability of capturing and model-
+    Ablation study. To verify the effectiveness of the com-                                                                  ing temporal features. Experimental results on four public
+ponents in IBN, we conducted the following three groups of                                                                   datasets under varying missing rates show that IBN achieves
+ablation experiments: replacing UAI with IA [8], replacing                                                                   SOTA performance in forecasting accuracy.
+                    6. REFERENCES                                      Transactions on Knowledge and Data Engineering, vol.
+                                                                       36, no. 8, pp. 3783–3800, 2024.
+ [1] Nishu Bansal and Rasmeet Singh Bali, “Attention Based
+     Traffic Flow Forecasting Model as A Service of Intel-        [11] Yarin Gal and Zoubin Ghahramani, “Dropout as a
+     ligent Transportation System,” IEEE Transactions on               Bayesian Approximation: Representing Model Uncer-
+     Artificial Intelligence, pp. 1–10, 2025.                          tainty in Deep Learning,” in international conference
+                                                                       on machine learning, 2016, pp. 1050–1059.
+ [2] Rafal A Angryk, Petrus C Martens, Berkay Aydin,
+     Dustin Kempton, Sushant S Mahajan, Sunitha Ba-               [12] Chao Shang, Jie Chen, and Jinbo Bi, “Discrete Graph
+     sodi, Azim Ahmadzadeh, Xumin Cai, Soukaina Fi-                    Structure Learning for Forecasting Multiple Time Se-
+     lali Boubrahimi, Shah Muhammad Hamdi, et al., “Mul-               ries,” in International Conference on Learning Repre-
+     tivariate time series dataset for space weather data ana-         sentations, 2021.
+     lytics,” Scientific data, vol. 7, no. 1, pp. 227, 2020.
+                                                                  [13] Renhe Jiang, Zhaonan Wang, Jiawei Yong, Puneet Jeph,
+ [3] Shusen Ma, Yun-Bo Zhao, Yu Kang, and Peng Bai,                    Quanjun Chen, Yasumasa Kobayashi, Xuan Song, Shin-
+     “Multivariate Time-Series Modeling and Forecasting                taro Fukushima, and Toyotaro Suzumura, “Spatio-
+     With Parallelized Convolution and Decomposed Sparse-              Temporal Meta-Graph Learning for Traffic Forecast-
+     Transformer,” IEEE Transactions on Artificial Intelli-            ing,” in Proceedings of the AAAI conference on artificial
+     gence, vol. 5, no. 10, pp. 5232–5243, 2024.                       intelligence, 2023, vol. 37, pp. 8078–8086.
+ [4] Haixu Wu, Tengge Hu, Yong Liu, Hang Zhou, Jianmin            [14] Guojun Liang, Prayag Tiwari, Sławomir Nowaczyk,
+     Wang, and Mingsheng Long, “TimesNet: Temporal 2D-                 and Stefan Byttner, “Higher-order Spatio-temporal
+     Variation Modeling for General Time Series Analysis,”             Physics-incorporated Graph Neural Network for Multi-
+     in The Eleventh International Conference on Learning              variate Time Series Imputation,” in Proceedings of the
+     Representations, 2023.                                            33rd ACM International Conference on Information and
+ [5] Ailing Zeng, Muxi Chen, Lei Zhang, and Qiang Xu,                  Knowledge Management, 2024, pp. 1356–1366.
+     “Are transformers effective for time series forecasting?,”
+                                                                  [15] Xiaodan Chen, Xiucheng Li, Bo Liu, and Zhijun Li,
+     in Proceedings of the AAAI conference on artificial in-
+                                                                       “Biased Temporal Convolution Graph Network for Time
+     telligence, 2023, vol. 37, pp. 11121–11128.
+                                                                       Series Forecasting with Missing Values,” in The Twelfth
+ [6] Shusen Ma, Yun-Bo Zhao, and Yu Kang, “C3RL: Re-                   International Conference on Learning Representations,
+     thinking the Combination of Channel-independence and              2024.
+     Channel-mixing from Representation Learning,” arXiv
+                                                                  [16] Xianfeng Tang, Huaxiu Yao, Yiwei Sun, Charu Aggar-
+     preprint arXiv:2507.17454, 2025.
+                                                                       wal, Prasenjit Mitra, and Suhang Wang, “Joint Model-
+ [7] Yuzhou Chen, Sotiris Batsakis, and H Vincent Poor,                ing of Local and Global Temporal Dynamics for Mul-
+     “Higher-Order Spatio-Temporal Neural Networks for                 tivariate Time Series Forecasting with Missing Values,”
+     Covid-19 Forecasting,” in ICASSP 2023-2023 IEEE In-               in Proceedings of the AAAI conference on artificial in-
+     ternational Conference on Acoustics, Speech and Signal            telligence, 2020, vol. 34, pp. 5956–5963.
+     Processing (ICASSP). IEEE, 2023, pp. 1–5.
+                                                                  [17] Yi Xu, Armin Bazarjani, Hyung-gun Chi, Chiho Choi,
+ [8] Chengqing Yu, Fei Wang, Zezhi Shao, Tangwen Qian,                 and Yun Fu, “Uncovering the Missing Pattern: Uni-
+     Zhao Zhang, Wei Wei, and Yongjun Xu, “GinAR:                      fied Framework Towards Trajectory Imputation and Pre-
+     An End-To-End Multivariate Time Series Forecasting                diction,” in Proceedings of the IEEE/CVF Conference
+     Model Suitable for Variable Missing,” in Proceedings              on Computer Vision and Pattern Recognition, 2023, pp.
+     of the 30th ACM SIGKDD conference on knowledge dis-               9632–9643.
+     covery and data mining, 2024, pp. 3989–4000.
+                                                                  [18] Kai Zhang, Chao Li, and Qinmin Yang, “TriD-MAE: A
+ [9] Soumen Pachal and Avinash Achar, “Sequence Predic-                Generic Pre-trained Model for Multivariate Time Series
+     tion under Missing Data: An RNN Approach without                  with Missing Values,” in Proceedings of the 32nd ACM
+     Imputation,” in Proceedings of the 31st ACM Interna-              International Conference on Information and Knowl-
+     tional Conference on Information & Knowledge Man-                 edge Management, 2023, pp. 3164–3173.
+     agement, 2022, pp. 1605–1614.
+[10] Jinliang Deng, Xiusi Chen, Renhe Jiang, Du Yin,
+     Yi Yang, Xuan Song, and Ivor W. Tsang, “Disentan-
+     gling Structured Components: Towards Adaptive, Inter-
+     pretable and Scalable Time Series Forecasting,” IEEE
+

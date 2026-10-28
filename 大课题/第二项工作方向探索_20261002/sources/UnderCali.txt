@@ -1,0 +1,973 @@
+                                                   Online Irregular Multivariate Time Series Forecasting via
+                                                         Uncertainty-Driven Dual-Expert Calibration
+                                                             Haonan Wen                                              Hanyang Chen                                    Songhe Feng∗
+                                                 Key Laboratory of Big Data &                              Key Laboratory of Big Data &                   School of Computer Science and
+                                                    Artificial Intelligence in                                Artificial Intelligence in                    Technology, Beijing Jiaotong
+                                                Transportation (Beijing Jiaotong                          Transportation (Beijing Jiaotong                           University
+                                               University), Ministry of Education                        University), Ministry of Education                        Beijing, China
+                                                School of Computer Science and                            School of Computer Science and                Tangshan Research Institute, Beijing
+                                                  Technology, Beijing Jiaotong                              Technology, Beijing Jiaotong                        Jiaotong University
+                                                           University                                                University                                   Tangshan, China
+arXiv:2605.28603v1 [cs.LG] 27 May 2026
+
+
+
+
+                                                         Beijing, China                                            Beijing, China                               shfeng@bjtu.edu.cn
+                                                     hn.wen@bjtu.edu.cn                                      hanyangchen@bjtu.edu.cn
+
+                                         Abstract                                                                                CCS Concepts
+                                         Irregular multivariate time series (IMTS) forecasting is critical in                    • Computing methodologies → Machine learning.
+                                         many real-world applications, where time series are irregularly
+                                         sampled and exhibit dynamically evolving missingness patterns.                          Keywords
+                                         Although existing methods perform well in offline settings, they
+                                                                                                                                 Irregular Time Series Forecasting; Online Learning; Distribution
+                                         often suffer from significant performance degradation when de-
+                                                                                                                                 Shift
+                                         ployed online due to dynamic shifts in data distribution. Main-
+                                         taining forecasting capability in such dynamic scenarios typically                      ACM Reference Format:
+                                         necessitates online adaptation techniques. Since irregular sampling                     Haonan Wen, Hanyang Chen, and Songhe Feng. 2026. Online Irregular
+                                         fundamentally undermines temporal continuity and periodicity,                           Multivariate Time Series Forecasting via Uncertainty-Driven Dual-Expert
+                                         we cannot leverage these widely studied characteristics from regu-                      Calibration. In Proceedings of the 32nd ACM SIGKDD Conference on Knowl-
+                                         lar MTS for online learning. To this end, we study the problem of                       edge Discovery and Data Mining V.2 (KDD 2026), August 9–13, 2026, Jeju
+                                         online IMTS forecasting and propose Under-Cali, an uncertainty-                         Island, Republic of Korea. ACM, New York, NY, USA, 12 pages. https://doi.
+                                         driven dual-expert calibration framework consisting of three core                       org/10.1145/3770855.3817729
+                                         components: an uncertainty estimator, a dual-expert calibration
+                                         module, and an adaptive routing module. We design an uncer-
+                                         tainty estimator that serves as the core control signal to jointly                      1    Introduction
+                                         manage inference and adaptation processes. In our framework, the                        Irregular multivariate time series (IMTS) forecasting is critical in
+                                         uncertainty estimator first assesses uncertainty for each incom-                        applications such as healthcare, biomechanics, climate, astronomy
+                                         ing batch. The adaptive routing module then directs samples with                        and finance [27, 30, 33, 36], where time series are captured at ir-
+                                         high uncertainty to the unreliable expert for calibration, while                        regular sampling intervals and temporal misalignment. While sub-
+                                         low uncertainty samples remain with the reliable expert. Subse-                         stantial progress has been made in offline IMTS forecasting using
+                                         quently, the system updates the reliable expert and the uncertainty                     continuous-time models, graph-based representations, and atten-
+                                         estimator using well-calibrated reliable samples, and updates the                       tion mechanisms [2, 5, 14, 24, 25, 32, 35, 37], the parameters in these
+                                         unreliable expert with challenging samples, enabling stable and                         methods will be frozen once training is completed, and thus they
+                                         efficient online learning. Under-Cali keeps the source forecasting                      lack the ability to continuously adapt to evolving data.
+                                         model frozen and performs adaptation only through a lightweight,                           However, distribution shifts between the training and testing
+                                         model-agnostic calibration module, enabling efficient adaptation.                       data often occur in many real-world application scenarios. It stems
+                                         Extensive experiments on IMTS benchmarks demonstrate consis-                            from the evolving data distribution and observation process caused
+                                         tent improvements with low computational cost. Our code is avail-                       by changes in subjects, devices, environments, or operational poli-
+                                         able at https://github.com/HaonanWen/Under-Cali.                                        cies, leading to significant performance degradation after deploy-
+                                                                                                                                 ment. We present a data analysis in Figure 1 to verify the presence
+                                                                                                                                 of distribution shifts. While several online learning studies have
+                                         ∗ Corresponding author.
+                                                                                                                                 been proposed to address this issue, most of them focus on regular
+                                                                                                                                 time series [12, 31], where dense temporal continuity and period-
+                                                                                                                                 icity provide reliable learning signals. These assumptions break
+                                                                                                                                 down in IMTS, where temporal dependencies are sparse and incon-
+                                         This work is licensed under a Creative Commons Attribution 4.0 International License.   sistent, observation intervals are highly variable, and missingness
+                                         KDD 2026, Jeju Island, Republic of Korea.                                               itself is informative and non-stationary [37]. As a result, directly
+                                         © 2026 Copyright held by the owner/author(s).
+                                         ACM ISBN 979-8-4007-2259-2/2026/08                                                      applying existing online time series adaptation methods is not an
+                                         https://doi.org/10.1145/3770855.3817729                                                 appropriate solution. This gap motivates us to formally define and
+  KDD 2026, August 9–13, 2026, Jeju Island, Republic of Korea.                                                        Haonan Wen, Hanyang Chen, & Songhe Feng
+
+
+                                                                                          Importantly, predictions for each incoming batch are generated
+                               Train Set                                   Train Set
+                                                                                       using parameters updated from previous batches, and the ground
+                               Test Set                                    Test Set    truth is used exclusively for adaptation, satisfying the online learn-
+                                                                                       ing protocol. The entire framework is resource-efficient, updates
+Dimension 2
+
+
+
+
+                                               Dimension 2
+                                                                                       only a small fraction of parameters, and is model-agnostic, seam-
+                                                                                       lessly compatible with any existing IMTS forecaster. In summary,
+                                                                                       our contributions are as follows:
+                                                                                           • We are the first to define the problem of Online Irregular Mul-
+                                                                                             tivariate Time Series Forecasting and identify key challenges
+                 Dimension 1                                 Dimension 1
+                                                                                             that distinguish it from existing settings.
+              (a) Human Activity                             (b) USHCN                     • We propose Under-Cali, an uncertainty-driven dual-expert
+                                                                                             calibration framework that enables principled and stable
+  Figure 1: Train–test distribution shifts in the Human Activity                             online adaptation for IMTS. We design a dual-expert gated
+  and USHCN datasets.                                                                        distribution calibrator that performs differentiated calibra-
+                                                                                             tion based on sample uncertainty scores quantified by the
+                                                                                             uncertainty estimator.
+  study the problem of online irregular multivariate time series fore-                     • We introduce an adaptive routing module that governs the
+  casting, which models should continuously generate predictions in                          autonomously on-demand triggering and sample allocating
+  a sequential manner, achieve online adaptation under distribution                          to distinct calibration experts for stable online forecasting.
+  shifts, and simultaneously handle complex issues such as irregular                       • We conduct extensive experiments on IMTS benchmarks and
+  sampling and dynamically evolving missingness patterns.                                    architectures, demonstrating that Under-Cali consistently
+      In this paper, we directly focus on the uncertainty caused by                          achieves superior performance compared to those without
+  distribution shifts, instead of the temporal continuity and period-                        online adaptation.
+  icity. To better measure the forecasting uncertainty, we assume
+  that a high forecasting uncertainty for a sample often indicates                     2 Related Work
+  that the model has not learned or seen this underlying distribution,
+  signaling a distribution shift. In such cases, online adaptation can be              2.1 IMTS Forecasting
+  leveraged to update the model or the parameters of adapters, allow-                  Recent advancements in deep learning have significantly propelled
+  ing it to assimilate the new data distribution and thereby achieve                   the field of Irregular Multivariate Time Series (IMTS) forecasting.
+  better performance on subsequent test data.                                          From the perspective of data representation for model input, ex-
+      Building on the insight, we propose Under-Cali, an Uncertainty-                  isting approaches can be broadly classified into two paradigms:
+  driven Dual-Expert Calibration framework for online IMTS fore-                       padding-based and non-padding-based methods.
+  casting. Concretely, it consists of an Uncertainty Estimator (UE),                       Padding-based methods first convert IMTS into regular grid-like
+  a Dual-Expert Gated Distribution Calibrator (GDC), and an Adap-                      structures by inserting placeholders such as zeros, imputed values,
+  tive Routing Module (ARM). We define uncertainty operationally                       or repeated observations along the time axis for each channel. This
+  as the normalized prediction error under the current data distri-                    alignment facilitates the use of standard neural architectures. A
+  bution, rather than a Bayesian confidence estimate. Intuitively,                     prominent line of work leverages continuous-time models parame-
+  increased uncertainty reflects a mismatch between the current and                    terized by Neural Ordinary Differential Equations (Neural ODEs)
+  the learned representation, providing a principled and reliable indi-                or their variants [2, 24, 25], which treat observations as points on
+  cator for inference and adaptation. During inference, the UE first                   a learned latent trajectory, inherently accommodating irregular
+  assesses uncertainty for each incoming batch per sample. Then,                       intervals. Another branch adapts discrete-time architectures, such
+  guided by their uncertainty scores, the samples are allocated to                     as Transformers [35] and Graph Neural Networks [7, 17, 38], to
+  different gated distribution calibration experts for input and output                the padded representations to capture temporal and cross-variable
+  calibration. The GDC separates them into two isolated pathways                       dependencies. While effective, these methods often incur increased
+  where a reliable expert refines inputs and predictions for familiar                  computational cost due to processing filler data, and the padding
+  patterns with low uncertainty, and an unreliable expert cautiously                   operation itself may distort the original temporal dynamics and
+  adapts to novel or anomalous patterns with high uncertainty. This                    sparsity patterns.
+  separation prevents severe out-of-distribution samples from cor-                         In contrast, non-padding-based methods aim to model the raw,
+  rupting stable forecasting patterns, addressing a core failure mode                  sparse IMTS directly using more flexible data structures. SeFT [8]
+  of existing online learning approaches. In addition, blindly adapting                employs set representations where observations are treated as un-
+  at every batch in the online adaptation may amplify gradient noise                   ordered elements, focusing on permutation-invariant aggregation.
+  and lead to catastrophic interference, while an overly conservative                  GraFITi [32] treats the series as a bipartite graph, connecting sepa-
+  adaptation strategy fails to effectively track distribution shifts. The              rate sets of variable nodes and time nodes. A recent advancement
+  ARM autonomously determines when to adapt the GDC and the UE.                        is the hypergraph-based approach, exemplified by HyperIMTS [14],
+  If adaptation is necessary, the system updates the reliable expert                   which models all observed values as nodes interconnected by tempo-
+  and the UE using well-calibrated reliable samples, and updates the                   ral and variable hyperedges. This structure enables direct message
+  unreliable expert with challenging samples.                                          passing among unaligned observations, offering a more unified and
+Online Irregular Multivariate Time Series Forecasting via Uncertainty-Driven Dual-Expert Calibration               KDD 2026, August 9–13, 2026, Jeju Island, Republic of Korea.
+
+
+expressive representation. However, these approaches often face                           The adaptive routing module, described in Section 4.3, governs
+challenges in addressing the distribution shift issue after model                         when to trigger adaptation and how to allocate samples to the
+deployment and lack the capability for online adaptation.                                 calibration experts. In addition, the online adaptation process is
+                                                                                          introduced for online deployment in section 4.4.
+2.2     Online Learning for Time Series
+Research on online time series forecasting has evolved from tradi-                        4.1      Uncertainty Estimator
+tional statistical models toward more complex deep learning archi-                        Due to the irregular nature of IMTS, the temporal continuity and
+tectures. Early work [1] updated ARMA model parameters online                             periodicity commonly exploited in recent multivariate time series
+using regret minimization techniques, though such models strug-                           studies [10] to determine model update timing are no longer accessi-
+gle to capture complex temporal dependencies. Subsequently, re-                           ble. Therefore, we resort to uncertainty estimation as an alternative
+searchers have proposed deep learning-based online models, such as                        indicator to quantify the degree of distribution shift and determine
+OneNet [31], which integrates cross-variable and cross-time model-                        when to update the model. However, conventional methods such as
+ing and FSNet [23] introduces a dual-stream mechanism to leverage                         MC dropout [6] depend on dropout layers and cannot generalize to
+both immediate and delayed feedback. To address shifting data dis-                        arbitrary model architectures. To enable model-agnostic adaptation,
+tributions, the Detect-and-Adapt method [39] was introduced to                            we train an Uncertainty Estimator (UE) to estimate the uncertainty
+explicitly detect concept drift and adjust the model. Additionally,                       score, using it as a measure of uncertainty [16]. It is necessary to
+some studies have focused on reducing the computational cost of                           clarify that we define uncertainty operationally as the normalized
+online updates. DSOF [12] employs an adapter module and expe-                             prediction error under the current data distribution, rather than
+rience replay to efficiently fine-tune the model with limited data.                       a Bayesian confidence estimate. Importantly, UE is not used to di-
+Proceed [41] proposes a proactive adaptation strategy that adjusts                        rectly refine predictions, but solely serves as a control signal for
+model weights using low-rank matrices. Concurrently, TAFAS [10]                           online adaptation decisions.
+proposes a test-time adaptation framework that utilizes partially                            Specifically, we implement UE as a neural network 𝑔𝜙 that learns
+observed ground truths to proactively calibrate predictions.                              a mapping from the joint representation of input time series and
+   These methods primarily target regularly sampled time series.                          the prediction results to the uncertainty score, which can be written
+However, existing work has not yet systematically studied the                             as follows,
+online forecasting scenario for IMTS, where irregular sampling,                                                      𝑢ˆ𝑖 = 𝑔𝜙 (X𝑖 , V̂𝑖,𝑦 ),                 (2)
+asynchronous variables, and dynamically evolving missingness fun-
+                                                                                          where X𝑖 is the flattened lookback window, V̂𝑖,𝑦 is the the model
+damentally undermine temporal continuity and periodicity, making
+                                                                                          prediction, and 𝑢ˆ𝑖 ∈ [0, 1] is the estimated uncertainty score. The
+direct application of existing online adaptation techniques ineffi-
+                                                                                          ground truth of the uncertainty score 𝑢𝑖 is computed as the normal-
+cient or unstable. This paper aims to fill this gap.
+                                                                                          ized Mean Squared Error (MSE) between the predicted values V̂𝑖,𝑦
+                                                                                          and observed values V𝑖,𝑦 , which can be formulated as follows,
+3     Preliminary
+                                                                                                               Δ − Δmin
+We consider an IMTS dataset D := {O𝑖 |𝑖 = 1, ..., 𝑁 } consisting of 𝑁                                  𝑢𝑖 =               , Δ =∥ ( V̂𝑖,𝑦 − V𝑖,𝑦 ) ⊙ M𝑖,𝑦 ∥ 22,             (3)
+samples, where O𝑖 is the 𝑖-th sample. Each sample O𝑖 with a total                                             Δmax − Δmin
+of 𝐿 timestamps and 𝐶 variables can be represented by triplet O𝑖 =                        where Δmin , Δmax are the minimum value and maximum value in
+(T𝑖 , V𝑖 , M𝑖 ). Here, T𝑖 = ∪𝐶𝑐=1 [𝑙 𝑐𝑗 ] 𝐿𝑗=1
+                                            𝑐
+                                               ∈ R𝐿 denotes the chronological             running statistics. Notably, the observation mask M𝑖,𝑦 allows UE
+unique timestamps of all observations within 𝐶 variables. Matrix                          to learn the missingness pattern of the target series and distinguish
+V𝑖 = [[𝑣𝑙𝑐 ]𝐶𝑐=1 ]𝑙=1
+                    𝐿   ∈ R𝐿×𝐶 records the observed values or ‘NA’                        whether potential error stems from poor forecasting or inherent
+if unobserved. Matrix M𝑖 = [[𝑚𝑙𝑐 ]𝐶𝑐=1 ]𝑙=1         𝐿  ∈ R𝐿×𝐶 represents a                sparsity of the ground truth.
+masking matrix, where 𝑚𝑙𝑐 is 1 if 𝑣𝑙𝑐 is observed, otherwise zero.                            The UE is pre-trained offline first to regress the normalized
+   For the forecasting task, given a split timestamp 𝑙ℎ ∈ [1, 𝐿],                         MSE value of the source forecaster with the Mean Absolute Error
+an IMTS sample can be divided into a lookback window X𝑖 :=                                (MAE) loss function, which ensures that the estimated uncertainty
+(T𝑖,𝑥 , V𝑖,𝑥 , M𝑖,𝑥 ) and a forecast window Y𝑖 := (T𝑖,𝑦 , V𝑖,𝑦 , M𝑖,𝑦 ). The              aligns with the actual forecasting error. This direct supervision
+forecast query Q𝑖 is the combination of T𝑖,𝑦 and M𝑖,𝑦 within the                          ensures that a higher output value 𝑢ˆ𝑖 correlates directly with a
+forecast window, i.e., Q𝑖 := (T𝑖,𝑦 , M𝑖,𝑦 ). In this work, given the                      higher expected prediction error and, by proxy, higher estimated
+lookback window X𝑖 and forecast query Q𝑖 , a source forecasting                           forecasting uncertainty, signaling a significant distribution shift.
+model 𝑓𝜃 (·) can predict the corresponding observed values V̂𝑖,𝑦 :                            During online adaptation, both the ground-truth and estimated
+                                                                                          uncertainty scores are computed using the calibrated prediction
+                                                                                             cali produced by the reliable expert introduced in Section 4.2,
+                                                                                          V̂𝑖,𝑦
+                             𝑓𝜃 (X𝑖 , Q𝑖 ) → V̂𝑖,𝑦 .                           (1)
+                                                                                          rather than by the source forecaster.
+4     Methodology                                                                                                                          cali
+                                                                                                                         𝑢ˆ𝑖 = 𝑔𝜙 (X𝑖 , V̂𝑖,𝑦   ).                         (4)
+As illustrated in Figure 2, Under-Cali operates in an online manner
+and is built upon three core components. The uncertainty estimator,                                      Δ − Δmin
+                                                                                                       𝑢𝑖 =        , Δ =∥ ( V̂𝑖,𝑦
+                                                                                                                               cali
+                                                                                                                                    − V𝑖,𝑦 ) ⊙ M𝑖,𝑦 ∥ 22, (5)
+introduced in Section 4.1, quantifies the forecasting uncertainty of                                   Δmax − Δmin
+each sample. The dual-expert gated distribution calibrator, detailed                      After the ground truth becomes available, the UE will be updated
+in Section 4.2, performs expert-isolated input and output calibration.                    online to improve uncertainty estimation for subsequent batches,
+KDD 2026, August 9–13, 2026, Jeju Island, Republic of Korea.                                                                               Haonan Wen, Hanyang Chen, & Songhe Feng
+
+
+                     IMTS batch ℬ (𝑡)
+          𝑉𝑉1                               ？
+                                            ？           Adaptive Routing   Unreliable Expert
+            𝑉1
+              1                              ？？
+                                              ？？
+          𝑉𝑉2
+            𝑉22
+                                                        ①&②            ≥   ℬur            ⊕                            Output
+
+
+
+
+                                                                                                Source Forecaster
+          𝑉𝑉3                               ？
+                                            ？                                           tanh                                                        𝑉𝑉
+                                                                                                                                                     11
+            𝑉33                              ？                                                                        Calibrator                      𝑉1
+                                                 ？
+                                                 ？？                              TC MLP
+①                 tt1 tt22 tt3 tt4 tt5 tt66 tt77 tt88
+                    t11 t 2 t33 t44 t55 t 6 t 7 t 8     ①                                                                                           𝑉𝑉2
+                                                                                                                                                       2
+                                                                                                                                                       𝑉
+                                                            𝜏alloc                                                                                      2
+
+&                                                                                                                                                   𝑉𝑉3
+                                                                                                                                                       3
+                                                                                                                                                       𝑉3
+②                      Uncertainty
+                        Estimator                                                                                                                           tt11tt22 tt33 tt44tt55 tt66 tt77 tt88
+                                                                 Yes
+                                                                                   Input                                Output⊕                                t1 t 2 t 3 t 4 t 5 t 6 t 7 t 8
+                                                                                                                               tanh
+                                                                       <   ℬr    Calibrator                            Calibrator                 Calibrated Predictions 𝒱෠𝑦cali
+           …
+
+
+
+
+                                 𝑢ො                          𝜏trig                                                       TC MLP
+                   …
+
+
+
+
+                                                        ②
+                                                                                                                    Reliable Expert
+
+                                                                            ①&②
+
+Figure 2: The framework of Under-Cali. For each incoming batch, (1) samples are calibrated by the reliable expert first for
+preliminary predictions, which are then fed into the uncertainty estimator along with input to compute per-sample uncertainty
+scores. Guided by these scores, the adaptive routing module directs high-uncertainty samples to the unreliable expert for
+secondary calibration to obtain final predictions, while low-uncertainty samples retain their preliminary calibrated results.
+(2) After prediction, if the adaptive routing module determines an adaptation is required, the reliable expert and uncertainty
+estimator are updated using low-uncertainty samples, while the unreliable expert is updated with challenging samples.
+
+
+ensuring fair and stable evaluation under distribution shift. We                          module introduced in Section 4.3, each sample is routed to the ap-
+detail the online adaptation process in Section 4.4.                                      propriate expert for targeted adjustment of both its input features
+                                                                                          and final predictions. In addition, each calibrator is built upon a
+                                                                                          variable-wise, gated temporal calibration model. Specifically, for
+                                                                                          an input tensor V ∈ R𝐿×𝐶 representing a window of 𝐿 timesteps
+4.2     Dual-Expert Gated Distribution Calibrator
+                                                                                          and 𝐶 variables, the calibrator first applies a temporal calibration
+Rather than fine-tuning the source forecaster directly, we choose to                      via learnable weights W𝑐 ∈ R𝐿×𝐿 and biases b𝑐 ∈ R𝐿 per variable
+introduce a calibration module to achieve more efficient adaptation                       to capture local temporal shifts. This is followed by a non-linear
+with lower resource consumption. However, updating the calibrator                         enhancement via an MLP to model complex distribution changes.
+with high-uncertainty samples may lead to unstable adaptation on                          A learnable, variable-wise gating vector 𝜐 ∈ R𝐶 dynamically modu-
+subsequent low-uncertainty samples.                                                       lates the strength of the calibration, which is finally applied in a
+   To this end, we introduce a model-agnostic Dual-Expert Gated                           residual manner to ensure training stability:
+Distribution Calibrator (GDC), which comprises two experts with
+separate parameters, i.e., a reliable expert 𝑒𝜓r and an unreliable ex-                    𝑒𝜓 𝑗,𝑘 (V) = V + Tile(tanh(𝜐)) ⊙ MLP(Concat({W𝑐 V:,𝑐 + b𝑐 }𝐶𝑐=1 )),
+pert 𝑒𝜓ur . The reliable expert 𝑒𝜓r calibrates low-uncertainty samples,                                                                                        (6)
+which are close to the trained distribution and where the forecaster                      where 𝑘 ∈ {in, out}, Concat denotes concatenation along the vari-
+already performs well, applying fine-grained adjustments. In con-                         able dimension, Tile(·) : R𝐶 → R𝐿×𝐶 broadcasts the gating vector
+trast, the unreliable expert 𝑒𝜓ur calibrates high-uncertainty samples,                    along the temporal dimension, and ⊙ is element-wise multiplica-
+which may be anomalies or reflect a significant distribution shift, re-                   tion.
+quiring cautious adaptation to prevent overfitting. The two experts                           Combining with both the input calibrator and output calibrator,
+share an identical structure but serve distinct functions. They play                      each expert 𝑒𝜓 𝑗 applies calibrators in two stages. The input calibra-
+complementary roles in handling samples of different uncertainty.                         tor 𝑒𝜓 𝑗,in transforms the raw input observation V𝑥 into a calibrated
+By isolating the calibration pathways, Under-Cali ensures that                            input V𝑥cali that aligns better with the forecaster’s original training
+learning from challenging samples with high uncertainty scores                            domain. After the source forecaster 𝑓𝜃 processes the calibrated in-
+does not corrupt the precise calibration maintained for reliable                          put to produce a preliminary prediction V̂𝑦 , the output calibrator
+patterns of low uncertainty samples. Besides, each expert can be                                                                    cali align with the evolving
+                                                                                          𝑒𝜓 𝑗,out further adjusts this output to V̂𝑗,𝑦
+tuned with tailored learning rates, allowing the system to learn                          distribution. It can be formulated as follows,
+efficiently from both high-quality and noisy data. For brevity, the                                                   cali
+                                                                                                                    V̂𝑗,𝑦  = 𝑒𝜓 𝑗,out (𝑓𝜃 ((T𝑥 , 𝑒𝜓 𝑗,in (V𝑥 ), M𝑥 ), Q)).                          (7)
+index subscript 𝑖 is omitted in this section.
+   To concretize the design, each expert 𝑒𝜓 𝑗 , 𝑗 ∈ {r, ur} consists of                      The parameters of both experts are updated online, guided by
+an input calibrator 𝑒𝜓 𝑗,in at the front-end of the source forecaster                     the uncertainty scores and the adaptive routing module. To ensure
+𝑓𝜃 and an output calibrator 𝑒𝜓 𝑗,out at its back-end. Based on the                        stability, all learnable parameters in both experts include linear
+uncertainty score described in Section 4.1 and the adaptive routing                       weights, biases, and the final layer weights of the MLP are initialized
+Online Irregular Multivariate Time Series Forecasting via Uncertainty-Driven Dual-Expert Calibration             KDD 2026, August 9–13, 2026, Jeju Island, Republic of Korea.
+
+
+to zero, while the gating vector is initialized to small values near                        Algorithm 1: Online Adaptation of Under-Cali
+zero, e.g., 0.01, making each GDC initially approximate an identity                          Input: Source forecaster 𝑓𝜃 , uncertainty estimator 𝑔𝜙 ,
+mapping. This design preserves the source forecaster’s original                                      reliable expert 𝑒𝜓r , unreliable expert 𝑒𝜓ur , dataset D.
+knowledge until distribution shifts compel the respective expert to
+                                                                                             Output: Calibrated prediction V̂𝑦cali
+apply meaningful calibration.                                                                                                (𝑡 ) = {(X (𝑡 ) , Q (𝑡 ) )|𝑡 = 1, ...,𝑇 } do
+                                                                                           1 for each incoming batch B
+
+4.3      Adaptive Routing Module                                                           2     for 𝑡 = 1 to 𝑇 do
+                                                                                           3         // Inference Stage
+To achieve adaptive routing and updating for samples with various
+                                                                                           4         Calibrate predictions with the expert 𝑒𝜓r via Eq.7
+uncertainty scores and automatic model updating, we propose the
+                                                                                           5         Estimate uncertainty scores via Eq.4
+Adaptive Routing Module (ARM), leveraging uncertainty scores as
+the primary decision signal. The module coordinates the online                             6         Update the allocation statistics set and allocation
+adaptation process through two independent adaptive thresholds,                                        threshold via Eq.8, 9 and 10
+where the allocation threshold 𝜏alloc routes each sample to the appro-                     7         Route samples and recalibrate predictions via Eq.11
+priate calibration expert, and the trigger threshold 𝜏trig determines                      8         // Adaptation Stage
+whether adaptation is necessary. The index subscript 𝑖 is omitted                          9         Update the trigger threshold via Eq.12
+                                                                                                                    (𝑡 )
+for brevity in this section.                                                              10         if 𝑢¯ (𝑡 ) > 𝜏trig  then
+    To support the distinct functions of the thresholds, we maintain                      11              Update reliable expert 𝑒𝜓r via Eq.13
+two independent statistics sets, 𝑠 alloc = {𝜇 alloc, 𝜎alloc           2 } and 𝑠
+                                                                                trig =    12              Update unreliable expert 𝑒𝜓ur via Eq.13
+          2
+{𝜇 trig, 𝜎trig }, which respectively track the distributions of uncer-                    13              Update uncertainty estimator 𝑔𝜙 via Eq.14
+tainty scores. Each set is updated using an Exponential Moving
+                                                                                          14           Update the trigger statistics set via Eq.8 and 9
+Average (EMA), with smoothing factors 𝛼 alloc and 𝛼 trig for sets 𝑠 alloc
+and 𝑠 trig , respectively. Specifically, the mean and variance in each
+set are updated iteratively per batch as follows,
+                       (                                                                       Meanwhile, the trigger threshold 𝜏trig acts as a sentinel monitor-
+                  (𝑡 )  𝑢¯ (𝑡 ) ,                                   𝑡 =1                  ing environmental changes and determining when to initiate an
+                𝜇𝑗 =                                                      ,         (8)
+                         (1 − 𝛼 𝑗 ) · 𝜇 𝑗(𝑡 −1) + 𝛼 𝑗 · 𝑢¯ (𝑡 ) , 𝑡 > 1                   update, thereby achieving sparse triggering. For a new batch 𝑡, an
+                       (                                                                  update is triggered only when the mean uncertainty of this batch
+                        𝑢˜ (𝑡 ) ,                                      𝑡 =1                                 (𝑡 )
+               2 (𝑡 )
+           (𝜎 𝑗 ) =                                                          ,      (9)   𝑢¯ (𝑡 ) exceeds 𝜏trig  . The threshold is computed as follows,
+                         (1 − 𝛼 𝑗 ) · (𝜎 𝑗2 ) (𝑡 −1) + 𝛼 𝑗 · 𝑢˜ (𝑡 ) , 𝑡 > 1
+                                                                                                                    (𝑡 )    (𝑡 −1)              (𝑡 −1)
+                                                                                                                  𝜏trig  = 𝜇trig   + 𝜅 trig · 𝜎trig    ,                    (12)
+where 𝑢¯ (𝑡 ) and 𝑢˜ (𝑡 ) represent the mean value and variance of the
+estimated uncertainty scores in the 𝑡-th batch, and 𝑗 ∈ {alloc, trig}                     where 𝜅 trig is a coefficient controlling the triggering sensitivity. If
+indicates the corresponding threshold in this section.                                    an update is judged necessary, Under-Cali then use the batch to
+    With the statistics sets established, we further introduce the allo-                  update the GDC and UE.
+cation and trigger thresholds. Specifically, the allocation threshold                        The ARM forms an intelligent decision core that efficiently allo-
+𝜏alloc serves as a dispatcher that routes each sample to the appropri-                    cates computational resources and learning signals. Furthermore,
+ate expert. For the incoming batch 𝑡, we first update the statistics                      using EMA for thresholds allows the system to adaptively track the
+set 𝑠 alloc using the uncertainty scores of the current batch, then                       evolving uncertainty distribution online, eliminating the need for
+                              (𝑡 )                                                        preset thresholds.
+compute the threshold 𝜏alloc       based on these updated statistics:
+                          (𝑡 )     (𝑡 )               (𝑡 )
+                         𝜏alloc = 𝜇alloc + 𝜅 alloc · 𝜎alloc ,                    (10)     4.4      Online Adaptation Process
+where 𝜅 alloc is a coefficient controlling the allocation sensitivity. We                 In this section, we further introduce the online adaptation process
+utilize the statistics from the 𝑡-th batch to enable timely feedback                      of our method. For online deployment, Under-Cali processes each
+on threshold adjustment, thus facilitating more accurate allocation                       incoming batch into two separated stages: (1) an inference stage
+for the current batch. During inference, each sample is routed to                         generating the calibrated predictions, and (2) an adaptation stage
+either the reliable or unreliable expert by comparing its estimated                       where parameters are updated for future batches. In the following,
+                                                            (𝑡 )                          we provide a detailed description of these two stages.
+uncertainty score 𝑢ˆ against the allocation threshold 𝜏alloc     . Samples
+              (𝑡 )
+with 𝑢ˆ < 𝜏alloc   are deemed reliable and calibrated by the reliable                        First, in the inference stage, samples from each incoming batch
+expert, while others are calibrated by the unreliable expert:                             are initially treated as reliable and processed by the reliable expert in
+                                                                                          GDC to obtain preliminary calibrated predictions. These predictions
+                                                                   (𝑡 )
+             𝑒𝜓r,out (𝑓𝜃 ((T𝑥 , 𝑒𝜓r,in (V𝑥 ), M𝑥 ), Q)),   𝑢ˆ < 𝜏alloc                   are then fed into the UE along with the input series to compute per-
+             
+                                                                       ,
+   V̂𝑦cali =
+             
+                                                                  (𝑡 )
+                                                                          (11)            sample uncertainty scores 𝑢ˆ𝑖 . Guided by these uncertainty scores,
+             𝑒𝜓ur,out (𝑓𝜃 ((T𝑥 , 𝑒𝜓ur,in (V𝑥 ), M𝑥 ), Q)), 𝑢ˆ ≥ 𝜏alloc .
+             
+                                                                                         the ARM directs high-uncertainty samples to the unreliable expert
+The calibrated outputs are the final predictions for this batch. Then                     for secondary calibration, producing their final predictions, while
+the adaptation process performs the same routing strategy. This                           low-uncertainty samples retain their preliminary calibrated results.
+strategy enables specialized learning through precise sample rout-                        The performance of the current batch is evaluated based on these
+ing and enables stable online adaptation.                                                 final predictions.
+KDD 2026, August 9–13, 2026, Jeju Island, Republic of Korea.                                                Haonan Wen, Hanyang Chen, & Songhe Feng
+
+
+   Then, in the adaptation stage, we use the mean value of the batch-       to 30-minute intervals, while those in PhysioNet are rounded to
+wise uncertainty scores 𝑢¯𝑖 to compare with the trigger threshold 𝜏trig     1-hour intervals. A Human Activity dataset containing millisecond-
+to judge whether to adapt. If so, the allocation threshold completes        resolution biomechanics signals describing 3D positional variables
+sample routing, and then the parameters of the corresponding                and a 4-year subset (1996–2000) of the USHCN [20] climate reposi-
+expert in GDC are updated. Specifically, the subset of samples in           tory are also adopted in the experiments. We follow standard pre-
+a batch, B 𝑗 , is assigned to the corresponding expert 𝑒𝜓 𝑗 , where         processing procedures from prior work [37] for all four datasets. For
+𝑗 ∈ {r, ur} denotes the reliable and unreliable experts, respectively.      all experiments, we adopt a consistent split ratio of 20% for training,
+Then, we perform a few gradient steps to minimize the prediction            5% for validation, and 75% for online learning. The training and
+error on the assigned samples with the loss function as follows,            validation sets are shuffled, while the test set for online learning is
+                   1     ∑︁                                                 preserved in its original order to simulate a realistic scenario.
+                                        cali
+     L𝑒 (𝜓 𝑗 ) =                 ∥ ( V̂𝑖,𝑗,𝑦 − V𝑖,𝑦 ) ⊙ M𝑖,𝑦 ∥ 22, (13)
+                  |B 𝑗 |
+                         ( X𝑖 ,Y𝑖 ) ∈ B 𝑗                                      Baselines. To conduct comprehensive comparisons, twenty-one
+          cali is the calibrated prediction from the output calibrator      source forecasters are considered in the experiments, covering
+where V̂𝑖,𝑗,𝑦
+                                                                            SOTA methods from (1) Multivariate time series forecasting: FED-
+of expert 𝑒𝜓 𝑗,out via Equation 7. After updating the experts, we move
+                                                                            former [43], FreTS [34], iTransformer [15], Ada-MSHyper [26],
+to fine-tune the parameters 𝜙 of UE. To maintain stable uncertainty
+                                                                            PatchTST [22], Reformer [11], Informer [42], Crossformer [40], (2)
+estimation, we only use the reliable samples with uncertainty scores
+                                                                            Traffic forecasting: BigST [7], (3) IMTS classification, imputation,
+below the allocation threshold 𝜏alloc , i.e., Br , to update it. We then
+                                                                            and forecasting: PrimeNet [4], SeFT [8], mTAN [28], NeuralFlows
+compute the loss between the uncertainty scores estimated by UE
+                                                                            [2], CRU [25], GNeuralFlow [21], GRU-D [3], Warpformer [35],
+and the actual prediction errors of the calibrated predictions from
+                                                                            tPatchGNN [37], GraFITi [32], Hi-Patch [18], HyperIMTS [14], (4)
+the reliable expert:
+                                                                            online forecasting and test-time adaptation: OneNet [31], FSNet
+                              1      ∑︁
+                                                                            [23], D3A [39], TAFAS [10].
+                   L𝑔 (𝜙) =                 ∥𝑢ˆ𝑖 − 𝑢𝑖 ∥ 1,           (14)
+                             |Br |
+                                            ( X𝑖 ,Y𝑖 ) ∈ Br
+                                                                               Implementation details. All experiments are conducted on a Linux
+where 𝑢ˆ𝑖 is the uncertainty scores estimated by uncertainty esti-          server equipped with NVIDIA GeForce RTX 3090 GPUs using Py-
+mator 𝑔𝜙 at Equation 4, and 𝑢𝑖 is computed from the calibrated              Torch 2.0.1 with CUDA 11.7. All source forecasters are trained offline
+              cali and the ground truth V via Equation 5. Restrict-
+prediction V̂𝑖,r,𝑦                       𝑖,𝑦                                using the Adam optimizer for up to 300 epochs with early stopping
+ing UE updates to reliable samples prevents feedback loops caused           (patience = 5) based on validation performance. The UE is trained
+by noisy or anomalous predictions.                                          offline to regress sample-level prediction errors of the source model.
+   In summary, Under-Cali enables principled online adaptation              UE is optimized with Adam and an L1 loss for up to 300 epochs
+for IMTS by combining uncertainty-guided adaptive routing with              with early stopping (patience = 10). During the online process, un-
+expert-isolated calibration. Both the experts in GDC and the UE are         certainty scores are tracked using exponential moving averages
+updated online sequentially, creating a synergistic adaptation loop         of the mean and variance, with the smoothing factor 𝛼 alloc = 0.75
+where improved predictions lead to better uncertainty estimation,           and scaling coefficient 𝜅 alloc = 0.25 for sample allocation. Update
+which in turn guides more effective updates. Without modifying              triggering is controlled independently using EMA-based statistics
+the source forecaster, Under-Cali provides a robust and model-              with 𝛼 trig = 0.25 and 𝜅 trig = 0.75. When an update is triggered, each
+agnostic solution to online IMTS forecasting. The complete online           expert is updated using 5 inner optimization steps.
+adaptation procedure is summarized in Algorithm 1.
+                                                                            5.2    Main Results
+5     Experiments                                                           To evaluate the effectiveness of Under-Cali, we report forecasting
+In this section, we conduct extensive experiments to evaluate the           results on four IMTS datasets with various models in Table 1, mea-
+performance of our method. We first introduce the experimental              sured by the MSE metric. The lookback time window is 36 hours for
+setup in Section 5.1. Then, we present the overall performance in           MIMIC and PhysioNet, 3000 milliseconds for Human Activity, and 3
+Section 5.2. Moreover, we conduct an ablation study to analyze the          years for USHCN. We use the next 3 timestamps as forecast targets
+effectiveness of each component in Section 5.3. The parameter study         for MIMIC, PhysioNet, and USHCN, and use 300 milliseconds for
+is provided in Section 5.4 to the sensitivity of hyperparameters.           Human Activity as forecast length, following the setting in existing
+Finally, the lookback length and horizon study, comparison with             works [2, 5]. As can be seen, Under-Cali improves performance
+existing online forecasting and test-time adaptation methods, and           over most of the non-adaptive baselines, with particularly large
+case study are provided in Section 5.5, 5.6 and 5.7, respectively.          gains on datasets exhibiting strong distribution shift.
+                                                                               Specifically, on Human Activity dataset, we observe clear im-
+5.1     Experimental Setup                                                  provements across all models. For instance, the MSE of tPatchGNN
+   Datasets. We conduct comprehensive experiments on the Py-                decreases by 8.41%, and that of Warpformer drops even more sub-
+OmniTS benchmark [14], including four publicly available bench-             stantially by 21.84%. This indicates that in scenarios with significant
+mark datasets spanning diverse domains to evaluate our proposed             distribution shifts, our method delivers strong practical benefits
+method. Specifically, for the clinical domain, we use MIMIC [9] and         and notable gains. On USHCN dataset, it improves the average MSE
+PhysioNet [29], both collected from ICU patients during the first           of Crossformer and GraFITi by 7.82% and 5.89%, respectively. On
+48 hours of admission. The measurements in MIMIC are rounded                MIMIC dataset, Under-Cali reduces the MSE of mTAN by about
+Online Irregular Multivariate Time Series Forecasting via Uncertainty-Driven Dual-Expert Calibration                KDD 2026, August 9–13, 2026, Jeju Island, Republic of Korea.
+
+
+Table 1: Test MSE (mean ± std) on irregular multivariate time series forecasting datasets with and without Under-Cali across
+various architectures under five seeds. Lower MSE indicates better performance. Best results are highlighted in bold.
+
+      Models                      MIMIC                                PhysioNet                              Human Activity                            USHCN
+  +Under-Cali              ✗                   ✓                  ✗                  ✓                    ✗                  ✓                    ✗                  ✓
+   FEDformer         0.7234±0.0036     0.6244±0.0045        0.4097±0.0013     0.3789±0.0008       0.4212±0.0176        0.3966±0.0184        0.4965±0.0339     0.4391±0.0093
+      FreTS          0.6361±0.0017     0.5998±0.0020        0.3904±0.0019     0.3690±0.0028       0.1553±0.0025        0.1494±0.0019        0.5950±0.0452     0.5784±0.0538
+      BigST          0.5758±0.0043     0.5679±0.0032        0.3701±0.0048     0.3535±0.0028       0.4118±0.0240        0.2999±0.0164        0.4474±0.0168     0.4447±0.0166
+  iTransformer       0.5979±0.0026     0.5816±0.0090        0.3929±0.0028     0.3720±0.0019       0.1417±0.0018        0.1335±0.0012        0.4363±0.0331     0.4164±0.0195
+  Ada-MSHyper        0.6542±0.0140     0.6331±0.0091        0.3914±0.0007     0.3743±0.0071       0.3647±0.0154        0.3002±0.0284        0.4953±0.0458     0.4476±0.0257
+    PatchTST         0.6147±0.0024     0.5762±0.0102       0.3748±0.0014       0.3953±0.0243      0.1294±0.0239        0.1249±0.0041        0.6334±0.0198     0.6039±0.0208
+    Reformer        0.7738±0.0031       0.9490±0.1902      0.4113±0.0009       0.4169±0.0083      1.0842±0.0834        0.9269±0.0344        0.4382±0.0043     0.4346±0.0037
+    Informer        0.7328±0.0064       0.8077±0.0459       0.4944±0.0026     0.4860±0.0083       0.5202±0.0336        0.4386±0.0264       0.4584±0.0047       0.4922±0.0120
+   Crossformer       0.5294±0.0039     0.5249±0.0026        0.3404±0.0018     0.3391±0.0013       0.2716±0.0237        0.2391±0.0224        0.5591±0.0076     0.5153±0.0150
+    PrimeNet         0.9103±0.0001     0.8960±0.0023       0.8095±0.0001      0.7879±0.0028       4.0244±0.0060        3.5619±0.0512       0.9441±0.0045      0.8098±0.0094
+      SeFT           0.9035±0.0004     0.8821±0.0070       0.8057±0.0033      0.7577±0.0076       1.8232±0.0703        1.4135±0.2791       0.7708±0.0038      0.7113±0.0103
+     mTAN            1.2596±0.1443     0.8809±0.0415       0.4305±0.0071      0.4193±0.0061       0.3550±0.0189        0.3354±0.0209       0.5218±0.0335      0.4792±0.0179
+  NeuralFlows        0.8332±0.0133     0.8000±0.0229       0.4456±0.0064      0.4408±0.0066       0.4732±0.0464        0.4390±0.0239       0.5627±0.0100      0.5445±0.0131
+  GNeuralFlow        0.9046±0.0067     0.8814±0.0024       0.7493±0.0494      0.6647±0.0197       0.4225±0.0188        0.4070±0.0167       0.5860±0.0201      0.5750±0.0245
+      CRU            0.8097±0.0037     0.7870±0.0126       0.6649±0.0031      0.6253±0.0049       0.4070±0.0598        0.3488±0.0305       0.5771±0.0161      0.5685±0.0170
+     GRU-D           0.6634±0.0110     0.6510±0.0112       0.3759±0.0007      0.3742±0.0006       0.3735±0.0011        0.3680±0.0034       0.5215±0.0381      0.5070±0.0327
+  Warpformer         0.4722±0.0070     0.4683±0.0044       0.3040±0.0026      0.3028±0.0014       0.3942±0.0441        0.3081±0.0346       0.4338±0.0081      0.4295±0.0085
+   tPatchGNN         0.4943±0.0128     0.4872±0.0099       0.3080±0.0007      0.3066±0.0008       0.1378±0.0873        0.1262±0.0732       0.4589±0.0063      0.4538±0.0092
+    Hi-Patch         0.5073±0.0088     0.5039±0.0063       0.3433±0.0021      0.3405±0.0017       1.1308±0.6606        1.0956±0.6544       0.4343±0.0137      0.4330±0.0138
+     GraFITi         0.4531±0.0030     0.4482±0.0040       0.2996±0.0013      0.2989±0.0009       0.0795±0.0004        0.0790±0.0003       0.5893±0.1996      0.5546±0.1765
+  HyperIMTS          0.5568±0.0179     0.5457±0.0156       0.2987±0.0006      0.2980±0.0005       0.0818±0.0008        0.0813±0.0007       0.4077±0.0191      0.3973±0.0165
+
+
+30.07%, and also brings a 2.01% improvement to HyperIMTS. The                             Table 2: Ablation study of Under-Cali taking tPatchGNN
+similar performance improvement is observed on the PhysioNet                              as the source forecaster on four datasets under five seeds
+dataset as well. These results demonstrate that Under-Cali is a                           evaluated using MSE.
+model-agnostic and effective solution for online irregular multivari-
+ate time series forecasting.                                                                Method Variant                        MIMIC    PhysioNet   Human Activity    USHCN
+                                                                                            w/o GDC (Single Expert, Joint)        0.4902     0.3070         0.1294       0.4549
+                                                                                            w/o GDC (Single Expert, Reliable)     0.4937     0.3074         0.1333       0.4547
+                                                                                            w/o GDC (Single Expert, Unreliable)   0.5001     0.3079         0.1360       0.4608
+5.3     Ablation Study                                                                      w/o ARM (Random Triggering)           0.4915     0.3077         0.1371       0.4577
+                                                                                            w/o ARM (Random Allocating)           0.4909     0.3069         0.1269       0.4567
+In order to verify the effectiveness of our designs, we evaluate the
+                                                                                            w/o All (Single Expert, Joint)        0.4911     0.3070         0.1291       0.4539
+performance of Under-Cali and six variants on all benchmark
+                                                                                            Under-Cali                            0.4872    0.3066          0.1262       0.4538
+datasets to analyze the contribution of each core component in
+our online adaptation framework. Specifically, (1) w/o GDC (Single
+Expert, Joint) collapses the dual experts in the GDC into a single
+calibration expert, where all samples are updated jointly; (2) w/o                        online updates are insufficient for handling samples with hetero-
+GDC (Single Expert, Reliable) updates only the reliable expert using                      geneous reliability. Results from w/o GDC (Single Expert, Reliable)
+low-uncertainty samples, while high-uncertainty samples bypass                            and w/o GDC (Single Expert, Unreliable) further show that rely-
+calibration; (3) w/o GDC (Single Expert, Unreliable) updates only the                     ing exclusively on either low or high uncertainty samples leads
+unreliable expert using high-uncertainty samples, while reliable                          to suboptimal adaptation, highlighting the necessity of isolating
+samples are not used for calibration; (4) w/o ARM (Random Trig-                           update pathways. w/o ARM (Random Triggering) exhibits unstable
+gering) removes uncertainty-driven selective adaptation triggering                        behavior or excessive update frequency, demonstrating that the
+and allows each batch to trigger adaptation with a fixed probabil-                        UE and uncertainty-driven ARM are critical for balancing adap-
+ity. (5) w/o ARM (Random Allocating) removes uncertainty-guided                           tation effectiveness and performance in online IMTS forecasting.
+sample routing and randomly assigns samples to the two experts                            The performance drop under w/o ARM (Random Allocating) as well
+with equal probability; (6) w/o All (Single Expert, Joint) removes                        confirms that uncertainty-guided routing drives performance gains.
+UE and uses a single calibration expert to adjust all samples per                         Moreover, experiments on w/o All (Single Expert, Joint) confirm that
+batch. The ablation results are summarized in Table 2. All ablation                       the UE, GDC and ARM together constitute the core mechanism for
+experiments are conducted under the same online setting and use                           the effective operation of the system. The ARM ensures separate
+identical source forecasters and hyperparameters unless specified.                        calibration and necessary updates, while the GDC performs tar-
+   As shown in Table 2, all modules and mechanisms in Under-Cali                          geted calibration for samples with different uncertainty levels. The
+are necessary for effective online IMTS forecasting. The inferior                         effectiveness of the system relies on the synergistic operation of all
+performance of w/o GDC (Single Expert, Joint) indicates that unified                      components, none of which can be omitted.
+KDD 2026, August 9–13, 2026, Jeju Island, Republic of Korea.                                                                  Haonan Wen, Hanyang Chen, & Songhe Feng
+
+
+                                                                               Table 3: Test MSE on irregular multivariate time series fore-
+          8.21%    8.36%      8.31%                  8.20%     8.56%   8.65%
+
+
+
+
+                                             0.25
+  0.25
+
+
+                                                                               casting datasets varying lookback window lengths and fore-
+                                                                               cast horizons under five seeds. Lower MSE indicates better
+                                                                               performance. Best results are highlighted in bold.
+          8.09%    8.61%      8.53%                  8.23%     8.37%   8.46%
+alloc
+
+
+
+
+                                           trig
+                                             0.5
+  0.5
+
+
+
+
+                                                                                     Models                      tPatchGNN        HyperIMTS              GraFITi       Warpformer
+                                                                                                   Length
+                                                                                 +Under-Cali                     ✗        ✓        ✗        ✓        ✗         ✓        ✗        ✓
+
+          8.13%    8.77%      8.49%                  8.03%     8.31%   8.71%
+
+                                             0.75
+  0.75
+
+
+
+
+                                                                                                   24 → 3      0.8311   0.8113   0.8115   0.8100   0.7289    0.7207   0.7561   0.7400
+                                                                                                   48 → 3      0.4653   0.4574   0.5206   0.5166   0.4694    0.4688   0.4900   0.4879
+                                                                                     MIMIC
+                                                                                                   72 → 3      0.4943   0.4872   0.5568   0.5457   0.4531    0.4482   0.4722   0.4683
+                                                                                                  72 → 24      0.5814            0.5805            0.5383             0.5532
+           0.25      0.5       0.75                  0.25       0.5    0.75
+                                                                                                                        0.5801            0.5782             0.5339            0.5551
+                                                                                                   12 → 3      0.3447            0.3272            0.3310             0.3372
+                     alloc                                      trig                               24 → 3      0.3257
+                                                                                                                        0.3417
+                                                                                                                        0.3230   0.3137
+                                                                                                                                          0.3263
+                                                                                                                                          0.3122   0.3141
+                                                                                                                                                             0.3302
+                                                                                                                                                             0.3133   0.3202
+                                                                                                                                                                               0.3355
+                                                                                                                                                                               0.3184
+                                                                                  PhysioNet
+                                                                                                   36 → 3      0.3080   0.3067   0.2987   0.2980   0.2996    0.2989   0.3040   0.3026
+        (a) Allocation threshold                    (b) Trigger threshold                         36 → 12      0.3796   0.3779   0.3698   0.3691   0.3734    0.3725   0.3740   0.3733
+                                                                                                  1200 → 300   0.1215   0.1106   0.0701   0.0695   0.0680    0.0672   0.4474   0.3332
+                                                                                                  2100 → 300   0.0957   0.0902   0.0716   0.0711   0.0696    0.0691   0.4171   0.3593
+                                                                                Human Activity
+Figure 3: Parameter Study of Human Activity on tPatchGNN.                                         3000 → 300   0.1404   0.1287   0.0818   0.0814   0.0795    0.0790   0.3942   0.3105
+                                                                                                 3000 → 1000   0.1550   0.1408   0.1005   0.1004   0.0993    0.0992   0.4643   0.3455
+                                                                                                    50 → 3     0.5166   0.5146   0.5366   0.5311   1.5995    1.5878   1.6039   1.5993
+                                                                                                   100 → 3     0.9845   0.9797   0.9667   0.9644   0.2920    0.2836   0.2937   0.2859
+                                                                                   USHCN
+                                                                                                   150 → 3     0.4589   0.4538   0.4077   0.3977   0.5893    0.5638   0.4338   0.4294
+5.4       Parameter Study                                                                         150 → 50     0.8473   0.7592   0.7940   0.7643   0.7719    0.7361   0.6264   0.6240
+
+
+Under-Cali involves four key hyperparameters that require ex-
+perimental analysis, including the smoothing factor 𝛼 alloc for the
+allocation threshold 𝜏alloc , the smoothing factor 𝛼 trig for the trigger      5.6       Comparison with Online and TTA Methods
+threshold 𝜏trig , and the positive coefficients 𝜅 alloc and 𝜅 trig , which     To further evaluate the effectiveness of Under-Cali, we compare
+control the sensitivity of allocation and triggering, respectively. The        against several representative online learning and TTA methods,
+parameter experiment results of Human Activity on tPatchGNN                    including OneNet, FSNet, D3A, and TAFAS. Among them, OneNet
+are summarized in Figure 3. We provide the average performance                 and FSNet tightly couple online updating mechanisms with propri-
+improvement of different combinations of 𝛼 and 𝜅 for allocation and            etary forecasting architectures, and we further investigate whether
+trigger thresholds, indicating that the performance is insensitive             Under-Cali can enhance their online adaptation capability. Specifi-
+across parameter choices. However, we also observe that different              cally, for OneNet, we compare the variants with and without online
+parameter combinations lead to varied update rates. The selected               learning, as well as the integration with Under-Cali. For FSNet, we
+parameter set mentioned in Section 5.1 maintains strong predictive             compare the vanilla FSNet, FSNet+D3A, and FSNet+Under-Cali.
+performance while significantly reducing the model update fre-                 In addition, we conduct plug-in adaptation experiments on Hy-
+quency by an average of approximately 15%. It helps us to achieve              perIMTS using D3A and TAFAS as representative methods. D3A
+an effective balance between performance and efficiency.                       triggers model updates when distribution drift is detected and per-
+                                                                               forms adaptation using accumulated historical data together with
+5.5       Lookback Length and Horizon Study                                    additional noise perturbation, while TAFAS performs test-time
+To further assess the robustness of our method across varying                  adaptation through adaptive periodicity-aware mechanisms. Re-
+lookback lengths and forecasting horizons, we provide the results              sults in Tables 4, Table 5, and Table 6 show that Under-Cali con-
+in Table 3. For varying lookback lengths, we keep the same forecast            sistently achieves the best performance across different datasets
+horizons in Section 5.2 and set the lookback window lengths to: (1)            and forecasting backbones.
+MIMIC: 12, 24, and 36 hours; (2) PhysioNet: 12, 24, and 36 hours; (3)             Notably, conventional online learning and TTA methods such as
+Human Activity: 1200, 2100, and 3000 milliseconds; (4) USHCN: 1, 2,            D3A and TAFAS may even lead to performance degradation in IMTS
+and 3 years. As can be seen, Under-Cali generally improves model               settings, particularly on HyperIMTS. This suggests that directly
+performance across different lookback lengths, demonstrating its               transferring adaptation strategies developed for regularly sampled
+ability to leverage historical information and mitigate distribution           time series to irregular observation scenarios may introduce un-
+shifts. For varying forecast horizons, we follow the same settings in          stable updates due to asynchronous observations and dynamically
+Section 5.2 as well. For MIMIC and PhysioNet, the forecast horizon             evolving missingness patterns.
+is set to 12 hours. For Human Activity and USHCN, the forecast                    In contrast, Under-Cali effectively improves online forecasting
+horizon is 1000 milliseconds and 1 year, respectively. We find that            robustness through uncertainty-aware calibration and dual-expert
+under the more challenging setting of extended forecast horizons,              adaptation, consistently reducing forecasting errors.
+Under-Cali shows slower performance degradation and greater
+stability compared to baselines, which proves its particular strength          5.7       Case Study
+in handling distribution shifts in long-term forecasting.                          GPU Footprint of Under-Cali. We analyze the GPU footprint of
+   In summary, Under-Cali is not only robust across various his-               Under-Cali with a batch size of one, and provide the results on
+torical contexts but also exhibits critical advantages in long-horizon         tPatchGNN in Figure 4a. As shown, integrating Under-Cali leads to
+scenarios, providing models with continuous, adaptive calibration              only marginal increases in GPU memory usage. This demonstrates
+that significantly enhances the accuracy and reliability of online             that our method achieves resource-efficient online learning, making
+irregular multivariate time series forecasting.                                it practical for deployment alongside large-scale forecasters.
+Online Irregular Multivariate Time Series Forecasting via Uncertainty-Driven Dual-Expert Calibration                            KDD 2026, August 9–13, 2026, Jeju Island, Republic of Korea.
+
+
+Table 4: Test MSE and MAE of OneNet under different online                                             70                                    Forecaster                      0.16                                Ground Truth
+                                                                                                                                             UE                              0.14                                Prediction
+                                                                                                       60
+
+
+
+
+                                                                                                                                                             Uncertainty Score
+learning settings on the Human Activity and USHCN datasets.                                                                                  GDC
+
+
+
+
+                                                                                          Footprint (MB)
+                                                                                                       50                                                                    0.12
+Best results are highlighted in bold.                                                                  40                                                                    0.10
+                                                                                                       30                                                                    0.08
+                                                                                                       20                                                                    0.06
+                                                           OneNet
+    Dataset            Metric                                                                          10                                                                    0.04
+                                          ✗             +Online      +Under-Cali                        0                                                                            0   5   10      15     20   25      30
+                                                                                                              MIMIC   PhysioNet HumanActivity USHCN                                                Batch Index
+                        MSE           0.3360             0.3151        0.2780
+Human Activity                                                                             (a) GPU footprint across four (b) Uncertainty score estimations
+                        MAE           0.4645             0.4409        0.3830
+                                                                                           datasets.                     on Human Activity.
+                        MSE           0.7390             0.7130        0.5910
+    USHCN                                                                                                                                       Reliable                                                              Reliable
+                        MAE           0.4533             0.4540        0.3835
+                                                                                                                                                Unreliable                                                            Unreliable
+
+
+
+
+                                                                                            Dimension 2
+
+
+
+
+                                                                                                                                                             Dimension 2
+Table 5: Test MSE and MAE of FSNet under different online
+adaptation strategies on the Human Activity and USHCN
+datasets. Best results are highlighted in bold.
+                                                                                                                         Dimension 1                                                          Dimension 1
+
+                                                             FSNet                            (c) Allocated sample distribution (d) Allocated sample distribution
+    Dataset            Metric
+                                           ✗             +D3A        +Under-Cali              on PhysioNet.                     on USHCN.
+                        MSE              0.3960          0.3911        0.3694
+Human Activity
+                        MAE              0.4595          0.4566        0.4441                                           Figure 4: Case study on tPatchGNN.
+                        MSE              0.8059          0.8017        0.7449
+    USHCN
+                        MAE              0.4198          0.4162        0.3929              Table 7: Batch-level inference time (ms) for tPatchGNN and
+                                                                                           HyperIMTS with and without Under-Cali on four datasets.
+Table 6: Test MSE and MAE of plug-in online and TTA meth-
+ods on HyperIMTS over the Human Activity and USHCN                                                          Dataset                          tPatchGNN                                                    HyperIMTS
+datasets. Best results are highlighted in bold.                                                   +Under-Cali                            ✗                                       ✓                 ✗                     ✓
+                                                                                               MIMIC                                    58.50                       176.82                        49.84               139.83
+                                                        HyperIMTS                             PhysioNet                                11.87                        112.94                        43.38               243.26
+    Dataset         Metric                                                                  Human Activity                             163.98                       126.56                        80.29               385.73
+                                  ✗            +D3A       +TAFAS     +Under-Cali               USHCN                                   48.39                        83.83                         56.09               188.45
+                     MSE        0.0818         0.2362      0.2505      0.0813
+Human Activity
+                     MAE        0.1877         0.3576      0.3332      0.1869
+                     MSE        0.3809         0.4418      0.6376      0.3754               in Figure 4c and 4d. We observe clear distributional shifts between
+    USHCN
+                     MAE        0.3448         0.3821      0.5420      0.3389               the samples processed by the two experts in both figures, indicating
+                                                                                            that our dual-expert calibration architecture and adaptive rout-
+                                                                                            ing module can effectively guide and learn samples with different
+   Inference Latency of Under-Cali. As shown in Table 7, although                           uncertainty scores, thereby assisting in stable calibration.
+Under-Cali introduces additional adaptation operations, the batch-
+level inference latency remains within 0.1–0.4s, which is acceptable                        6                Conclusion
+in real scenarios. This indicates that the limited computational over-                     This study addresses the distribution shifts problem in online irreg-
+head is well offset by performance gains, demonstrating a favorable                        ular multivariate time series forecasting by proposing Under-Cali,
+trade-off between adaptive capability and inference efficiency.                            a model-agnostic framework driven by the synergistic collaboration
+    Consistency of Uncertainty Scores. To validate the effectiveness                       of an uncertainty estimator, a dual-expert calibration module, and
+and accuracy of UE, we compare the estimated uncertainty scores                            an adaptive routing module. The framework dynamically guides
+𝑢ˆ against the ground truth, i.e., prediction errors of the calibrated                     sample allocation and update decisions based on uncertainty, and
+outputs 𝑢. Taking the results on tPatchGNN over Human Activity                             employs isolated dual-expert calibration for samples of differing
+dataset as an example, shown in Figure 4b, we observe that the                             reliability, enabling efficient and stable online adaptation without
+trend of UE outputs aligns well with the ground truth. It shows                            updating the source forecaster. Extensive experiments show that
+that the UE provides consistent estimations of uncertainty scores.                         Under-Cali delivers consistent performance gains across various
+Meanwhile, we also observe that the estimations are slightly lower                         source forecasters, with pronounced advantages under significant
+compared to the ground truth. We believe that the estimation bias                          distribution shifts and in long-horizon forecasting. Ablation studies
+can be effectively alleviated by the adaptive design of thresholds in                      confirm the necessity of each core component.
+ARM, which further ensures the calibration stability and reliability.
+                                                                                            Acknowledgments
+   Sample Distributions in Dual-Expert Architecture. To further ver-                       This work was supported by the Beijing Natural Science Foundation
+ify the effectiveness of dual-expert calibration architecture in GDC,                      (No. 4242046, No. L259051) and the Natural Science Foundation of
+we use t-SNE [19] to visualize the expert-wise sample distributions                        Hebei Province (No. F2025105018).
+on tPatchGNN over the PhysioNet and USHCN datasets, as shown
+KDD 2026, August 9–13, 2026, Jeju Island, Republic of Korea.                                                                      Haonan Wen, Hanyang Chen, & Songhe Feng
+
+
+References                                                                                 [26] Zongjiang Shang, Ling Chen, Binqing Wu, and Dongliang Cui. 2024. Ada-
+ [1] Oren Anava, Elad Hazan, Shie Mannor, and Ohad Shamir. 2013. Online learning                MSHyper: adaptive multi-scale hypergraph transformer for time series forecast-
+     for time series prediction. In Conference on learning theory. PMLR, 172–184.               ing. Advances in Neural Information Processing Systems 37 (2024), 33310–33337.
+ [2] Marin Biloš, Johanna Sommer, Syama Sundar Rangapuram, Tim Januschowski,               [27] Satya Narayan Shukla and Benjamin M Marlin. 2020. A survey on principles,
+     and Stephan Günnemann. 2021. Neural flows: Efficient alternative to neural                 models and methods for learning from irregularly sampled time series. arXiv
+     ODEs. Advances in neural information processing systems 34 (2021), 21325–21337.            preprint arXiv:2012.00168 (2020).
+ [3] Zhengping Che, Sanjay Purushotham, Kyunghyun Cho, David Sontag, and Yan               [28] Satya Narayan Shukla and Benjamin M Marlin. 2021. Multi-time attention
+     Liu. 2018. Recurrent neural networks for multivariate time series with missing             networks for irregularly sampled time series. arXiv preprint arXiv:2101.10318
+     values. Scientific reports 8, 1 (2018), 6085.                                              (2021).
+ [4] Ranak Roy Chowdhury, Jiacheng Li, Xiyuan Zhang, Dezhi Hong, Rajesh K Gupta,           [29] Ikaro Silva, George Moody, Daniel J Scott, Leo A Celi, and Roger G Mark. 2012.
+     and Jingbo Shang. 2023. Primenet: Pre-training for irregular multivariate time             Predicting in-hospital mortality of icu patients: The physionet/computing in
+     series. In Proceedings of the AAAI Conference on Artificial Intelligence, Vol. 37.         cardiology challenge 2012. In 2012 computing in cardiology. IEEE, 245–248.
+     7184–7192.                                                                            [30] Roberto Vio, María Diaz-Trigo, and Paola Andreani. 2013. Irregular time series
+ [5] Edward De Brouwer, Jaak Simm, Adam Arany, and Yves Moreau. 2019. GRU-                      in astronomy and the use of the Lomb–Scargle periodogram. Astronomy and
+     ODE-Bayes: Continuous modeling of sporadically-observed time series. Advances              Computing 1 (2013), 5–16.
+     in neural information processing systems 32 (2019).                                   [31] Qingsong Wen, Weiqi Chen, Liang Sun, Zhang Zhang, Liang Wang, Rong Jin,
+ [6] Yarin Gal and Zoubin Ghahramani. 2016. Dropout as a bayesian approximation:                Tieniu Tan, et al. 2023. Onenet: Enhancing time series forecasting models under
+     Representing model uncertainty in deep learning. In international conference on            concept drift by online ensembling. Advances in Neural Information Processing
+     machine learning. PMLR, 1050–1059.                                                         Systems 36 (2023), 69949–69980.
+ [7] Jindong Han, Weijia Zhang, Hao Liu, Tao Tao, Naiqiang Tan, and Hui Xiong.             [32] Vijaya Krishna Yalavarthi, Kiran Madhusudhanan, Randolf Scholz, Nourhan
+     2024. Bigst: Linear complexity spatio-temporal graph neural network for traffic            Ahmed, Johannes Burchert, Shayan Jawed, Stefan Born, and Lars Schmidt-Thieme.
+     forecasting on large-scale road networks. Proceedings of the VLDB Endowment                2024. Grafiti: Graphs for forecasting irregularly sampled time series. In Proceed-
+     17, 5 (2024), 1081–1090.                                                                   ings of the AAAI Conference on Artificial Intelligence, Vol. 38. 16255–16263.
+ [8] Max Horn, Michael Moor, Christian Bock, Bastian Rieck, and Karsten Borg-              [33] Zhen-Jie Yao, Jie Bi, and Yi-Xin Chen. 2018. Applying deep learning to individual
+     wardt. 2020. Set functions for time series. In International Conference on Machine         and community health monitoring data: A survey. International Journal of
+     Learning. PMLR, 4353–4363.                                                                 Automation and Computing 15, 6 (2018), 643–655.
+ [9] AE Johnson, Tom J Pollard, Lu Shen, Li-wei H Lehman, Mengling Feng, Moham-            [34] Kun Yi, Qi Zhang, Wei Fan, Shoujin Wang, Pengyang Wang, Hui He, Ning An,
+     mad Ghassemi, Benjamin Moody, Peter Szolovits, L Anthony Celi, and Roger G                 Defu Lian, Longbing Cao, and Zhendong Niu. 2023. Frequency-domain MLPs are
+     Mark. 2016. MIMIC-III, a freely accessible critical care database, Sci. Data 3, 1          more effective learners in time series forecasting. Advances in Neural Information
+     (2016), 1–9.                                                                               Processing Systems 36 (2023), 76656–76679.
+[10] HyunGi Kim, Siwon Kim, Jisoo Mok, and Sungroh Yoon. 2025. Battling the non-           [35] Jiawen Zhang, Shun Zheng, Wei Cao, Jiang Bian, and Jia Li. 2023. Warpformer:
+     stationarity in time series forecasting via test-time adaptation. In Proceedings of        A multi-scale modeling approach for irregular clinical time series. In Proceedings
+     the AAAI Conference on Artificial Intelligence, Vol. 39. 17868–17876.                      of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining.
+[11] Nikita Kitaev, Łukasz Kaiser, and Anselm Levskaya. 2020. Reformer: The efficient           3273–3285.
+     transformer. arXiv preprint arXiv:2001.04451 (2020).                                  [36] Kexin Zhang, Qingsong Wen, Chaoli Zhang, Rongyao Cai, Ming Jin, Yong Liu,
+[12] Ying-yee Ava Lau, Zhiwen Shao, and Dit-Yan Yeung. 2025. Fast and Slow Streams              James Y Zhang, Yuxuan Liang, Guansong Pang, Dongjin Song, et al. 2024. Self-
+     for Online Time Series Forecasting Without Information Leakage. In The Thir-               supervised learning for time series analysis: Taxonomy, progress, and prospects.
+     teenth International Conference on Learning Representations.                               IEEE transactions on pattern analysis and machine intelligence 46, 10 (2024), 6775–
+[13] Boyuan Li, Zhen Liu, Yicheng Luo, and Qianli Ma. 2026. Learning Recursive                  6794.
+     Multi-Scale Representations for Irregular Multivariate Time Series Forecasting.       [37] Weijia Zhang, Chenlong Yin, Hao Liu, Xiaofang Zhou, and Hui Xiong. 2024.
+     In International Conference on Learning Representations.                                   Irregular multivariate time series forecasting: A transformable patching graph
+[14] Boyuan Li, Yicheng Luo, Zhen Liu, Junhao Zheng, Jianming Lv, and Qianli Ma.                neural networks approach. In Forty-first International Conference on Machine
+     2025. HyperIMTS: Hypergraph Neural Network for Irregular Multivariate Time                 Learning.
+     Series Forecasting. arXiv preprint arXiv:2505.17431 (2025).                           [38] Xiang Zhang, Marko Zeman, Theodoros Tsiligkaridis, and Marinka Zitnik. 2021.
+[15] Yong Liu, Tengge Hu, Haoran Zhang, Haixu Wu, Shiyu Wang, Lintao Ma, and                    Graph-guided network for irregularly sampled multivariate time series. arXiv
+     Mingsheng Long. 2023. itransformer: Inverted transformers are effective for time           preprint arXiv:2110.05357 (2021).
+     series forecasting. arXiv preprint arXiv:2310.06625 (2023).                           [39] YiFan Zhang, Weiqi Chen, Zhaoyang Zhu, Dalin Qin, Liang Sun, Xue Wang,
+[16] Zhiding Liu, Mingyue Cheng, Guanhao Zhao, Jiqian Yang, Qi Liu, and Enhong                  Qingsong Wen, Zhang Zhang, Liang Wang, and Rong Jin. 2024. Addressing
+     Chen. 2025. Improving Time Series Forecasting via Instance-aware Post-hoc                  Concept Shift in Online Time Series Forecasting: Detect-then-Adapt. arXiv
+     Revision. arXiv preprint arXiv:2505.23583 (2025).                                          preprint arXiv:2403.14949 (2024).
+[17] Yicheng Luo, Zhen Liu, Linghao Wang, Binquan Wu, Junhao Zheng, and Qianli             [40] Yunhao Zhang and Junchi Yan. 2023. Crossformer: Transformer utilizing cross-
+     Ma. 2024. Knowledge-empowered dynamic graph network for irregularly sam-                   dimension dependency for multivariate time series forecasting. In The eleventh
+     pled medical time series. Advances in Neural Information Processing Systems 37             international conference on learning representations.
+     (2024), 67172–67199.                                                                  [41] Lifan Zhao and Yanyan Shen. 2025. Proactive model adaptation against concept
+[18] Yicheng Luo, Bowen Zhang, Zhen Liu, and Qianli Ma. [n. d.]. Hi-Patch: Hi-                  drift for online time series forecasting. In Proceedings of the 31st ACM SIGKDD
+     erarchical Patch GNN for Irregular Multivariate Time Series. In Forty-second               Conference on Knowledge Discovery and Data Mining V. 1. 2020–2031.
+     International Conference on Machine Learning.                                         [42] Haoyi Zhou, Shanghang Zhang, Jieqi Peng, Shuai Zhang, Jianxin Li, Hui Xiong,
+[19] Laurens van der Maaten and Geoffrey Hinton. 2008. Visualizing data using t-SNE.            and Wancai Zhang. 2021. Informer: Beyond efficient transformer for long se-
+     Journal of machine learning research 9, Nov (2008), 2579–2605.                             quence time-series forecasting. In Proceedings of the AAAI conference on artificial
+[20] MJ Menne, CN Williams Jr, and RS Vose. 2016. Long-term daily and monthly                   intelligence, Vol. 35. 11106–11115.
+     climate records from stations across the contiguous United States (US Historical      [43] Tian Zhou, Ziqing Ma, Qingsong Wen, Xue Wang, Liang Sun, and Rong Jin. 2022.
+     Climatology Network). Technical Report. Environmental System Science Data                  Fedformer: Frequency enhanced decomposed transformer for long-term series
+     Infrastructure for a Virtual Ecosystem . . . .                                             forecasting. In International conference on machine learning. PMLR, 27268–27286.
+[21] Giangiacomo Mercatali, Andre Freitas, and Jie Chen. 2024. Graph neural flows for
+     unveiling systemic interactions among irregularly sampled time series. Advances
+     in Neural Information Processing Systems 37 (2024), 57183–57206.                      A Additional Experiments
+[22] Y Nie. 2022. A Time Series is Worth 64Words: Long-term Forecasting with
+     Transformers. arXiv preprint arXiv:2211.14730 (2022).                                 A.1 Additional Main Results
+[23] Quang Pham, Chenghao Liu, Doyen Sahoo, and Steven CH Hoi. 2022. Learning              We report additional forecasting results measured by the MAE
+     fast and slow for online time series forecasting. arXiv preprint arXiv:2202.11672
+     (2022).                                                                               metric in Table 8. Under-Cali improves performance across almost
+[24] Yulia Rubanova, Ricky TQ Chen, and David K Duvenaud. 2019. Latent ordinary            all models and datasets. On the Human Activity dataset, the MAE
+     differential equations for irregularly-sampled time series. Advances in neural
+     information processing systems 32 (2019).
+                                                                                           of SeFT decreases by 16.20%, and that of Reformer drops by 21.51%,
+[25] Mona Schirmer, Mazin Eltayeb, Stefan Lessmann, and Maja Rudolph. 2022. Mod-           mirroring the substantial reductions seen in MSE. Similarly, on
+     eling irregular time series with continuous recurrent units. In International con-    USHCN, MIMIC, and PhysioNet, MAE improvements align with
+     ference on machine learning. PMLR, 19388–19405.
+                                                                                           the corresponding MSE gains as well. These results further confirm
+Online Irregular Multivariate Time Series Forecasting via Uncertainty-Driven Dual-Expert Calibration                  KDD 2026, August 9–13, 2026, Jeju Island, Republic of Korea.
+
+
+Table 8: Test MAE (mean ± std) on irregular multivariate time series forecasting datasets with and without Under-Cali across
+various architectures under five seeds. Lower MAE indicates better performance. Best results are highlighted in bold.
+
+      Models                      MIMIC                                PhysioNet                               Human Activity                                USHCN
+  +Under-Cali              ✗                   ✓                  ✗                   ✓                    ✗                   ✓                   ✗                      ✓
+   FEDformer         0.5646±0.0021     0.5162±0.0038        0.4548±0.0010       0.4316±0.0008      0.4833±0.0110        0.4694±0.0120        0.3854±0.0069        0.3723±0.0099
+      FreTS          0.5113±0.0012     0.4937±0.0010        0.4363±0.0015       0.4223±0.0015      0.2418±0.0011        0.2382±0.0010        0.4433±0.0136        0.4180±0.0112
+      BigST          0.4756±0.0021     0.4749±0.0016        0.4216±0.0034       0.4114±0.0021      0.4816±0.0172        0.3986±0.0124        0.3817±0.0161        0.3774±0.0144
+  iTransformer       0.4916±0.0016     0.4845±0.0045        0.4384±0.0023       0.4232±0.0012      0.2395±0.0027        0.2299±0.0012        0.3729±0.0093        0.3636±0.0026
+  Ada-MSHyper        0.5233±0.0044     0.5123±0.0043        0.4363±0.0005       0.4244±0.0049      0.3916±0.0050        0.3562±0.0170        0.3911±0.0099        0.3807±0.0066
+    PatchTST         0.5139±0.0017     0.4898±0.0068       0.4306±0.0010         0.4409±0.0148     0.2457±0.0037        0.2426±0.0039        0.4107±0.0104        0.3958±0.0094
+    Reformer        0.6013±0.0016       0.6284±0.0433      0.4573±0.0008         0.4576±0.0048     0.8772±0.0312        0.6886±0.1016        0.3961±0.0024        0.3891±0.0029
+    Informer        0.5692±0.0044       0.6027±0.0242       0.5147±0.0019       0.5084±0.0056      0.5308±0.0184        0.4854±0.0142       0.3730±0.0039          0.3840±0.0080
+   Crossformer      0.4534±0.0014       0.4553±0.0012       0.3996±0.0021       0.3988±0.0014      0.3695±0.0189        0.3489±0.0184        0.3883±0.0139        0.3594±0.0095
+    PrimeNet         0.6550±0.0001     0.6414±0.0010       0.6891±0.0001        0.6784±0.0017      1.6478±0.0011        1.5154±0.0140       0.6147±0.0021         0.5272±0.0046
+      SeFT           0.6482±0.0011     0.6316±0.0041       0.6883±0.0015        0.6599±0.0054      1.0711±0.0193        0.8976±0.1195       0.4893±0.0021         0.4424±0.0071
+     mTAN            0.7852±0.0574     0.6365±0.0194       0.4668±0.0049        0.4600±0.0035      0.4396±0.0092        0.4299±0.0103       0.4472±0.0242         0.4035±0.0118
+  NeuralFlows        0.6236±0.0096     0.6039±0.0109       0.4789±0.0044        0.4753±0.0047      0.5117±0.0222        0.4917±0.0108       0.4088±0.0060         0.3969±0.0083
+  GNeuralFlow        0.6448±0.0068     0.6314±0.0030       0.6504±0.0222        0.6119±0.0102      0.4822±0.0071        0.4725±0.0080       0.4089±0.0073         0.4024±0.0103
+      CRU            0.6050±0.0044     0.5940±0.0028       0.6052±0.0026        0.5855±0.0023      0.4661±0.0323        0.4318±0.0193       0.4083±0.0062         0.3993±0.0064
+     GRU-D           0.5322±0.0052     0.5275±0.0047       0.4281±0.0011        0.4268±0.0005      0.4488±0.0008        0.4456±0.0014       0.3892±0.0134         0.3787±0.0098
+  Warpformer        0.4068±0.0066       0.4077±0.0024      0.3656±0.0018        0.3648±0.0008      0.3978±0.0198        0.3542±0.0169       0.3564±0.0237         0.3405±0.0147
+   tPatchGNN         0.4281±0.0122     0.4269±0.0094       0.3682±0.0011        0.3672±0.0009      0.2502±0.0885        0.2359±0.0726       0.3547±0.0252         0.3479±0.0230
+    Hi-Patch         0.4470±0.0090     0.4426±0.0053       0.3999±0.0030        0.3962±0.0017      0.8279±0.2170        0.8109±0.2181       0.3396±0.0076         0.3388±0.0076
+     GraFITi         0.3958±0.0015     0.3945±0.0026       0.3611±0.0017        0.3604±0.0011      0.1773±0.0012        0.1764±0.0005       0.3444±0.0137         0.3366±0.0156
+  HyperIMTS          0.4697±0.0108     0.4640±0.0099       0.3620±0.0012        0.3612±0.0004      0.1877±0.0019        0.1869±0.0019       0.3453±0.0096         0.3330±0.0068
+
+
+Table 9: Test MAE (mean ± std) on irregular multivariate time series forecasting datasets varying lookback window lengths and
+forecast horizons under five seeds. Lower MSE indicates better performance. Best results are highlighted in bold.
+
+      Models                                  tPatchGNN                          HyperIMTS                               GraFITi                             Warpformer
+                       Length
+   +Under-Cali                            ✗                ✓                ✗                 ✓                   ✗                ✓                    ✗                    ✓
+                      24 → 3        0.5861±0.0021    0.5782±0.0019    0.5511±0.0099    0.5492±0.0098       0.5388±0.0033      0.5336±0.0028     0.5522±0.0013       0.5454±0.0030
+                      48 → 3        0.4111±0.0054    0.4081±0.0030    0.4491±0.0077    0.4453±0.0061       0.4111±0.0010      0.4096±0.0004     0.4212±0.0037       0.4202±0.0017
+      MIMIC
+                      72 → 3        0.4281±0.0122    0.4269±0.0094    0.4697±0.0108    0.4640±0.0099       0.3958±0.0015      0.3945±0.0026    0.4068±0.0066         0.4077±0.0024
+                      72 → 24      0.4647±0.0050      0.4667±0.0050   0.4738±0.0030    0.4724±0.0028       0.4439±0.0065      0.4413±0.0057    0.4476±0.0012         0.4508±0.0014
+                      12 → 3        0.2434±0.0557    0.2293±0.0436    0.1713±0.0030    0.1698±0.0025       0.1615±0.0017      0.1595±0.0025    0.4249±0.0322        0.3666±0.0213
+                      24 → 3        0.2080±0.0497    0.1990±0.0404    0.1732±0.0016    0.1718±0.0016       0.1647±0.0016      0.1632±0.0017    0.4104±0.0192        0.3810±0.0273
+    PhysioNet
+                      36 → 3        0.2566±0.0899    0.2417±0.0755    0.1877±0.0019    0.1871±0.0020       0.1773±0.0012      0.1764±0.0005    0.3978±0.0198        0.3551±0.0184
+                      36 → 12       0.2683±0.0912    0.2512±0.0713    0.2082±0.0020    0.2083±0.0021       0.1979±0.0010      0.1979±0.0009    0.4390±0.0336        0.3810±0.0198
+                     1200 → 300     0.4057±0.0164    0.4018±0.0159    0.4140±0.0301    0.4097±0.0291       0.4576±0.0093      0.4548±0.0080    0.4623±0.0081        0.4579±0.0093
+                     2100 → 300     0.4651±0.0095    0.4569±0.0108    0.4561±0.0117    0.4539±0.0116       0.2872±0.0609      0.2715±0.0406    0.2785±0.0684        0.2636±0.0483
+ Human Activity
+                     3000 → 300     0.3547±0.0252    0.3479±0.0230    0.3453±0.0096    0.3339±0.0061       0.3444±0.0137      0.3372±0.0159    0.3564±0.0237        0.3427±0.0161
+                    3000 → 1000     0.4906±0.0069    0.4434±0.0050    0.4919±0.0100    0.4727±0.0152       0.4652±0.0062      0.4408±0.0193    0.3528±0.0030        0.3501±0.0030
+                      50 → 3        0.4057±0.0164    0.4018±0.0159    0.4140±0.0301    0.4097±0.0291       0.4576±0.0093      0.4548±0.0080    0.4623±0.0081        0.4579±0.0093
+                      100 → 3       0.4651±0.0095    0.4569±0.0108    0.4561±0.0117    0.4539±0.0116       0.2872±0.0609      0.2715±0.0406    0.2785±0.0684        0.2636±0.0483
+      USHCN
+                      150 → 3       0.3547±0.0252    0.3479±0.0230    0.3453±0.0096    0.3339±0.0061       0.3444±0.0137      0.3372±0.0159    0.3564±0.0237        0.3427±0.0161
+                     150 → 50       0.4906±0.0069    0.4434±0.0050    0.4919±0.0100    0.4727±0.0152       0.4652±0.0062      0.4408±0.0193    0.3528±0.0030        0.3501±0.0030
+
+
+
+that Under-Cali provides robust, model-agnostic enhancements                              Table 10: Ablation study of Under-Cali for mTAN on four
+for online irregular multivariate time series forecasting.                                datasets under five seeds evaluated using MSE.
+
+                                                                                             Method Variant                        MIMIC    PhysioNet       Human Activity    USHCN
+
+A.2      Additional Ablation Study                                                           w/o GDC (Single Expert, Joint)        1.0363     0.4218            0.3529           0.4939
+                                                                                             w/o GDC (Single Expert, Reliable)     0.9951     0.4225            0.3438           0.4890
+We further report ablation results of Under-Cali on additional                               w/o GDC (Single Expert, Unreliable)   1.0630     0.4274            0.4016           0.5129
+source forecasters, including mTAN [28], Warpformer [35], Hyper-                             w/o ARM (Random Triggering)           0.9706     0.4264            0.3466           0.5085
+                                                                                             w/o ARM (Random Allocating)           0.8955     0.4205            0.3489           0.4861
+IMTS [14], and GraFITi [32], in Table 10, 11, 12, and 13. The results
+                                                                                             w/o All (Single Expert, Joint)        1.0310     0.4217            0.3495           0.5012
+consistently show performance drops in most cases, confirming
+                                                                                             Under-Cali                            0.8809     0.4193            0.3354           0.4792
+that all components jointly contribute to effective online adaptation
+across diverse source models.
+KDD 2026, August 9–13, 2026, Jeju Island, Republic of Korea.                                                               Haonan Wen, Hanyang Chen, & Songhe Feng
+
+
+Table 11: Ablation study of Under-Cali for Warpformer on                              Table 14: MSE change under inaccurate uncertainty estima-
+four datasets under five seeds evaluated using MSE.                                   tion on Human Activity.
+
+ Method Variant                        MIMIC    PhysioNet   Human Activity   USHCN        Batch            1           2             3           4          5
+ w/o GDC (Single Expert, Joint)        0.4692    0.3032         0.3310       0.4311
+ w/o GDC (Single Expert, Reliable)     0.4717    0.3033         0.3424       0.4299   MSE Change        -0.12%       +0.01%       +0.30%       +0.33%    +0.60%
+ w/o GDC (Single Expert, Unreliable)   0.4745    0.3038         0.3431       0.4354
+ w/o ARM (Random Triggering)           0.4712    0.3034         0.3797       0.4323
+ w/o ARM (Random Allocating)           0.4723    0.3029         0.2976       0.4310   Table 15: Trade-off between trigger threshold, update fre-
+ w/o All (Single Expert, Joint)        0.4689    0.3031         0.3225       0.4304   quency, and performance on Human Activity for tPatchGNN.
+ Under-Cali                            0.4683    0.3028         0.3081       0.4295
+                                                                                                            𝜏trig   MSE        Frequency (%)
+Table 12: Ablation study of Under-Cali for HyperIMTS on                                                     0.25    0.1269         96.47
+four datasets under five seeds evaluated using MSE.                                                         0.50    0.1266         92.71
+                                                                                                            0.75    0.1258         85.41
+ Method Variant                        MIMIC    PhysioNet   Human Activity   USHCN
+                                                                                                            1.00    0.1280         79.47
+                                                                                                            1.50    0.1278         76.47
+ w/o GDC (Single Expert, Joint)        0.5488    0.2983         0.0816       0.3973
+ w/o GDC (Single Expert, Reliable)     0.5484    0.2984         0.0815       0.3992                         2.00    0.1300         58.82
+ w/o GDC (Single Expert, Unreliable)   0.5544    0.2987         0.0839       0.4046                         3.00    0.1376         21.18
+ w/o ARM (Random Triggering)           0.5552    0.2985         0.0817       0.4059
+ w/o ARM (Random Allocating)           0.5495    0.2982         0.0818       0.3985
+ w/o All (Single Expert, Joint)        0.5456    0.2984         0.0816       0.3925   (Single Expert, Reliable/Unreliable) performs worse than the joint
+ Under-Cali                            0.5457    0.2980         0.0813       0.3973   variant, suggesting that challenging samples remain informative
+                                                                                      rather than acting purely as noise. Moreover, approximately 45%
+Table 13: Ablation study of Under-Cali for GraFITi on four                            of training batches exhibit gradient conflicts between reliable and
+datasets under five seeds evaluated using MSE.                                        unreliable groups. In contrast, Under-Cali achieves better per-
+                                                                                      formance, indicating that dedicated experts effectively mitigate
+ Method Variant                        MIMIC    PhysioNet   Human Activity   USHCN
+                                                                                      optimization interference.
+ w/o GDC (Single Expert, Joint)        0.4513    0.2992         0.0790       0.5520
+ w/o GDC (Single Expert, Reliable)     0.4520    0.2993         0.0790       0.5811   A.6     Trigger Threshold Sensitivity Analysis
+ w/o GDC (Single Expert, Unreliable)   0.4589    0.2996         0.0796       0.5627
+                                                                                      To evaluate the trade-off between update frequency and forecasting
+ w/o ARM (Random Triggering)           0.4524    0.2994         0.0793       0.5877
+ w/o ARM (Random Allocating)           0.4527    0.2992         0.0792       0.5537
+                                                                                      performance, we vary the trigger threshold 𝜏trig and report the
+ w/o All (Single Expert, Joint)        0.4513    0.2992         0.0788       0.5726
+                                                                                      results in Table 15. We observe that MSE reaches a plateau when
+ Under-Cali                            0.4482    0.2989         0.0790       0.5546
+                                                                                      𝜏trig ≤ 0.75, while update frequency continues increasing. Therefore,
+                                                                                      our chosen setting reduces update frequency by approximately 15%
+                                                                                      without noticeable performance loss.
+A.3      Additional Lookback Length and Horizon
+         Study                                                                        B     Baseline Details
+                                                                                      We briefly introduce the baseline methods used in our experiments.
+We report additional MAE results for varying lookback lengths
+                                                                                      For both regular and irregular multivariate time series forecast-
+and forecast horizons in Table 9. Under-Cali consistently reduces
+                                                                                      ing models, we adopt the implementations from the PyOmniTS
+MAE across most of lookback lengths, forecast horizons. Mean-
+                                                                                      benchmark1 . More details can be found in HyperIMTS [14] and
+while, improvements are observed on most models and datasets,
+                                                                                      ReIMTS [13]. For online learning and test-time adaptation methods:
+demonstrating that our method effectively leverages historical in-
+formation and maintains stability under extended forecast horizons.                       • OneNet [31]: An online deep learning model that integrates
+                                                                                            cross-variable and cross-time modeling to capture dynamic
+A.4      Uncertainty Estimator Robustness Analysis                                          dependencies.
+                                                                                          • FSNet [23]: An online forecasting framework with a dual-
+To simulate radical online distribution shifts and evaluate the ro-
+                                                                                            stream mechanism that leverages both immediate and de-
+bustness of Under-Cali under inaccurate uncertainty estimation,
+                                                                                            layed feedback for adaptive learning.
+we inject Gaussian noise with variance 𝜎 2 = 0.5 into UE outputs.
+                                                                                          • Detect-and-Adapt (D3A) [39]: A concept drift adaptation
+Results in Table 14 show that, despite strong perturbations, per-
+                                                                                            method that explicitly detects distribution shifts and updates
+formance re-stabilizes within 1–2 batches while maintaining an
+                                                                                            model parameters accordingly.
+average MSE improvement of about 0.5%, demonstrating strong
+                                                                                          • TAFAS [10]: A test-time adaptation framework that utilizes
+self-correction and stable online adaptation capabilities.
+                                                                                            partially observed ground truths to proactively calibrate
+                                                                                            predictions.
+A.5      Discussion on Gated Distribution Calibrator
+To analyze the performance drop of w/o GDC (Single Expert, Joint,
+we conduct a gradient conflict analysis. We observe that w/o GDC                      1 https://github.com/Ladbaby/PyOmniTS
+

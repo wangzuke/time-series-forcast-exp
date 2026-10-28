@@ -1,0 +1,1616 @@
+                                                  Wind energy forecasting with missing values within a fully
+                                                            conditional specification framework
+                                                                Honglin Wena,c , Pierre Pinsonb,c , Jie Gua , Zhijian Jina
+                                                            a
+                                                            Department of Electrical Engineering, Shanghai Jiao Tong University,
+                                                               b
+                                                                 Dyson School of Design Engineering, Imperial College London,
+                                                 c
+                                                   Department of Technology, Management and Economics, Technical University of Denmark,
+arXiv:2203.08252v2 [stat.AP] 22 Oct 2022
+
+
+
+
+                                           Abstract
+                                           Wind power forecasting is essential to power system operation and electricity markets. As
+                                           abundant data became available thanks to the deployment of measurement infrastructures
+                                           and the democratization of meteorological modeling, extensive data-driven approaches have
+                                           been developed within both point and probabilistic forecasting frameworks. These models
+                                           usually assume that the dataset at hand is complete and overlook missing value issues that
+                                           often occur in practice. In contrast to that common approach, we rigorously consider here
+                                           the wind power forecasting problem in the presence of missing values, by jointly accommo-
+                                           dating imputation and forecasting tasks. Our approach allows inferring the joint distribution
+                                           of input features and target variables at the model estimation stage based on incomplete
+                                           observations only. We place emphasis on a fully conditional specification method owing to
+                                           its desirable properties, e.g., being assumption-free when it comes to these joint distribu-
+                                           tions. Then, at the operational forecasting stage, with available features at hand, one can
+                                           issue forecasts by implicitly imputing all missing entries. The approach is applicable to both
+                                           point and probabilistic forecasting, while yielding competitive forecast quality within both
+                                           simulation and real-world case studies. It confirms that by using a powerful universal impu-
+                                           tation method based on fully conditional specification, the proposed universal imputation
+                                           approach is superior to the common impute-then-predict approach, especially in the context
+                                           of probabilistic forecasting.
+                                           Keywords: Wind power, Probabilistic forecasting, Missing values, Multiple imputation
+
+
+                                           1. Introduction
+                                           1.1. Background
+                                               As a cornerstone to achieve net-zero emissions in the energy sector, wind power has
+                                           proliferated over recent decades. However, the stochastic nature of wind power generation
+                                           challenges power system operation and electricity markets, which has therefore motivated
+                                           wind power forecasting (WPF) research. WPF is usually classified into short-term fore-
+                                           casting (hours to a few days) which takes numerical weather predictions as input features
+                                           and very short-term forecasting (minutes to a few hours) which utilizes recent observations
+                                           as input features. Recently WPF has achieved several advances by employing cutting-edge
+                                           Preprint submitted to International Journal of Forecasting                         October 25, 2022
+statistical and machine learning approaches, e.g. deep learning (Goodfellow et al., 2016)
+and lightGBM (Ke et al., 2017), as well as the modeling of underlying stochastic processes
+through the investigation of its spatial-temporal dynamics (Cavalcante et al., 2017; Messner
+and Pinson, 2019).
+    Meanwhile, the interest of the WPF community has shifted from point forecasting to
+probabilistic forecasting; see recent review by Hong et al. (2020). Probabilistic wind power
+forecasting (PWPF) communicates the probability distribution of wind power generation at
+a future time based on gathered information up to the issue time, usually in the form of quan-
+tiles, prediction intervals, and densities. It has attracted increasing attention in the power
+industry, especially after the 2014 Global Energy Forecasting Competition (GEFCom 2014)
+(Hong et al., 2016). In general, two approaches, namely parametric and non-parametric have
+been proposed for PWPF. The parametric approach is based on a distributional assumption,
+such as Gaussian, Beta, etc., the shape parameters of which are determined through statis-
+tical learning. In contrast, the non-parametric approach is free of such an assumption. One
+of the most popular non-parametric approaches relies on quantile regression (QR) (Koenker
+and Hallock, 2001), which involves a pinball loss function to guide the learning of conditional
+quantile functions. It is therefore easy to employ QR in advanced statistical learning models
+(for instance gradient boosting machine (Landry et al., 2016) and extreme learning machine
+(Wan et al., 2016)) by using the pinball loss as loss function at the model estimation phase.
+Besides, with the aim to characterize the whole distribution in a distribution-free manner,
+methods that simultaneously estimate several quantiles (Sangnier et al., 2016) and directly
+estimate the distribution based on conditional normalizing flow(s) (Wen et al., 2022) have
+been proposed.
+    Although several works have contributed forecasting methods and products to the WPF
+community, most of them assume that the dataset at hand is complete and overlook the
+widespread missing value problems, due to sensor failures and communication errors for
+instance. Intuitively, missing value issues pose problems at both model estimation and
+operational forecasting stages, ultimately compromising forecast quality. Obviously, for
+models estimated through gradient-based optimization, the training datasets cannot contain
+missing values, otherwise, the gradients of the parameters cannot be calculated at the model
+estimation stage. Therefore, rows of the learning set containing both missing values and
+observations are often deleted, even if the missing information is minimal. It means that
+valuable information is also discarded in the process of removing the missing values. In
+addition, even with estimated models at hand, missing value problems still affect operational
+forecasting, possibly obliging forecasters to revert to naive models such as climatology (i.e.,
+long-term averages) as surrogates. Therefore, it remains an open issue to investigate the
+influence of missing values and develop WPF approaches that accommodate missing values.
+
+1.2. Related works
+    An intuitive and popular approach to the problem (though, not used by the WPF com-
+munity) is to impute these missing values before training models and issuing operational
+forecasts (Liu et al., 2018). It is referred to as “impute, then predict” (ITP) approach in
+
+                                              2
+this paper. For example, the classic forecasting package “forecast” (Hyndman and Khan-
+dakar, 2008) provides an option that uses linear interpolation to impute missing values.
+Obviously, a spectrum of imputation methods can be employed; see a thorough review by
+Van Buuren (2018). Then, an associated question is how to choose the imputation method.
+The recent study by Tawn et al. (2020) suggests that the influence of imputation on model
+estimation and operational forecasting stages is ambiguous. Concretely, they concluded that
+advanced imputation methods are beneficial to model estimation. However, at the opera-
+tional forecasting, it turns out that retraining models without missing features results in
+better performance. In fact, it is natural to consider the retraining approach, as it only
+uses actual observations to estimate parameters, and hence prevents using the aforemen-
+tioned imputation procedure. However, the learning then only relies on a subset of the data
+available, while the information potentially contained in the discarded part is lost. In addi-
+tion, this approach may suffer the curse of dimensionality since having to train models for
+all combinations of input features. This may yield a substantial increase in computational
+costs.
+    In addition to the aforementioned approaches, several works have focused on adapting
+forecasting methods to be used in the presence of missing values. A classic approach is
+based on state-space modeling, where the Kalman filter is modified to allow accommodating
+incomplete observations. For example, autoregressive moving average models (Jones, 1980)
+and autoregressive integrated moving average models (Kohn and Ansley, 1986) have been
+represented in state-space form and adapted to tackle missing value problems. Although
+these works have shed light on forecasting in the presence of missing values, they are only
+applicable to point forecasting and restricted to linear models. Recent advanced models
+such as GRU-D (Che et al., 2018) and BRITS (Cao et al., 2018) have been proposed based
+on the long-short term memory model (Hochreiter and Schmidhuber, 1997), by using the
+intermediate results (which can be also interpreted as latent states) of the neural network
+model to impute missing values. This idea has been successfully applied in the recent popular
+package DeepAR (Salinas et al., 2020). However, they still require imputing missing values
+via the recurrent neural network structure before performing the forecasting task.
+
+1.3. Proposed method and contributions
+    There is no such a clearly defined boundary between imputation and forecasting, as ex-
+plained by Golyandina and Osipov (2007). Indeed, a forecasting problem can be considered
+as an imputation problem in the situation where missing values are systematically located
+at the end of a sequence. Furthermore, both imputation and forecasting tasks assume the
+continuation of the underlying structure within the data, and consequently leverage obser-
+vations to predict unknown values. That is, it is feasible to develop a model that can infer
+the structure based on observations and seamlessly perform the imputation and forecasting
+tasks, which is referred to as “universal imputation” (UI) approach in this paper. As a result,
+in what follows, we may interchangeably use the terms “impute” and “forecast”. With this
+idea in mind, You et al. (2020) considered the point forecasting problem and proposed to
+model the correlation structure between input features and targets via a graph neural net-
+work, where imputation of missing features and prediction of targets can be simultaneously
+                                              3
+performed. In contrast here, we place ourselves within a probabilistic setting directly, for
+which it is then also possible to derive point forecasts. Unlike the usual probabilistic fore-
+casting approaches that model conditional probability distributions (for the target variable)
+directly, in this work we model the joint multivariate probability distribution of input fea-
+tures and targets. As discussed by Stone (1991), with the estimated multivariate probability
+distribution at hand, one can obtain conditional distributions via marginalization, although
+it is computationally inefficient compared to the usual conditional probability distribution
+modeling. This approach is appealing in the presence of missing values. That is, with the
+estimated multivariate probability distribution, one can marginalize over missing variables
+to obtain probabilistic forecasts. Then, the goal at the model estimation stage is to estimate
+the parameters of such a distribution based on incomplete observations. At the operational
+forecasting stage, targets to be predicted are treated as missing values and imputed via
+the estimated distribution. The focus is on a very-short-term wind power forecasting ap-
+plications, where missing value issues often occur, though the method is generic and could
+be then used by others for different applications where challenges accommodating missing
+values are also present.
+    In this work, we focus on situations where observations are missing at random due
+to, e.g., sensor failures and communication errors. This means missingness patterns are
+independent of the missing values themselves. However, it does not mean that this concept
+of missingness at random is restricted to the case of data missing in a pointwise and sporadic
+fashion. Even in the case of block missingness (i.e., data missing over time intervals), as
+long as the data is missing at random (hence, independently of the values for the process of
+interest or relevant exogenous processes), our approach can be employed. The distribution
+of missingness can then be left aside when inferring the underlying structure of interest.
+As a consequence, the problem boils down to estimating the parameters of a model based
+on incomplete observations only. Missing-not-at-random cases could still be handled by the
+proposed UI approach, though requiring more sophisticated techniques at both the model
+estimation and operational forecasting stages, which is left for future work. Specifically, it
+requires modeling the missingness explicitly when calculating the likelihood at the model
+estimation stage. At the operational forecasting stage, the targets to be predicted are treated
+as missing, and thus independent of the missingness distribution of the contextual features.
+It also requires taking into account the missingness distribution of contextual features when
+calculating the conditional distribution of missing variables given the observed variables.
+Particularly, we implement this idea based on the multiple imputation method (Dempster
+et al., 1977), which allows us to impute missing values with several equally likely realizations
+from the distribution and thus provides probabilistic forecasts for the targets. Instead of
+assuming a special family of distributions and inferring its parameters, we adopt the fully
+conditional specification (FCS) approach (Van Buuren et al., 2006), which implicitly specifies
+the multivariate distribution as a collection of conditional distributions on a variable-by-
+variable basis. At the model estimation stage, parameters for each conditional distribution
+are iteratively estimated through a Gibbs sampling procedure. At the operational forecasting
+stage, missing values are also iteratively imputed on a variable-by-variable basis.
+    The proposed method is validated based on a simulation study and real-world case studies
+                                               4
+with wind power data from the USA. The simulation study is based on synthetic data (for
+both AR and VAR processes) and Monte-Carlo simulations, to illustrate and underline the
+salient features of our approach. It also allows analyzing the impact of certain characteristics
+e.g. rate of missingness on the performance of the approach, while remaining in a controlled
+environment within which the results are due to changes in the design, and not to some
+spurious effects often observed with real-world data. Real-world data from the US are
+used for benchmarking instead, and to investigate various aspects of the applicability of the
+approach in an operational context, e.g., with a focus on pointwise vs. block missingness,
+various rates of missingness, univariate and multivariate setups, etc. The results show that
+the proposed approach is superior to existing ITP approaches. The main contributions of
+this paper are two-fold. One of them is the proposal of a universal imputation approach,
+which is general, though inspired by the problem of wind power forecasting in the presence
+of missing values. Such a universal imputation approach jointly accommodates imputation
+and forecasting tasks within the universal multiple imputation framework. By design, this
+approach allows to generate both point and probabilistic forecasts. The other contribution
+is to show its applicability to wind power forecasting with missing values, where different
+types and rates of missingness are present.
+    The remaining parts of this paper are organized as follows. Section 2 formulates the
+problem, whereas Section 3 describes the proposed approach for forecasting in the presence
+of missing values. Next, the simulation study to show the applicability of the proposed ap-
+proach is elaborated in Section 4. Section 5 presents case studies with results and discussion.
+Section 6 concludes the paper.
+
+    Notations: In general, we use uppercase letters to denote random variables and lowercase
+letters to denote the realizations of these random variables. For instance, Y1 denotes a
+random variable and y1 its realization. A collection of random variables are represented as
+a tuple, which is bracketed with parentheses, such as (Y1 , Y2 ) and (Y1 , · · · , Y10 ). Boldface
+lowercase and uppercase letters respectively indicate vectors and matrices. Particularly, we
+use row and column slices to represent parts of a matrix. For instance, let Z represent a
+matrix, I, and J denote row indices and column indices. Then, Z[I; J ] represents a part of
+matrix Z indexed by I and J . And, (·)> denotes the transpose of matrices. A time series
+is represented as {yt , t = 1, 2, · · · } indexed by time t, which is a realization of a stochastic
+process {Yt , t = 1, 2, · · · }. We also write them as {yt } and {Yt } for short.
+
+2. Preliminaries
+   We first describe the framework for very-short term wind power forecasting, for both
+point and probabilistic forecasting cases. Subsequently, we detail the challenges induced by
+missing values at both model estimation and operational forecasting stages.
+
+2.1. Problem Formulation
+    Assume we have p wind farms in a region that can share information to improve forecast-
+ing accuracy as suggested by Cavalcante et al. (2017). When p equals to 1, it reduces to the
+                                                5
+common single wind farm case. At wind farm n, let yn,t ∈ [0, Pn ] (where Pn is its capacity) de-
+note the wind power generation value at time t, which is a realization of the random variable
+Yn,t . Let Ωn,t denote the information tuple of wind farm n up to time t, which would contain
+values over previous time steps and possibly other relevant information such as weather
+observations and numerical weather forecasts. And let Ωt represent the tuple that contains
+information of all sites up to time t, i.e., Ωt = (Ω1,t , · · · , Ωp,t ). Generally, the aim is to issue
+forecasts with lead time h, i.e., the characteristics of Y1,t+1 , · · · , Y1,t+h , · · · , Yp,t+1 , · · · , Yp,t+h ,
+given information Ωt . The forecasting task can be decoupled into several sub-problems, each
+of which focuses on a specific site and time, for instance forecasting the characteristics of
+Yn,t+h based on the whole information pool Ωt . Then the point forecast for Yn,t+h given by
+a model M with parameters Θ̂t is usually defined as
+
+                                         ŷn,t+h|t = E[Yn,t+h |M, Θ̂t , Ωt ],                                            (1)
+
+where E[·] denotes the expectation of random variables, and Θ̂t changes with time t. In
+this paper, let us assume the stochastic process {Y1,t , Y2,t , · · · , Yp,t } is stationary. Then, the
+density function fY1,t ,··· ,Yp,t+h is invariant for changes in time (De Gooijer et al., 2017), which
+means parameters Θ̂t do not vary with time and are denoted as Θ̂. Then, one can estimate
+the parameters based on collected data via statistical learning methods. We rewrite (1) as
+
+                                          ŷn,t+h|t = E[Yn,t+h |M, Θ̂, Ωt ].                                             (2)
+
+The probabilistic forecast for time t + h given by M is communicated as a density function,
+i.e.,
+                               fˆn,t+h|t (y) = fYn,t+h (y|M, Θ̂, Ωt ).                  (3)
+Indeed, with the estimated density function at hand, one can easily obtain point forecast
+via:                                     Z
+                              ŷn,t+h|t = y fˆn,t+h|t (y) dy.                         (4)
+                                                          y
+
+For simplicity of notations, let us focus on the predictive density fˆn,t+h|t given the information
+set Ωt at time t. We denote the input features as xt and the realization of target Yn,t+h as
+yt . The information one has access to N sample pairs (x1 , y1 ), · · · , (xN , yN ) serves as a basis
+for training. They can be written in the form of a matrix, i.e., X = [x1 , · · · , xN ]> as well
+as Y = [y1 , · · · , yN ]> . The matrix X has dimensions N × pk, whereas Y is a vector with
+N elements. Now the density forecast described in (3) boils down to conditional probability
+density function estimation, which is performed via statistical learning. In very-short term
+WPF, one commonly uses past wind power generation values of length k as input features,
+i.e., a vector [yn,t−k+1 , · · · , yn,t ]> ∈ [0, Pn ]k for the nth site. Therefore, considering all sites
+together, the vector of input features is given by
+
+      xt = [y1,t−k+1 , · · · , y1,t , · · · , yp,t−k+1 , · · · , yp,t ]> ∈ [0, P1 ]k × [0, P2 ]k × · · · × [0, Pp ]k .
+
+Obviously, features in xt have some form of dependency, which breaks down the classical
+i.i.d assumption in statistical learning. However, it is still common to place oneself in a
+                                                              6
+regression framework for estimation and overlook this dependency issue, as for instance
+done recently also for global/local model estimation (Montero-Manso and Hyndman, 2021)
+and estimation in deep learning models (Benidis et al., 2022). The consequences are actually
+fairly mild in practice, since the fact that input features are not independent mainly affects
+the interpretability of regression coefficients and the ability to perform hypothesis testing
+(to assess whether coefficients are significantly different from 0). This is while the fact
+that observation samples used as a basis for estimation are not i.i.d. mainly yields higher
+variance in coefficient estimates – an issue if dealing with small datasets, which is rarely
+the case today for most statistical and machine learning applications, including wind energy
+forecasting.
+    Based on a stationarity assumption, the sample pairs (x1 , y1 ), · · · , (xN , yN ) can be re-
+garded as identically distributed. For simplicity, we introduce two random variables X and
+Y for these samples. It allows us to model the joint distribution fX,Y (x, y) via M with
+estimated parameters Θ̂, i.e., fX,Y (x, y; M, Θ̂), and derive fY |X (y|x) via the conditional
+probability formula. It is described as
+
+                                       fX,Y (x, y; M, Θ̂)            fX,Y (x, y; M, Θ̂)
+                fY |X (y|x; M, Θ̂) =                        =R                              .    (5)
+                                         fX (x; M, Θ̂)           y
+                                                                     fX,Y (x, y; M, Θ̂)dy
+
+With the estimated joint distribution fX,Y (x, y; M, Θ̂) at hand, at any time t, given con-
+textual information xt , one can issue the forecast fˆY |X (yt |xt ; M, Θ̂) via (5). In this paper,
+M is set as an imputation model and implicitly defined by a collection of conditional dis-
+tributions. Each conditional distribution is implemented by predictive mean matching that
+relies on a function, for instance gj parameterized by θ̂j . As we are considering the joint
+distribution now, we can concatenate xt and yt as z t , i.e., z t = [x>          >
+                                                                         t , yt ] . Accordingly, the
+dataset is concatenated as the matrix Z of shape N × (pk + 1), i.e.,
+                                                    
+                                         x>
+                                          1   y  1       z>
+                                                          1
+                                        x> y2   z > 
+                                        2           2
+                                  Z =  ..     ..  =  .. .
+                                        .      .   . 
+                                          >
+                                        xN yN            z>
+                                                          N
+
+We refer to the i-th row, j-th column, and (i, j)-th entry of Z as z i , Z j , and zi,j respectively.
+And we introduce a random variable Z = (X, Y ) that concatenates X and Y , which contains
+pk + 1 variables (recall that X has pk variables, as it represents information from p sites),
+i.e., Z = (Z1 , Z2 , · · · , Zpk+1 ). Then, the distribution of Z is modeled by fZ (z; M, Θ̂). In
+particular, let Z−j denote the collection of random variables in Z except Zj , i.e., Z−j =
+(Z1 , · · · , Zj−1 , Zj+1 , · · · , Zpk+1 ). Accordingly, let z −j denote the realization of Z−j .
+     We assume values are missing at random. This is to be understood in a way that is more
+general than data missing sporadically and at random times. More formally, missingness
+at random means that the fact a data entry is missing or not is independent of the process
+itself, or of some exogenous process. For the wind power application, data missing not
+at random could be for the case there are systematic sensor failures for power generation
+                                                  7
+values below a given threshold, or systematic communication failures when wind comes for
+a given direction. In addition, missingness at random is not restricted to the case data is
+missing at single times. It can also be for the case of data missing over time intervals (i.e.,
+block missingness). This assumption of missingness at random is expected to be sound for
+wind power applications, though this should be confirmed on a case-by-case basis based on
+advanced data analysis.
+     Missing values are likely to occur in every element of z t . Let us introduce a vector mt
+to indicate the missingness of z t . Concretely, mt,j = 1 indicates that zt,j is missing, whereas
+mt,j = 0 indicates that zt,j is observed. Accordingly, the matrix M indicates the missingness
+of Z. Let Jzt ,M denote the indices of missingness of z t , i.e., Jzt ,M = {j | mt,j = 1},
+and Jzt ,O denote the indices of observations, i.e., Jzt ,O = {j | mt,j = 0}. Therefore,
+the observed and missing parts of z t are represented by z t [Jzt ,O ] and z t [Jzt ,M ], which are
+written as z obst   and z mis
+                           t     for simplicity. The corresponding random variables for z obs            t    and
+  mis                        obs           mis                            mis       mis >        >
+z t are denoted as Z               and Z . When yt is missing, z t = [xt                  , yt ] where xmis    t
+                                                                                      mis
+is the missing part of xt . The corresponding random variables for xt are denoted as
+X mis . For example, Figure 1 presents the matrix Z = [zi,j ]4×4 , where blue blocks indicate
+observations and yellow blocks indicate missing values. As shown, the first row of Z is
+denoted as z 1 , the second entry of which, i.e., z1,2 is missing. Then, the indices of missing
+values and observations of z 1 are Jz1 ,M = {2} and Jz1 ,O = {1, 3, 4}. Accordingly, we
+have z obs
+         1  = [z1,1 , z1,3 , z1,4 ]> , z mis
+                                         1   = [z1,2 ]. The corresponding random variables for z obs            1
+and z mis
+       1   are    denoted    as   Z obs
+                                        =   (Z 1 , Z3 , Z4 ) and Z mis
+                                                                       = Z2 . Also, let  I  Z j ,M denote     the
+indices of missing values in Z j , i.e., IZ j ,M = {i | mi,j = 1}, and IZ j ,O denote the indices
+of observations in Z j , i.e., IZ j ,O = {i | mi,j = 0}. Then the missing and observed parts
+of Z j are Z[IZ j ,M ; j] and Z[IZ j ,O ; j], which are respectively written as Z mis       j     and Z obsj   for
+simplicity. In Figure 1, Z 1 represents the first column of Z, the second entry of which is
+missing. Accordingly, we have IZ 1 ,M = {2}, IZ 1 ,O = {1, 3, 4}, Z obs        1   = [z1,1 , z3,1 , z4,1 ]> , and
+Z mis
+   1   = [z2,1 ].
+
+                                           ✞☛✁☛ ✞☛✁          ✞☛✁✄   ✞☛✁✂
+
+                                          ☎ ✁☛    ☎ ✁        ☎ ✁✄   ☎ ✁✂
+
+                                          ✞✆✝✟    ✞✆✝✠       ✞✆✝✆   ✞✆✝✡
+
+                                          ☎✂✁☛    ☎✂✁        ☎✂✁✄   ☎✂✁✂
+
+
+Figure 1: Illustration of a dataset Z. Here we take p = 1, k = 3, h = 1 as an example. Blue blocks indicate
+observations, whereas yellow blocks indicate missing values.
+
+    Therefore, at the model estimation phase, we concatenate features and targets to form a
+training dataset Z tr with some missing values, based on which an imputation model M is
+trained. At the operational forecasting phase, the input vector xt at time t is available, part
+                                                         8
+                                   . . .
+
+                                               . . .
+
+                                                       . . .
+
+
+
+
+                                                                           . . .
+
+                                                                                           . . .
+
+                                                                                                   . . .
+                           . . .
+
+
+
+
+                                                                   . . .
+                                               ✁                                       ✂
+                                           ✟                                       ✟
+
+Figure 2: Illustration of training and test datasets. Here we take p = 1, k = 3, h = 1 as an example. Blue
+blocks indicate observations, whereas yellow blocks indicate missing values.
+
+
+of which may be missing, and we focus on target yt . Together, they form z t = [x>            >
+                                                                                      t , yt ] .
+Then z t is imputed via the estimated model. For illustration, we present the training and
+test datasets for the single wind farm case in Figure 2. In the training dataset, missingness
+occurs in both input features and targets. In the test dataset, all targets are systematically
+missing.
+
+2.2. Challenge at the model estimation stage
+    Usually, the learning process of parameters in density estimation problems is based on
+maximum likelihood, which involves the computation of likelihood. However, in the presence
+of missing values, the likelihood is blended with missingness indicators. With the assump-
+tion that values are missing at random, the parameters of underlying distributions can be
+estimated based on observations only. Let Θ denote the true parameters of M. Consider
+the likelihood of a sample z t . It is described as
+
+                          fZ (z t , mt ; M, Θ) = fZ (z obs   mis
+                                                       t , z t , mt ; M, Θ),                               (6)
+
+where z mis
+        t   is missing. The likelihood function can be marginalized with respect to z mis
+                                                                                      t ,
+i.e.,
+                                     Z
+                fZ obs (z t ; M, Θ) = fZ obs ,Z mis (z obs
+                          obs                                mis              mis
+                                                       t , z t , mt ; M, Θ)dz t
+                                     Z                                                 (7)
+                                                       obs   mis          mis
+                                    = fZ obs ,Z mis (z t , z t ; M, Θ)dz t .
+
+Therefore, to learn the parameters Θ, it is required to maximize the likelihood of observations
+only, i.e., fZ obs (z obs
+                      i ; M, Θ). The estimate of Θ is denoted as Θ̂.
+
+2.3. Challenge at the operational forecasting stage
+    In this section, we assume that we already have distribution fZ (z; M, Θ̂) with estimated
+parameters Θ̂ at hand, and show how to issue forecasts at the operational forecasting stage.
+                                                               9
+If xt is fully observed, then xt is the observed part of z t , i.e., z obs
+                                                                       t   = xt , whereas the missing
+part of z t is yt . The forecast for yt can be expressed as
+
+                                             mis obs                  fZ (z obs     mis
+                                                                            t , z t ; M, Θ̂)
+   fY |X (yt |xt ; M, Θ̂) = fZ mis |Z obs (z t |z t ; M, Θ̂) = R                                       .   (8)
+                                                                z mis
+                                                                      fZ (z obs
+                                                                            t   , z mis
+                                                                                    t   ; M, Θ̂)dz mis
+                                                                                                   t
+                                                                  t
+
+
+In the presence of missing values, the forecasting task is to issue fY |Z obs (y|z obs
+                                                                                   t ) by utilizing
+                                          mis                             mis
+the distribution fZ (z; M, Θ̂). Indeed, z t can be decomposed into xt and yt , i.e.,
+
+                  fZ mis |Z obs (z mis  obs                                 mis obs
+                                   t |z t ; M, Θ̂) = fY,X mis |Z obs (yt , xt |z t ; M, Θ̂).               (9)
+
+Then the desired fY |Z obs (yt |z obs                                                      mis obs
+                                   t ; M, Θ̂) is derived by marginalizing fZ mis |Z obs (z t |z t ; M, Θ̂)
+with respect to xmis
+                   t , i.e.,
+                                             Z
+              fY |Z obs (yt |z t ; M, Θ̂) = fY,X mis |Z obs (yt , xmis
+                               obs                                      obs
+                                                                   t |z t ; M, Θ̂)dxt .
+                                                                                        mis
+                                                                                                     (10)
+
+
+3. Forecasting with missing values via FCS
+    In this section, we develop a forecasting approach based on the proposed universal im-
+putation strategy. For that, we employ the fully conditional specification approach, which
+in practice will be based on Gibbs sampling. It is described in the first part of the Section.
+This FCS approach requires a method to derive conditional distributions, which we describe
+in the second part. Eventually, it also relies on the choice for a regression model (random
+forests here), covered in the third part of the section. Finally, we will describe how the
+overall approach can be readily used for genuine forecasting with missing data.
+
+3.1. Fully conditional specification method
+     Instead of defining a multivariate distribution fZ (z; M, Θ̂) by assuming a specific distri-
+bution family, the FCS specifies a separate conditional distribution for each Zj , just like a
+Gibbs sampler. Concretely, the conditional distribution for Zj is modeled by gj with param-
+eters θ̂j , and is denoted as fZj |Z−j (zj |z −j ; gj , θ̂j ). Therefore, the model M is implemented via
+a bunch of models {gj }, whereas Θ̂ is composed of all parameters {θ̂j }. These parameters are
+estimated at the model estimation phase based on the training dataset Z tr . For simplicity of
+notations, we still use Z in what follows to show how to estimate the parameters. Intuitively,
+before estimating θ̂j , one needs to impute the missing values of Z −j . Then, parameters are
+estimated based on the imputed Z −j and Z obs           j . With the estimated conditional distribution
+                                                  mis
+fZj |Z−j (zj |z −j ; gj , θ̂j ), one can impute Z j based on the corresponding conditionals in Z −j .
+That is, both the estimation of θ̂j and the imputation of Z mis         j   are based on the imputed Z −j .
+Obviously, the imputation of any column of Z −j , for instance Z q , relies on its conditional
+distribution fZq |Z−q (zq |z −q ; gq , θ̂q ), which requires Z misj   to be imputed. In other words, the
+estimation of θ̂j and the imputation of Z −j are coupled with each other. If one performs
+
+                                                     10
+                                                  ✠                           ✠
+                                                                     Estimate ✞✆✏                        ✠
+                                      Estimate ✞✆✝                                              Estimate ✞✆✑
+       ☛ ✁✒☞✂✄☎                                                      Impute ✡✏✌✍✎
+    ✟                                 Impute ✡✝✌✍✎                                              Impute ✓✕✖✗
+                                                                                                          ✔
+
+
+
+
+                                                   Next iteration
+Figure 3: Illustration of the η-th iteration at the training stage. Light blue blocks indicate observations,
+yellow blocks indicate missing values, and dark blue blocks indicate imputation.
+
+
+the parameter estimation and imputation sequentially for j = 1, 2, · · · , pk + 1, the estima-
+tion of θ̂j can only use initial imputation of Z mis                 mis
+                                                     j+1 , · · · , Z pk+1 . The updated imputation of
+Z mis              mis
+   j+1 , · · · , Z pk+1 given by their estimated conditional distributions cannot be used for the
+estimation of θ̂j . Therefore, we perform the imputation of Z j and the estimation of θ̂j in an
+iterative manner. Then, at next iteration, the updated imputation of Z mis                           mis
+                                                                                     j+1 , · · · , Z pk+1 can
+be used for the estimation of θ̂j . For example, denote the estimated parameters θ̂j at the
+                           (η)                                            (η)
+η-th iteration as θ̂j , and the imputed complete column as Z j . At the η + 1-th iteration,
+   (η)             (η)                                     (η+1)
+Z j+1 , · · · , Z pk+1 can be used for the estimation of θ̂j       . Before the iterative estimation, all
+missing values are initially imputed as 0; therefore each column Z j becomes complete and
+                       (0)
+is written as Z j . After all iterations, the ultimate estimation for θj is denoted as θ̂j . Here,
+we set the stopping criterion as the round of iteration, as suggested by (Van Buuren et al.,
+2006). The caveat is that FCS method cannot guarantee the existence of joint distribution.
+Luckily, it is a relatively minor problem in practice, especially when missing rate is modest.
+We illustrate the steps of the η-th iteration in Figure 3.
+                                                                 (η)            (η)         (η)     (η−1)
+     Concretely, at the η-th iteration, before estimating θ̂j , we have Z 1 ,· · · ,Z j−1 ,Z j+1 ,· · · ,
+   (η−1)                                                  (η)
+Z pk+1 at hand, which are written compactly as Z −j in the form of a matrix, i.e.,
+                                (η)         (η)              (η)   (η−1)          (η−1)
+                             Z −j = [Z 1 , · · · , Z j−1 , Z j+1 , · · · , Z pk+1 ].                           (11)
+        (η)                                 (η)
+Then θ̂j      is estimated based on Z −j and Z obs
+                                               j   via maximum likelihood:
+                            (η)
+                                         X                          (η)
+                          θ̂j = arg max       log fZj |Z−j (zi,j |z i,−j ; gj , θj ).                          (12)
+                                           θj
+                                                  i∈Ij,obs
+
+                                                                                          (η)
+Thus we derive the estimated conditional distribution fZj |Z−j (zj |z −j ; gj , θ̂j ), based on which
+                                                              11
+we can impute Z mis                                                         mis
+                            j . For instance, to impute the value zi,j in Z j , we sample from
+                              (η)
+fZj |Z−j (zj |z i,−j ; gj , θ̂j ), which is described as:
+                              (η)                                (η)
+                             zi,j ∼ fZj |Z−j (zj |z −j ; gj , θ̂j ),       i ∈ Ij,mis .                     (13)
+
+As Z obs
+     j   is observed, we do not change the values, i.e.,
+                                         (η)       (η−1)
+                                        zi,j = zi,j         ,   i ∈ Ij,obs .                                (14)
+                       (η)                                                                 (η)
+Then we write all zi,j in the form of a vector, which is denoted as Z j                          i.e.,
+                                             (η)      (η)           (η)
+                                         Z j = [z1,j , · · · , zN,j ]> .                                    (15)
+
+This procedure goes sequentially for j = 1, · · · , pk + 1. We note that the method can be
+executed multiple times in parallel to obtain multiple imputations. Besides, the model gj
+for fZj |Z−j (zj |z −j ; gj , θ̂j ) needs to be specified, which is described in next section.
+
+                 ✂✄                          ✂✄                            ✁✂
+                                                                          ✟☛                       ✌ ✁✂
+                                                                                                   ✟
+                ✁☛                       ✁
+
+
+
+                                                                                     ☎     ✌
+                                                                                          ,✆
+                               ☎✆
+
+
+
+
+                                                                           ✁✄                      ✌ ✁✄
+                                                                          ✟☛                       ✟
+
+
+                                                                                     ☎     ✌
+                                                                                          ,✆
+
+
+
+                                ✌
+                      Estimated ✟                                                              Candidates
+                   (a) Training stage                                     (b) Candidates prediction
+
+                 Figure 4: Illustration of key components of predictive mean matching.
+
+
+3.2. Predictive mean matching
+     In this paper, fZj |Z−j (zj |z −j ; θ̂j , gj ) is specified based on the predictive mean matching
+(Little and Rubin, 2019), which is free of distributional assumptions. Specifically, here gj is
+not a real distribution model, but specified as a regression model. The distribution is given
+by a sampling procedure based on gj . For each missing entry, we form a set of candidates
+from complete cases whose predicted values are close to the predicted value for the missing
+entry. Now we use parameters θj to specify the regression model gj that maps z −j to zj ,
+i.e.,
+                                              zj = gj (z −j ; θj ) + j ,                         (16)
+                                                       12
+where j represents noise. We illustrate the key operations of this method in Figure 4, i.e.,
+the training of the regression model and the prediction of candidates. That is, we estimate
+parameters θ̂j based on training datasets Z tr          tr
+                                               −j and Z j . With the estimated model, we
+respectively predict targets for Z tr       te
+                                   −j and Z −j , which are called candidates and written as
+  tr         te                                                te                                                              tr
+Ẑ j and Ẑ j . Then, for each entry of Ẑ j , we form a set of its d closest candidates in Ẑ j ,
+from which we perform random sampling to obtain imputations.
+                                                                                 (η)
+     At the η-th iteration of FCS, the regression model is trained based on Z −j [Ij,obs , :] and
+Z obs
+   j  by minimizing the loss, i.e.,
+                             (η)
+                                            X                   (η)
+                           θ̂j = arg min         `(zi,j − gj (z i,−j ; θj )),                 (17)
+                                                       θj
+                                                              i∈Ij,obs
+
+
+where `(·) is the mean squared error function. Then, we predict a candidate value for each
+  (η)                                                          (η)
+z i,−j via the trained regression model, which is denoted as ẑi,j , i.e.,
+                                                        (η)               (η)     (η)
+                                                     ẑi,j = gj (z i,−j ; θ̂j ).                                              (18)
+                                                                                         (η)
+Together, they are written in the form of a vector as Ẑ j , which is expressed as
+                                                 (η)           (η)       (η)            (η)
+                                             Ẑ j = [ẑ1,j , ẑ2,j , · · · , ẑN,j ]> .                                       (19)
+
+To impute Z mis
+            j , let us focus on each missing entry of it, for instance zim ,j , im ∈ Ij,mis ,
+                          (η)                                                                                     (η)
+whose candidate is ẑim ,j . Then we find d nearest candidates from Ẑ j [Ij,obs ] for which
+   (η)       (η)
+|ẑim ,j − ẑi,j |, im ∈ Ij,mis , i ∈ Ij,obs is minimal. Suppose the d candidates are
+                                  (η)      (η)                 (η)
+                                ẑi1 ,j , ẑi2 ,j , · · · , ẑid ,j ,     i1 , i2 , · · · , id ∈ Ij,obs ,
+                                                                                                     (η)    (η)         (η)
+which can be written in the form of a set as Ci,j , i.e., Ci,j = {ẑi1 ,j , ẑi2 ,j , · · · , ẑid ,j }. Finally,
+                                                                                                       (η)
+we obtain imputation for zi,j , i ∈ Ij,mis by sampling from Cim ,j and denote it as zim ,j , i.e.,
+                                                  (η)
+                                                zim ,j ∼ Ci,j ,              im ∈ Ij,mis .                                    (20)
+
+Indeed, the set Cim ,j provides an empirical distribution for zim ,j , im ∈ Ij,mis . The operations
+described from (17) to (20) correspond the conceptual description in (12) and (13). After all
+iterations, the final candidates corresponding to training dataset are denoted as Ẑ j , which
+are prepared for the use of sampling at the operational forecasting stage. In particular,
+missing values can be directly imputed via (18) when only point forecasts are needed.
+
+3.3. Random forest
+    Indeed, the model described in (16) can be specified as any regression model, such as
+linear regression, random forest, etc. In this paper, it is specified as a random forest, as tree
+models usually perform well in practice (Januschowski et al., 2021). It grows B regression
+                                                                        13
+trees, each of which is trained on bootstrap samples from training data. Hence, the regression
+model that maps variables z −j to zj is described as
+                                                                     B
+                                                          1 X
+                                       gj (z −j ; θ̂j ) =       gj,b (z −j ),                                       (21)
+                                                          B b=1
+
+where gj,b (z −j ) is a regression tree. The splitting variable and splitting points of regression
+trees are often determined by the CART algorithm. Details about the CART algorithm can
+be found in (Hastie et al., 2001). Suppose we already have partitioned the variables into
+M regions, i.e., R1 , R2 , · · · , RM . And we model the target as a constant cm in each region.
+The regression function is described as
+                                                      M
+                                                      X
+                                     gj,b (z −j ) =            cm I(z −j ∈ Rm ),                                    (22)
+                                                      m=1
+
+where I(·) is the indicator function. In particular, cm is estimated as the average of targets
+zj in the region Rm , i.e.,
+                                            1     X
+                                    ĉm =             zi,j ,                              (23)
+                                          |IRm | i∈I
+                                                                         Rm
+
+where IRm = {i | z i,−j ∈ Rm }. The model grows like a binary tree. To begin with, we
+consider the space is split at variable Za , a ∈ {1, · · · , j − 1, j + 1, · · · , pk + 1} and point s,
+then we obtain two halves:
+
+                       R1 (a, s) = {z −j |za ≤ s}, R2 (a, s) = {z −j |za > s}.                                      (24)
+
+It is fulfilled by a greedy algorithm, i.e.,
+                                                                                                            
+                               X                                                   X
+                 min min            `(zi,j − c1 ) + min                                         `(zi,j − c2 ) .   (25)
+                 a,s    c1                                               c2
+                             z i,−j ∈R1 (a,s)                                 z i,−j ∈R2 (a,s)
+
+Repeat the splitting process in the generated two regions, and stop only when minimum
+node size is reached.
+
+3.4. Forecasting Stage
+     After training the imputation model, we obtain a collection of estimated random forests
+{gj } with parameters {θ̂j } and candidates {Ẑ j }. At the operational forecasting stage,
+we feed sample z t = [x>   t , yt ]
+                                   >
+                                     (yt is missing by default) into the estimated imputation
+model, and iteratively impute each missing value in z t according to (11), (13)-(15), which
+is illustrated in Figure 5. Compared to the training stage, parameters are fixed now; thus
+we only conduct iterative imputation here. Particularly, L equally likely imputations for z t
+are obtained, which are written as
+
+                                                z̃ 1t , z̃ 2t , · · · , z̃ Lt .
+                                                             14
+    ✟☛ ✁✒☞✂✄☎
+                                                                                                targets
+
+
+
+
+                                             Next iteration
+Figure 5: Illustration of the η-th iteration at the operational forecasting stage. Light blue blocks indicate
+observations, yellow blocks indicate missing values, and dark blue blocks indicate imputation (forecasting).
+
+                                              >
+Indeed, here z obs  t   = xobs
+                           t , zt
+                                  mis
+                                      = [xmis
+                                          t     , yt ]> . That is, z mis
+                                                                     t   is imputed by realizations from
+                                                 mis       obs
+the estimated distribution fX mis ,Y |X obs (z t , yt |xt ; M, Θ̂). To get an empirical distribution
+                                                                                              i
+for fY |X obs (yt |xobs
+                      t ; M, Θ̂), we just fetch the corresponding value for yt in each z̃ t , i.e., the
+last entry of z̃ it , which is denoted as ỹti , i.e.,
+                                      ỹti = z̃t,pk+1
+                                               i
+                                                      ,    i = 1, · · · , L.                            (26)
+Recall that yt is the realization of the random variable Yn,t+h , i.e., ỹti is the realization from
+                                                     i
+fYn,t+h |t (y|xt ; M, Θ̂). Thus we rewrite ỹti as ỹn,t+h|t , all of which form a set, i.e.,
+                                       1           2                   L
+                                    {ỹn,t+h|t , ỹn,t+h|t , · · · , ỹn,t+h|t }.
+Besides, we note that (26) is a surrogate of (10), which serves as marginalization operation
+when L is quite large. The point forecast ŷn,t+h|t is given as an average, which is expressed
+as
+                                                  L
+                                               1X i
+                                   ŷn,t+h|t =       ỹ      .                            (27)
+                                               L i=1 n,t+h|t
+
+4. Simulation study
+    Before validating the proposed approach on real data, we illustrate its applicability to
+point forecasting based on two related simulated processes, i.e., the autoregressive (AR)
+process and vector autoregressive (VAR) process. The results are assessed in terms of root-
+mean-square error (RMSE) here. Let Iy,obs denote the indices of observations in the test
+set. Then RMSE on the test set is described as
+                                     s
+                                          1        X
+                            RMSE =                   (yt − ŷt )2 ,                     (28)
+                                       |Iy,obs | t∈I
+                                                                 y,obs
+
+                                                          15
+where yt denotes the observation at time t, ŷt denotes the point forecast at time t, and |Iy,obs |
+is the number of observed samples in the test set. In each case, we remove parts of generated
+data at random to simulate missingness, where the missing rate is varied from 5% to 50%.
+Situations where missing rates are larger than 50% are regarded impractical and thus not
+included in the study. Then, 80% of data are split as the training set, whereas another
+20% of data are split as the test set for genuine forecasting validation. The missingness
+simulation and model validation are replicated 100 times for each missing rate.
+
+4.1. AR process
+    In this case, we model an AR process of order 2, i.e.,
+                                                     Yt = α0 + α1 Yt−1 + α2 Yt−2 + t ,
+where α0 is a constant, α1 and α2 are parameters, and t is a white noise centered on 0.
+Let us set α> as [1, 0.33, 0.5]> , and t to follow the Gaussian N (0, 0.01). Concretely, we
+simulate a time series of length 8760, corresponding to a year of data with 1-hour resolution,
+and present it in Figure 6 (a). The input features xt have 2 dimensions, and target yt has
+1 dimension. Specifically, the imputation model is trained by 10 iterations, as suggested
+by Van Buuren et al. (2006). The RMSE values with respect to different missing rates are
+shown in Figure 6 (b). Intuitively, missing values lead to an increase in RMSE, and higher
+missing rates lead to larger RMSE.
+
+
+                        6.30
+                                                                                0.036
+                        6.25
+ Simulated power data
+
+
+
+
+                        6.20                                                    0.034
+                                                                         RMSE
+
+
+
+
+                        6.15
+                                                                                0.032
+                        6.10
+
+                        6.05                                                    0.030
+
+
+                               0   2000    4000       6000   8000                       0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5
+                                          Time (hour)                                                    Missing rate
+
+                                   (a) Simulated data                                               (b) Results
+
+Figure 6: (a) Example simulated time-series with an AR process (single replicate); (b) Box plot of 1-step
+ahead RMSE in the presence of missing values based on AR simulated data with respect to different missing
+rates (based on Monte-Carlo simulations with 100 replicates).
+
+    Since experiments at each missing rate are replicated 100 times, we obtain the variance
+of RMSE at each missing rate. As the missing rate increases, the variance of RMSE also
+increases, because the influence on training varies to a larger extent when the missing rate
+is high.
+                                                                    16
+                         5
+
+                                                                                            0.038
+                         4
+  Simulated power data
+
+
+
+
+                                                                                            0.036
+                         3                                           series 1
+
+
+
+
+                                                                                     RMSE
+                                                                     series 2               0.034
+
+                         2
+                                                                                            0.032
+
+
+                         1                                                                  0.030
+
+
+                             0         2000      4000       6000     8000                           0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5
+                                                Time (hour)                                                          Missing rate
+
+                                        (a) Simulated data                       (b) Features are from two series (no missing values
+                                                                                 in series 2)
+
+                         0.040
+                                                                                            0.040
+
+                         0.038
+                                                                                            0.038
+
+                         0.036                                                              0.036
+  RMSE
+
+
+
+
+                                                                                     RMSE
+
+
+
+
+                         0.034                                                              0.034
+
+                         0.032                                                              0.032
+
+                                                                                            0.030
+                         0.030
+
+                                 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5                       0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5
+                                                  Missing rate                                                       Missing rate
+
+                                 (c) Features are only from series 1             (d) Features are from two series (with missing values
+                                                                                 in series 2)
+
+Figure 7: (a) Simulated time series of the VAR process; (b) Box plot of 1-step ahead RMSE based on VAR
+simulated data with respect to different missing rates for series 1 (Monte-Carlo with 100 replications); (c)
+Box plot of 1-step ahead RMSE based on series 1 with respect to different missing rates for series 1 (Monte-
+Carlo with 100 replications); (d) Box plot of 1-step ahead RMSE based on VAR simulated data with respect
+to different missing rates for both series (Monte-Carlo with 100 replications).
+
+
+4.2. VAR process
+    We model a VAR process of order 2, i.e.,
+
+                                       Y1,t = α0 + α1,1 Y1,t−1 + α1,2 Y1,t−2 + α2,1 Y2,t−1 + α2,2 Y2,t−2 + 1,t ,
+                                        Y2,t = β0 + β1,1 Y1,t−1 + β1,2 Y1,t−2 + β2,1 Y2,t−1 + β2,2 Y2,t−2 + 2,t ,
+
+where α>                                     >   >                                   >
+         1 = [1, 0.88, −0.1, 0.15, −0.14] , α2 = [1, 0.69, −0.05, 0.07, −0.23] , 1,t ∼
+N (0, 0.01), and 2,t ∼ N (0, 0.01). We still simulate time series of length 8760 and present
+them in Figure 7(a). In this case, we focus on forecasting the future value of Y1,t by using
+                                                                                17
+previous realizations of both series. Now, the input features xt have elements, whereas the
+target yt has a dimension of 1 only. We still train the imputation model with 10 iterations.
+    As a starting point, we assume there are no missing values in series {y2,t } and only vary
+the missing rate for {y1,t }. The overall RMSE values are presented in Figure 7(b). As with
+the AR case, RMSE and its variance increase as the missing rate increases. For comparison,
+we consider two other scenarios, i.e., only using features from {y1,t }, and simulating miss-
+ingness for both {y1,t } and {y2,t }, the results of which are respectively shown in Figure 7(c)
+and Figure 7(d). Comparing Figure 7(b) and Figure 7(c), we observe that the RMSE in
+Figure 7(b) is lower, which translates into saying that forecasting can be improved by using
+information from correlated series. However, as shown in Figure 7 (d), the benefit of using
+features from {y2,t } is still noticeable when the missing rate of {y2,t } is not too high. When
+the missing rate of {y2,t } is higher than 30%, using features of {y2,t } will even hamper the
+performance.
+
+5. Case study
+    Besides the above simulation study, we further validate our approach based on real-world
+data from the USA. The case study considers a typical forecasting setup, where some data is
+used for estimating model parameters (training set) and the remainder of the data for genuine
+out-of-sample forecast verification (test set). Both point and probabilistic forecasting are
+considered. Also, since the dataset gathers data for multiple wind farms in a limited area,
+we can look at the case of employing univariate approaches (i.e., use of local data only), but
+also at a case where data from surrounding wind farms is used to improve forecasts. In that
+case, it is intuitively expected that one is further exposed to the likelihood and potential
+consequences of missing data. Note that the goal of this case study is not to pick and choose
+the best model and forecasting approach, but instead to show the impact of missing values
+on forecasting and the effectiveness of the proposed approach to accommodate those. In the
+following, we first describe the dataset and our experimental setup, the forecast verification
+framework and the benchmark approaches. The results obtained are then described and
+discussed. Codes and data1 are publicly available.
+
+5.1. Data description
+    Data from the USA are generated by the Wind Integration National Dataset (WIND)
+Toolkit (Draxl et al., 2015), which are therefore not completely real but capture the dynam-
+ics of wind power generation. Indeed, there are no missing values in this dataset. Then,
+we randomly remove some values to simulate missingness, based on which all models are
+estimated and validated. Concretely, the dataset contains 3 wind farms located in South
+Carolina, within a 150 km area. The spatial-temporal dynamics among wind farms sug-
+gest that one could use data from nearby wind farms to improve the forecasts. It gathers
+data over 7 years, from 2007 to 2013, with an hourly temporal resolution. All wind power
+measurements are normalized by their corresponding capacities.
+
+  1
+      github link to be added in the final version
+                                                     18
+5.2. Experimental setup
+5.2.1. Different types of case-studies
+    Based on the data described above, we concentrate on both point and probabilistic
+forecasting in three different types of case studies, representing alternative approaches to
+forecasting (local data only, and with data from surrounding wind farms), as well as different
+types of missingness, i.e., sporadic and block missingness. We also consider forecasting with
+lead times from k = 1 to 6 steps ahead. More precisely these cases can be described as:
+Case 1: Forecasting at a single site, using local data only (hence, with an autoregressive
+    model). Data is missing sporadically and randomly, on a pointwise basis. The rates
+    of missingness are 10% and 20%, respectively, to investigate the performance of the
+    approach conditional to how much data is missing.
+
+Case 2: Forecasting at a single site using local data only (hence, with an autoregressive
+    model). Data is missing over given time intervals (block missingness) though at ran-
+    dom. The number of blocks with missing data is set to 600. These are randomly
+    located over the dataset. The length of the block with missing data is random and
+    uniformly distributed between 5 to 30 time steps.
+
+Case 3: Forecasting at a chosen site, but using data from both that site and the nearby sites
+    (hence, with a vector autoregressive model). The two types of missingness mentioned
+    before (pointwise and block missingness) are considered.
+In all 3 cases, when issuing a forecast at time t for lead time t + k, lagged observations
+are used as input features (since using autoregressive models). As feature selection is not
+the focus of this paper, we performed a preliminary study to select lags based on training
+data. As a result, we work in the following with autoregressive models with the 6 lagged
+observations (so, from t − 5 to t). The generalized logit-normal transform proposed by
+Pinson (2012) is further employed as a pre-processing stage to accommodate the double-
+bounded nature of wind power generation time-series (i.e., nonlinear and with the variance
+of residuals conditional upon the mean level).
+
+5.2.2. Forecast verification: relevant scores and diagnostic tools
+    The quality of point forecasts is commonly evaluated with an RMSE criterion (consistent
+with the use of a quadratic loss in learning and forecast verification), whereas the quality of
+probabilistic forecasts is most often assessed by using the Continuous Ranked Probability
+Score (CRPS). Given a lead time h, we denote the cumulative density function for wind
+power generation Yt+h , predicted at time t for time t + h, as Ft+h . Then, the CRPS for the
+predicted Ft+h and corresponding observation yt+h is defined as
+                                           Z
+                                               Ft+h (y) − 1(y − yt+h ) dy,
+                                                                      2
+                     CRPS(Ft+h , yt+h ) =                                                  (29)
+                                           y
+
+where 1(·) is a unit step function at the location of the observation yt+h (also known as a
+Heaviside function), which can be regarded as the empirical cumulative density function of
+                                               19
+the observation yt+h . Eventually, given the lead time h, we report the average CRPS value
+over all forecast-verification pairs, i.e.,
+                                         1        X
+                          CRPSh =                    CRPS(Ft+h , yt+h ).              (30)
+                                     |Iy,obs | t+h∈I
+                                                y,obs
+
+
+    Besides the use of a proper skill score like the CRPS, informing about the overall skill and
+quality of the probabilistic forecasts (in the form of predictive densities), we will assess the
+probabilistic calibration of the predictive densities with reliability diagrams. For an extensive
+description of such reliability diagrams and their use in the assessment of probabilistic
+calibration, the reader is referred to Pinson et al. (2010). In parallel, in order to see how the
+probabilistic forecasts concentrate information, their sharpness is evaluated by calculating
+the width of central prediction intervals. I.e., for a given nominal coverage rate 1 − β, these
+central prediction intervals are bounded by quantiles with nominal levels β/2 and 1 − β/2.
+For a general overview of probabilistic forecast verification, see Gneiting et al. (2007).
+
+5.2.3. Benchmarks
+    In general, we use three categories of benchmarks, i.e., the climatology/persistence
+method, an ITP approach, and a UI approach with a distributional assumption. For point
+forecasting, persistence uses the latest observation as the forecast. To implement the ITP
+approach, we respectively use mean imputation and advanced regression-based imputation
+namely MissForest (Stekhoven and Bühlmann, 2012) in the pre-processing procedure and
+employ a random forest as the backbone regression model, which are abbreviated as RF-M
+and RF-R respectively. And, the state-of-the-art model DeepAR (Salinas et al., 2020) is
+adopted, which uses intermediate results of the long-short term memory model to impute
+missing values at both model estimation and operational stages. The copula-based imputa-
+tion model proposed by Zhao and Udell (2020) is adopted to implement the UI approach.
+It is also a multiple imputation model, though relying on a distributional assumption. The
+retraining approach(Tawn et al., 2020) is used as a benchmark model, which consists in re-
+training the model without missing features. Besides, we consider a reference model that is
+implemented by a random forest and trained based on the complete dataset, which is abbre-
+viated as RF-C. The benchmark models for point forecasting, as well as used abbreviations,
+are gathered in Table 1.
+    As for probabilistic forecasting, climatology is set as a naive benchmark. It utilizes the
+empirical distribution of all historical values to communicate the probability distribution of
+future wind power generation. To implement the ITP approach, a model with the Gaussian
+distributional assumption as well as a QR model are adopted as backbone models. In
+particular, the base model chosen for QR is the gradient boosting machine, which supports
+QR and ranks highly on leaderboards of recent forecast competitions (Januschowski et al.,
+2021), including the GEFCom 2014 (Landry et al., 2016) for instance. For the model with
+the Gaussian distributional assumption, we use a neural network to estimate the shape
+parameters of Gaussian distributions. The QR model with regression-based imputation as
+preprocessing is abbreviated as QR-R, while the Gaussian models with mean and regression-
+based imputation are abbreviated as Gauss-M and Gauss-R. Again, the DeepAR model
+                                               20
+           Table 1: Abbreviations for point and probabilistic forecasting benchmark models.
+  Abbreviation    Description (point forecasting)
+  RF-M            Random forest with the mean imputation as preprocessing
+  RF-R            Random forest with the regression-based imputation as preprocessing
+  Copula          Copula-based imputation model within universal imputation strategy
+  DeepAR          Deep learning model that uses intermediate results to impute missing values
+  RF-C            Random forest trained based on the complete dataset
+  Abbreviation    Description (probabilistic forecasting)
+  Gauss-M         Gaussian model with the mean imputation as preprocessing
+  Gauss-R         Gaussian model with the regression-based imputation as preprocessing
+  Copula          Copula-based imputation model within universal imputation strategy
+  DeepAR          Deep learning model that uses intermediate results to impute missing values
+  QR-R            QR model with the regression-based imputation as preprocessing
+  QR-C            QR model trained based on the complete dataset
+
+
+(Salinas et al., 2020) is used as a benchmark, since it is allowed to communicate Gaussian
+densities. The UI approach is still implemented via the copula-based model. Besides, we set
+the QR model trained based on the complete dataset as a reference, which is abbreviated
+as QR-C. The benchmark models for probabilistic forecasting, as well as corresponding
+abbreviations, are also collated in Table 1.
+
+5.3. Results and discussion
+    Results that correspond to the aforementioned three cases are respectively reported in
+three different subsections and followed by further discussion.
+
+5.3.1. Case 1
+    Emphasis is first placed on sporadic missingness, i.e., for the case where single values
+are missing, at random times. Let us start by presenting and discussing results for the
+most severe rate of missingness, of 20%. In practice, this means that 20% of the values
+are missing, at random locations over both training and testing sets. The point forecasting
+results in terms of RMSE are collated in Table 2.
+
+Table 2: RMSE values as a function of the lead time (Case 1, missing rate of 20%). RMSE values are
+expressed in percentage of normalized capacity.
+      Lead Time (steps)     Persistence   RF-M     RF-R     Copula    FCS     DeepAR      RF-C
+             1                 16.8        17.7    16.1      17.3     15.9     17.0       14.6
+             2                 21.1        20.9    19.8      21.3     19.5     20.6       18.9
+             3                 24.7        23.4    22.5      24.3     22.3     23.3       21.9
+             6                 32.7        28.2    28.0      30.6     27.9     29.3       27.6
+
+
+   Not surprisingly, the RMSE increases with the lead time, and, forecast quality in the
+presence of missing values is worse than when there is no missing data. There, missing
+values have a negative impact at both model estimation and operational forecasting stages.
+                                                  21
+Persistence is a competitive benchmark, as it is easy to implement and the resulting forecast
+quality is difficult to outperform for such short lead times. In parallel, RF-M performs
+worse than persistence for 1-step ahead forecasts, most likely due to errors in imputation
+introduced by this pre-processing procedure. Given training datasets X tr and Y tr , one can
+estimate a regression model f P that is equivalent to the reference model, if the imputed
+datasets are as same as the real complete datasets X tr,P and Y tr,P . However, the imputed
+datasets usually deviate from the real complete datasets. Then, the model estimated based
+on X tr,C and Y tr,C , denoted as f C , is different from f P . That is, the closer the imputed
+datasets are to the real complete datasets, the closer f C is to f P .
+    Obviously, RF-R has better performance than RF-M, since the regression-based impu-
+tation is superior to the mean imputation. Besides, at the operational forecasting stage,
+it is still required to impute input features, which may also accumulate errors. Although
+DeepAR is free of any pre-processing stage, the imputed values may still deviate from real
+values, introducing errors to both the model training and forecasting stages. As shown in
+Table 2, the performance of DeepAR is even worse than the simple benchmark model, i.e.,
+RF-R.
+    The used copula- and FCS- based models fall into the category of UI approach. Compared
+to the ITP approach, the UI approach has the advantage that it is free of a pre-processing
+procedure, which avoids introducing errors aroused by the pre-processing procedure into the
+forecasting task. The FCS-based model outperforms RF-M and RF-R, while the copula-
+based model is inferior to them, as revealed in Table 2. Although the copula method allows
+to characterize several kinds of distributions, it is required to specify the transform function
+here, which means that a specific distributional assumption is implied. This may impede
+the performance of the copula-based model when the distributional assumption cannot fit
+the underlying distribution well. By contrast, the FCS method is free of such an assumption
+and therefore has a better performance than the copula-based model. It suggests that by
+using a distribution-free imputation method like FCS, the UI approach is superior to the
+ITP approach.
+    Besides, we compare our proposed approach and the retraining approach discussed by
+Tawn et al. (2020) by focusing on a specific missing pattern (i.e., the last feature is missing),
+and present the RMSE values in Table 3. It is intuitive that the performance of the retraining
+approach is comparable to RF-M and FCS, as the retraining approach is free of a pre-
+processing stage and utilizes a complete set of observations to estimate the parameters.
+Eventually, the quality of the forecasts is linked to the informative value of the features
+retained. However, it also implies that a specific model is needed for each missingness
+pattern. Then, a specific training dataset is required for each pattern, which means only
+parts of the data are used to estimate a model. Besides, the retraining approach will suffer
+the curse of dimensionality. That is, denoting the dimension of features as d, the retraining
+approach will independently train 2d models. While the training time for a set of point
+forecasting models may be acceptable, the computational costs will steeply increase for
+probabilistic forecasting cases. In contrast, the proposed UI approach is not only free of any
+pre-processing stage but also applicable to all missingness patterns once trained.
+    Next, we move on to the results for probabilistic forecasting, with the CRPS values ob-
+                                               22
+Table 3: RMSE for 1-step ahead forecasts (Case 1, last feature missing). RMSE values are expressed in
+percentage of normalized capacity.
+    Lead Time (steps)      Persistence   RF-M     RF-R    Copula     FCS    DeepAR      Retraining
+           1                  15.8        16.2    15.1     15.9      15.0    15.8          15.3
+
+
+tained collated in Table 4. Here, missing values have nearly no influence on the performance
+of climatology, since climatology characterizes uncertainty based on the empirical distribu-
+tion of all historical observations. This distribution is not highly modified when a fairly
+limited number of samples are missing.
+
+Table 4: CRPS as a function of the lead time (Case 1, missing rate of 20%). CRPS values are expressed in
+percentage of normalized capacity.
+ Lead Time (steps)   Climatology   Gauss-M    Gauss-R     QR-R     Copula    FCS    DeepAR      QR-C
+        1                18.6         9.2       7.5         7.8     11.5      6.9     7.8         6.9
+        2                18.6        11.2       9.9         9.9     14.6      9.1    10.2         9.3
+        3                18.6        12.7      11.7        11.7     17.0     10.9    12.1        11.2
+        6                18.6        15.9      15.5        15.4     22.4     14.7    16.5        15.1
+
+    Comparing the Gauss-M and Gauss-R, we know that a better imputation method is still
+preferred by the ITP strategy in the context of probabilistic forecasting. Both the Gauss-R
+and QR-R use the regression-based imputation as preprocessing procedure. But they differ
+in backbone models – Gauss-R relies on the Gaussian distributional assumption, whereas
+QR-R is distribution-free. Their performance is comparable in this case, which is different
+from the usual situation (i.e., complete datasets) where QR is always superior. Obviously,
+one needs to estimate the shape parameters of Gaussian distribution in Gauss-R, but the
+parameters of several quantile functions in QR-R. The parallel estimation of QR-R models
+may result in more errors in the ultimate estimated distribution. Therefore, results are
+governed by both models and the influence of missing values on model estimation. The
+performance of DeepAR is slightly worse than that of Gauss-R and QR-R, which suggests
+handling missing values in forecasting is nontrivial. Values imputed by the intermediate
+results of the model may also introduce errors at the model estimation stage. The FCS-
+based model outperforms Gauss-R and QR-R, whereas the performance of the copula-based
+model is worse than those of Gauss-R and QR-R, which suggests that the distributional
+assumption may impede the performance of the UI approach. Besides, the performance of
+the FCS-based model is comparable to that of the reference QR model trained based on the
+complete dataset, which validates the effectiveness of the FCS-based model.
+    We present the 90% PIs of 6 days issued by the FCS-based and reference models, respec-
+tively, in Figure 8.
+    Although the FCS-based approach encounters missing values at both model estimation
+and operational forecasting stages, its PIs are similar to those of the reference model. Specifi-
+cally, at some periods e.g. from 35-h to 45-h, the prediction interval issued by the FCS-based
+approach are actually sharper than those of the reference model. A reliability assessment
+
+                                                  23
+                               1.0                                     Missing values                                    1.0                                        Observation
+                                                                       Observation                                                                                  PI
+                                                                       PI
+Wind power generation [p.u.]
+
+
+
+
+                                                                                          Wind power generation [p.u.]
+                               0.8                                                                                       0.8
+
+
+                               0.6                                                                                       0.6
+
+
+                               0.4                                                                                       0.4
+
+
+                               0.2                                                                                       0.2
+
+
+                               0.0                                                                                       0.0
+                                     0   25     50      75      100   125           150                                        0    25     50      75       100   125         150
+                                                     Time [h]                                                                                   Time [h]
+
+                                          (a) FCS-based model                                                                        (b) Reference model
+
+Figure 8: Illustration of 1-step ahead 90% central prediction intervals over a period of 6 days, as issued by
+the FCS-based model (a), and the reference model (b).
+
+
+through the use of reliability diagrams is given in Figure 9(a), while a sharpness assessment
+is performed by looking at the width of central prediction intervals (as a function of their
+nominal coverage rate), and depicted in Figure 9(b). Models based on an ITP strategy tend
+to underestimate lower quantiles, while the reliability of DeepAR and copula-based model
+deviates from the ideal case to some extent. The FCS-based model achieves a level of re-
+liability and sharpness that is comparable to the reference model. The average of absolute
+values of deviations from perfect reliability is shown in Table 5. The deviation of the FCS is
+even smaller than that of the reference model, which is likely due to that the FCS is robust
+to overfitting.
+
+                               Table 5: The average of absolute values of deviations from perfect reliability in Case 1 (in percent).
+            Lead Time (steps)                        Climatology      Gauss-M             Gauss-R                                  QR-R    Copula          FCS    DeepAR            QR-C
+                   1                                     9.20           3.37               3.52                                     4.81    4.81           2.78    10.57             6.04
+
+   The RMSE and CRPS values, when considering a missing rate of 10%, are collated in
+Table 6 and Table 7, respectively. Compared to the results with a missing rate of 20%,
+the quality of the forecasts is improved. For point forecasting, the performance of RF-R is
+comparable to that of FCS, which means that the ITP strategy may be more acceptable when
+the missing rate is not that high. This is while, in the context of probabilistic forecasting,
+FCS still outperforms other models, which suggests that missing values may pose greater
+challenges to probabilistic forecasting. Besides, the performance of FCS is even better than
+that of QR-C, possibly hinting at the fact that FCS is less prone to overfitting.
+
+5.3.2. Case 2
+    In contrast to the sporadic missingness of Case 1, we simulate here missing values that
+span over time intervals (hence, referred to as block missingness). Remember that 600 blocks
+                                                                                          24
+                           100
+                                     Model                                                                                          Model
+                                                                                                                           0.8
+
+
+
+
+                                                                                    Width of prediction intervals [p.u.]
+                                     FCS                                                                                             FCS
+                           80        QR-C                                                                                            QR-C
+  Observed frequency [%]
+
+
+
+
+                                     QR-R                                                                                            QR-R
+                                     copula                                                                                0.6       copula
+                           60        climatology                                                                                     climatology
+                                     Gauss-M                                                                                         Gauss-M
+                                     Gauss-R                                                                               0.4       Gauss-R
+                           40        DeepAR                                                                                          DeepAR
+                                     Ideal
+                                                                                                                           0.2
+                           20
+
+
+                            0                                                                                              0.0
+                                      20             40         60        80                                                         20          40            60          80
+                                                   Nominal probability                                                                      Nominal probability coverage
+
+                                      (a) Reliability diagrams                                                                           (b) Sharpness diagrams
+
+Figure 9: Assessment of 1-step ahead probabilistic forecasts for all models for Case 1, based on reliability
+diagrams (a) and sharpness diagrams (b).
+
+
+Table 6: RMSE values with different lead times in Case 1 on the condition that missing rate is 10%
+(percentage of normalized capacity).
+                             Lead Time (steps)              Persistence    RF-M       RF-R                                        Copula       FCS      DeepAR         RF-C
+                                    1                          15.9         15.9      15.2                                         16.6        15.1      16.2          14.6
+                                    2                          20.6         19.7      19.2                                         20.8        19.1      20.2          18.9
+                                    3                          24.4         22.5      22.1                                         24.1        22.0      23.3          21.9
+                                    6                          32.5         27.9      27.8                                         30.5        27.8      29.5          27.6
+
+
+Table 7: CRPS values with different lead times in Case 1 on the condition that missing rate is 10% (per-
+centage of normalized capacity).
+   Lead Time (steps)                         Climatology            Gauss-M    Gauss-R                                           QR-R      Copula      FCS       DeepAR         QR-C
+                                 1               18.6                  8.1       7.2                                              7.4       11.2        6.6        7.4            6.9
+                                 2               18.6                 10.5       9.6                                              9.6       14.3        8.9        9.9            9.3
+                                 3               18.6                 12.1      11.5                                              11.5      16.9       11.9        9.7           11.2
+                                 6               18.6                 15.9      15.3                                              15.3      22.4       14.7       16.6           15.1
+
+
+are randomly spread over the whole dataset, with lengths between 5 and 30 time steps. Let
+us first analyze and discuss point forecasting results. As a basis, the RMSE values of the
+points forecasts obtained with the different approaches are gathered in Table 8.
+    The performance of RF-M is comparable to that of RF-R, most likely due to the fact
+that most samples here are complete. In contrast, the copula-based model performs much
+worse than both RF-M and RF-R. Indeed, the estimation stage for the copula-based model is
+based on an expectation-maximization algorithm, which is sensitive to samples whose values
+are entirely missing. This may suggest that the copula-based model is not applicable to the
+situation of block missingness. Certainly, the samples whose values are entirely missing
+contain no information and can be deleted at the model estimation stage. As with Case 1,
+                                                                                   25
+      Table 8: RMSE values with different lead times in Case 2 (percentage of normalized capacity).
+       Lead Time (steps)      Persistence   RF-M     RF-R     Copula    FCS     DeepAR     RF-C
+              1                  15.8        14.9    14.8      16.4     14.9     15.9      14.6
+              2                  20.9        19.2    19.2      21.1     19.3     21.0      18.9
+              3                  24.8        22.2    22.2      24.3     22.4     24.1      21.9
+              6                  32.9        27.9    27.9      30.6     28.1     30.9      27.6
+
+
+the performance of DeepAR is worse than that of RF-R, which reveals a caveat for the
+existing DeepAR framework in handling missing values. The performance of the FCS-based
+approach is comparable to that of RF-M/RF-R. One may then infer that ITP and UI types of
+strategies perform fairly similarly for point forecasting when experiencing block missingness.
+However, the picture will look different when extending the study to probabilistic forecasting.
+To assess the performance of the various approaches for that probabilistic forecasting case,
+we first look at CRPS values, which are gathered in Table 9.
+
+      Table 9: CRPS values with different lead times in Case 2 (percentage of normalized capacity).
+  Lead Time (steps)   Climatology   Gauss-M     Gauss-R     QR-R    Copula     FCS    DeepAR      QR-C
+         1                18.6         7.0        6.9        7.2     11.2       6.5     7.1         6.9
+         2                18.6         9.8        9.6        9.7     14.5       9.0    10.2         9.3
+         3                18.6        11.8       11.8        11.6    17.1      10.9    12.6        11.2
+         6                18.6        15.7       15.7        15.6    22.4      14.9    17.9        15.1
+
+     Not surprisingly, the performance of Gauss-R is slightly superior to that of Gauss-M.
+But their difference is smaller than what was observed in Case 1. It could be inferred that
+it is difficult to handle block missingness via imputation techniques. In the context of block
+missingness, regression-based imputation will also tend to impute missing values with mean
+values. Still, the performance of Gauss-R is comparable to that of QR-R. The FCS-based
+model yields the best performance. Combined with the results of Case 1, it indicates that
+this approach seems to be superior for different types of missingness, here both sporadic and
+block missingness. A clear point is that ITP strategies are highly sensitive to samples whose
+values are entirely missing since the rationale of ITP strategies is to utilize observed parts
+of samples to infer the missing parts. If a sample is completely unobserved, no information
+could be used for learning and eventually forecasting.
+     Both reliability and sharpness are evaluated in Figure 10, for 1-step ahead probabilistic
+forecasts (with reliability diagrams in Figure 10(a) and sharpness diagrams in Figure 10(b).
+The FCS-based approach achieves acceptable probabilistic calibration, especially in the case
+of lower and higher quantiles. As summary statistics, the average deviation (in absolute
+value) for perfect reliability is given in Table 10, for all approaches. There again, one verifies
+that the FCS-based approach yields the lowest deviation. In parallel, the prediction interval
+width for QR, Gaussian-based and FCS-based approaches are very close, for all nominal
+coverage rates. The prediction interval width for DeepAR is somewhat smaller, though at
+the price of poorer probabilistic calibration. This is also reflected by the larger CRPS values
+                                                    26
+for DeepAR, compared to the FCS-based approach.
+
+                           100
+                                     Model                                                                                        Model
+                                                                                                                         0.8
+
+
+
+
+                                                                                  Width of prediction intervals [p.u.]
+                                     FCS                                                                                           FCS
+                           80        QR-C                                                                                          QR-C
+  Observed frequency [%]
+
+
+
+
+                                     QR-R                                                                                          QR-R
+                                     copula                                                                              0.6       copula
+                           60        climatology                                                                                   climatology
+                                     Gauss-M                                                                                       Gauss-M
+                                     Gauss-R                                                                             0.4       Gauss-R
+                           40        DeepAR                                                                                        DeepAR
+                                     Ideal
+                                                                                                                         0.2
+                           20
+
+
+                            0                                                                                            0.0
+                                      20             40         60       80                                                        20          40            60          80
+                                                   Nominal probability                                                                    Nominal probability coverage
+
+                                      (a) Reliability diagrams                                                                         (b) Sharpness diagrams
+
+Figure 10: Assessment of 1-step ahead probabilistic forecasts for all models for Case 2, based on reliability
+diagrams (a) and sharpness diagrams (b).
+
+
+
+                            Table 10: Average deviation (in absolute value) from perfect reliability in Case 2 (in percent).
+   Lead Time (steps)                         Climatology            Gauss-M   Gauss-R                                          QR-R      Copula      FCS       DeepAR         QR-C
+                                 1               9.21                 4.47     4.27                                             6.01      8.29       2.69       8.37           6.04
+
+
+5.3.3. Case 3
+    In this subsection, we show that forecasting in the presence of missing values can still
+be improved by utilizing information on nearby sites as auxiliary features (AFs). Besides
+input features of the chosen wind farm, we use previous wind power generation values from
+two nearby wind farms as AFs. It is assumed that the missingness of nearby wind farms is
+different from the target wind farm, which is practical since missingness is usually caused
+by sensor faults or communication errors. We consider both sporadic missingness and block
+missingness here. Particularly, we concentrate on 1-step ahead forecasts and investigate
+the impacts of different missing rates or missing blocks in AFs. The RMSE values in the
+context of sporadic missingness are shown in Figure 11(a) (‘AFs p% m’ means p% of auxiliary
+features are missing), where we simulate different missing rates at two nearby wind farms
+and set the missing rate at the target wind farm as 20%.
+    As expected, the accuracy of point forecasting is improved with the assistance of AFs,
+which is comparable to RF-C in Table 1. Furthermore, it can be seen that the benefit
+of AFs is robust since the performance is relatively consistent as the missing rate of AFs
+increases. It might be explained by the fact that the key information for forecasting comes
+from the target wind farm itself. So, it may not make a big difference when a few auxiliary
+features are missing. The results of probabilistic forecasting are also shown in Figure 11(a),
+                                                                                27
+which also suggests that AFs provide extra information and thus contribute to improving
+probabilistic forecasts. The RMSE and CRPS values in the context of block missingness are
+presented in Figure 11(b) (‘AFs c m’ means there are c missing blocks in auxiliary features),
+where we simulate 600 missing blocks at the target wind farm. It is seen that auxiliary
+features can still improve the quality of the forecasts in that case.
+
+                               17.5
+                                                                            RMSE                                   17.5
+                                                                                                                                                                   RMSE
+                                                                            CRPS                                                                                   CRPS
+                               15.0                                                                                15.0
+  Percentage of capacity [%]
+
+
+
+
+                                                                                      Percentage of capacity [%]
+                               12.5                                                                                12.5
+
+
+
+                               10.0                                                                                10.0
+
+
+
+                                7.5                                                                                 7.5
+
+
+
+                                5.0                                                                                 5.0
+
+
+
+                                2.5                                                                                 2.5
+
+
+
+                                0.0                                                                                 0.0
+                                           No AFs   AFs     5% m    10% m    20% m                                         No AFs   AFs    AFs 150 m   AFs 300 m   AFs 600 m
+
+
+                                          (a) Sporadic missingness case                                                     (b) Block missingness case
+
+Figure 11: Assessment of 1-step ahead probabilistic forecasts for Case 3, in context of sporadic missingness
+(a) and block missingness (b).
+
+
+
+5.3.4. Training time
+    We note that by using the FCS method, the proposed UI approach is always superior
+in the context of probabilistic forecasting. However, it costs much time to perform Gibbs
+sampling to provide probabilistic forecasting. The computation will significantly increase
+when the dimension of the variable gets larger. We present the training time and operational
+time in Table 11 for illustration. As shown, the training time of FCS is larger than that
+of QR models, but manageable compared to that of DeepAR. Therefore, it is required
+to find computationally efficient methods to implement the proposed approach. As the
+fully conditional specification method iteratively estimates several conditional distribution
+models, it is hard to further reduce the training time. But it is feasible to directly learn the
+joint probability distribution model via a joint modeling approach, which would considerably
+reduce the training time.
+
+                                      Table 11: Training time and operational time for 1-step probabilistic forecasting in Case 1.
+                                                                        Gauss-R      QR-R                                 Copula    FCS    DeepAR
+                                               Training time (min)        32           1                                    9        41      67
+                                               Operational time (s)      0.01        0.01                                0.01    0.01    0.01
+
+
+
+                                                                                     28
+6. Conclusions
+    It is intuitive to want to consider an “impute, then predict” approach to deal with
+missing values, as existing forecasting methods can be readily used after the (imputing)
+pre-processing procedure. However, while such a pre-processing procedure at the model
+estimation stage jointly imputes input features and targets, it only imputes input features
+at the operational forecasting stage, possibly in a way that is not consistent with the model
+used for forecasting eventually. In this paper instead, we propose a “universal imputation”
+approach, motivated by the problem of wind power forecasting in the presence of missing
+values. As for many other application areas, it is very common to have missing values within
+wind power forecasting. Our proposal approach relies on multiple imputation methods, and
+jointly performs the imputation of missing values of input features and the forecasting of
+targets. That is, it does not require a pre-processing procedure, while being consistent
+through model estimation and operational forecasting stages. Under the assumption that
+observations are missing at random, parameters can be estimated based on observations
+only, at the model estimation stage. At the operational stage, it treats targets as missing
+values and iteratively imputes both the missing values of input features and targets. Par-
+ticularly, as multiple imputation provides several realizations from the joint distribution of
+input features and targets, the proposed approach naturally allows issuing both point and
+probabilistic forecasts. The case studies based on WIND Toolkit (over the USA) confirm
+the applicability of this approach. Not surprisingly, forecast quality necessarily decreases
+as the missing rate of the dataset increases. The results also suggest that the FCS-based
+method performs better than the “impute, then predict” approach; it is especially preferred
+in the probabilistic forecasting case. And, the results suggest that the FCS-based approach
+may prevent overfitting to some extent. It also further validates the benefits from sharing
+information and data among wind farms, even in the presence of missing values.
+    We note that the modeling approach is quite different from the commonly used fore-
+casting approaches in the context of complete datasets. The goal of this paper is not to
+replace the existing approaches, but to offer a complementary tool for use in the presence of
+missing values. We also expect there are similar ways to generalize commonly used model-
+ing and forecasting approaches to the case of missing data. The computational costs of the
+introduced FCS-based approach are high and grow significantly as the dimension increases.
+Therefore, more efficient methods are still needed. It may be appealing to alternate the
+FCS method with distribution-free joint modeling imputation approaches. Our proposal is
+based on the “missing-at-random” assumption and thus avoids modeling the distribution
+of missingness. The situation where observations are missing not at random should be fur-
+ther explored in the future. Besides, emphasis should be placed on relaxing the stationary
+assumption in order to deal with non-stationary environments, e.g., with online learning.
+
+Acknowledgments
+  This work was performed during a research stay at the Technical University of Denmark.
+The authors would like to appreciate China Scholarship Council (NO. 202006230261). The
+
+                                             29
+research leading to this work is being carried out as a part of the Smart4RES project
+(European Union’s Horizon 2020, No. 864337). The sole responsibility of this publication
+lies with the authors. The European Union is not responsible for any use that may be
+made of the information contained therein. Besides, the authors would like to appreciate
+the reviewers and editors for their constructive suggestions.
+
+References
+Benidis, K., Rangapuram, S.S., Flunkert, V., Wang, Y., Maddix, D., Turkmen, C., Gasthaus, J., Bohlke-
+  Schneider, M., Salinas, D., Stella, L., Aubet, F.X., Callot, L., Januschowski, T., 2022. Deep learning for
+  time series forecasting: Tutorial and literature survey. ACM Computing Surveys .
+Cao, W., Wang, D., Li, J., Zhou, H., Li, Y., Li, L., 2018. Brits: bidirectional recurrent imputation for time
+  series, in: Proceedings of the 32nd International Conference on Neural Information Processing Systems,
+  pp. 6776–6786.
+Cavalcante, L., Bessa, R.J., Reis, M., Browell, J., 2017. Lasso vector autoregression structures for very
+  short-term wind power forecasting. Wind Energy 20, 657–675.
+Che, Z., Purushotham, S., Cho, K., Sontag, D., Liu, Y., 2018. Recurrent neural networks for multivariate
+  time series with missing values. Scientific reports 8, 1–12.
+De Gooijer, J.G., et al., 2017. Elements of nonlinear time series analysis and forecasting. volume 37. Springer.
+Dempster, A.P., Laird, N.M., Rubin, D.B., 1977. Maximum likelihood from incomplete data via the em
+  algorithm. Journal of the Royal Statistical Society: Series B (Methodological) 39, 1–22.
+Draxl, C., Clifton, A., Hodge, B.M., McCaa, J., 2015. The wind integration national dataset (wind) toolkit.
+  Applied Energy 151, 355–366.
+Gneiting, T., Balabdaoui, F., Raftery, A.E., 2007. Probabilistic forecasts, calibration and sharpness. Journal
+  of the Royal Statistical Society, Series B 69, 243–268.
+Golyandina, N., Osipov, E., 2007. The “caterpillar”-ssa method for analysis of time series with missing
+  values. Journal of Statistical planning and Inference 137, 2642–2653.
+Goodfellow, I., Bengio, Y., Courville, A., 2016. Deep Learning. MIT Press.
+Hastie, T., Tibshirani, R., Friedman, J., 2001. The Elements of Statistical Learning. Springer Series in
+  Statistics, Springer New York Inc., New York, NY, USA.
+Hochreiter, S., Schmidhuber, J., 1997. Long short-term memory. Neural computation 9, 1735–1780.
+Hong, T., Pinson, P., Fan, S., Zareipour, H., Troccoli, A., Hyndman, R.J., 2016. Probabilistic energy
+  forecasting: Global energy forecasting competition 2014 and beyond. International Journal of Forecasting
+  32, 896–913.
+Hong, T., Pinson, P., Wang, Y., Weron, R., Yang, D., Zareipour, H., 2020. Energy forecasting: A review
+  and outlook. IEEE Open Access Journal of Power and Energy .
+Hyndman, R.J., Khandakar, Y., 2008. Automatic time series forecasting: the forecast package for r. Journal
+  of statistical software 27, 1–22.
+Januschowski, T., Wang, Y., Torkkola, K., Erkkilä, T., Hasson, H., Gasthaus, J., 2021. Forecasting with
+  trees. International Journal of Forecasting .
+Jones, R.H., 1980. Maximum likelihood fitting of arma models to time series with missing observations.
+  Technometrics 22, 389–395.
+Ke, G., Meng, Q., Finley, T., Wang, T., Chen, W., Ma, W., Ye, Q., Liu, T.Y., 2017. Lightgbm: a highly
+  efficient gradient boosting decision tree, in: Proceedings of the 31st International Conference on Neural
+  Information Processing Systems, pp. 3149–3157.
+Koenker, R., Hallock, K.F., 2001. Quantile regression. Journal of economic perspectives 15, 143–156.
+Kohn, R., Ansley, C.F., 1986. Estimation, prediction, and interpolation for arima models with missing data.
+  Journal of the American statistical Association 81, 751–761.
+Landry, M., Erlinger, T.P., Patschke, D., Varrichio, C., 2016. Probabilistic gradient boosting machines for
+  gefcom2014 wind forecasting. International Journal of Forecasting 32, 1061 – 1066.
+
+                                                      30
+Little, R.J., Rubin, D.B., 2019. Statistical analysis with missing data. volume 793. John Wiley & Sons.
+Liu, T., Wei, H., Zhang, K., 2018. Wind power prediction with missing data using gaussian process regression
+   and multiple imputation. Applied Soft Computing 71, 905–916.
+Messner, J.W., Pinson, P., 2019. Online adaptive lasso estimation in vector autoregressive models for high
+   dimensional wind power forecasting. International Journal of Forecasting 35, 1485–1498.
+Montero-Manso, P., Hyndman, R.J., 2021. Principles and algorithms for forecasting groups of time series:
+   Locality and globality. International Journal of Forecasting 37, 1632–1653.
+Pinson, P., 2012. Very-short-term probabilistic forecasting of wind power with generalized logit–normal
+   distributions. Journal of the Royal Statistical Society: Series C (Applied Statistics) 61, 555–576.
+Pinson, P., McSharry, P., Madsen, H., 2010. Reliability diagrams for non-parametric density forecasts of
+   continuous variables: Accounting for serial correlation. Quarterly Journal of the Royal Meteorological
+   Society 136, 77–90.
+Salinas, D., Flunkert, V., Gasthaus, J., Januschowski, T., 2020. Deepar: Probabilistic forecasting with
+   autoregressive recurrent networks. International Journal of Forecasting 36, 1181–1191.
+Sangnier, M., Fercoq, O., d’Alché Buc, F., 2016. Joint quantile regression in vector-valued rkhss, in:
+   Proceedings of the 30th International Conference on Neural Information Processing Systems, pp. 3700–
+   3708.
+Stekhoven, D.J., Bühlmann, P., 2012. Missforest—non-parametric missing value imputation for mixed-type
+   data. Bioinformatics 28, 112–118.
+Stone, C.J., 1991. Asymptotics for doubly flexible logspline response models. The annals of statistics 19,
+   1832–1854.
+Tawn, R., Browell, J., Dinwoodie, I., 2020. Missing data in wind farm time series: Properties and effect on
+   forecasts. Electric Power Systems Research 189, 106640.
+Van Buuren, S., 2018. Flexible imputation of missing data. CRC press.
+Van Buuren, S., Brand, J.P., Groothuis-Oudshoorn, C.G., Rubin, D.B., 2006. Fully conditional specification
+   in multivariate imputation. Journal of statistical computation and simulation 76, 1049–1064.
+Wan, C., Lin, J., Wang, J., Song, Y., Dong, Z.Y., 2016. Direct quantile regression for nonparametric
+   probabilistic forecasting of wind power generation. IEEE Transactions on Power Systems 32, 2767–2778.
+Wen, H., Pinson, P., Ma, J., Gu, J., Jin, Z., 2022. Continuous and distribution-free probabilistic wind
+   power forecasting: A conditional normalizing flow approach. IEEE Transactions on Sustainable Energy
+   13, 2250–2263.
+You, J., Ma, X., Ding, Y., Kochenderfer, M.J., Leskovec, J., 2020. Handling missing data with graph
+   representation learning, in: Larochelle, H., Ranzato, M., Hadsell, R., Balcan, M.F., Lin, H. (Eds.),
+   Advances in Neural Information Processing Systems, pp. 19075–19087.
+Zhao, Y., Udell, M., 2020. Missing value imputation for mixed data via gaussian copula, in: Proceedings of
+   the 26th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining, pp. 636–646.
+
+
+
+
+                                                    31
+

@@ -1,0 +1,773 @@
+                         Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+
+
+
+
+General Incomplete Time Series Analysis via Patch Dropping Without Imputation
+             Yangyang Wu1,4 , Yi Yuan1 , Mengyin Zhu1 , Xiaoye Miao2,3 and Meng Xi1,4
+                           1
+                             School of Software Technology, Zhejiang University
+                               2
+                                 Center for Data Science, Zhejiang University
+                 3
+                   The State Key Lab of Brain-Machine Intelligence, Zhejiang University
+                                  4
+                                    Binjiang Institute of Zhejiang University
+                     {zjuwuyy, icecens, mengyingzhu, miaoxy, ximeng}@zju.edu.cn
+
+                          Abstract                                                              (1) IMD paradigm
+                                                                                                               TS Analysis Model                   MSE = 5.343
+                                                                                               (2) ITA paradigm                           Improve 154.0 %!
+     Missing values in multivariate time series data                                                                               TS Analysis
+     present significant challenges to effective analy-                                             Imputer
+                                                                                                                                     Model
+                                                                                                                                                   MSE = 2.674
+     sis. Existing methods for multivariate time se-                        Incomplete Time SeriesBRITS, SAITS… Imputed Dataset
+     ries analysis either ignore missing data, sacrificing                    Illness, Weather… (3) Our end-to-end paradigm              Improve 24.5 %!
+     performance, or follow the impute-then-analyze                                                 Imputer            INTER
+                                                                                                                                                 MSE = 2.104
+                                                                                                    Bypass
+     paradigm, which suffers from redundant train-
+     ing and error accumulation, leading to biased re-                                         Figure 1: Traditional paradigm vs ours.
+     sults and suboptimal performance. In this paper,
+     we propose INTER, a novel end-to-end frame-
+     work for incomplete multivariate time series anal-                        missing values that hinder the functionality of certain analyt-
+     ysis, which bypasses imputation by leveraging pre-                        ical methods, (2) disrupted temporal dependencies that lead
+     trained language models to learn the distribution                         to model bias, and (3) reduced model robustness that causes
+     of incomplete time series data. INTER incor-                              overfitting to noise or incomplete data, ultimately resulting in
+     porates two novel components: the missing-rate-                           unstable performance in real-world applications. Given these
+     aware time series patch-dropping (MPD) strategy                           difficulties, it is crucial to propose an effective solution for
+     and the missing-aware Transformer block, both of                          the Incomplete Multivariate Time Series Analysis (IMTSA)
+     which we propose to enhance model generaliza-                             task, which improves the performance of time series analysis
+     tion, robustness, and the ability to capture under-                       in the presence of missing data.
+     lying patterns in the observed incomplete time se-                           Existing Multivariate Time Series analysis methods are
+     ries. Moreover, we theoretically prove that the                           primarily designed for the full-knowledge scenario, which
+     MPD strategy exhibits lower sample variance for                           assumes access to completely observed datasets. For the
+     time series with the same dropout rate compared                           IMTSA task, current solutions follow two flawed paradigms:
+     to other dropping strategies. Extensive experiments                       (1) Ignoring missing data (IMD): Performing downstream
+     on 11 public real-world time series datasets demon-                       analysis without addressing missing values, which leads to
+     strate that INTER improves accuracy by over 20%                           severely degraded performance. (2) Impute-then-analyze
+     compared to state-of-the-art methods, while main-                         (ITSA): Imputing missing data before analysis, which suffers
+     taining competitive computational efficiency.                             from redundant training and error accumulation, resulting in
+                                                                               biased results and suboptimal performance.
+                                                                                  Motivating Example. To better illustrate the challenges
+1   Introduction                                                               of incomplete multivariate time series analysis, we consider
+                                                                               the widely used public medical dataset PhysioNet, which con-
+Multivariate time series analysis [Wen et al., 2022] is widely                 tains ICU patient records for tasks such as mortality predic-
+used in extensive real-world applications, e.g., physiologic                   tion and clinical outcome analysis. Figure 1 compares the
+signals analysis [Moody et al., 2011], stock price forecast-                   performance of existing paradigms for time series analysis
+ing [Wang et al., 2022], and anomaly detection [Franceschi                     on this dataset. The IMD paradigm that directly performs
+et al., 2019]. However, real-world multivariate time series                    downstream analysis without handling missing values results
+data are usually imperfect and incomplete due to failures                      in severely degraded performance. The ITSA paradigm first
+in data collection devices [Miao et al., 2021; Miao et al.,                    applies a standard imputation method (e.g., MICE [Buuren
+2022] and an unstable system environment [Wu et al., 2022;                     and Groothuis-Oudshoorn, 2010]) to fill in missing values,
+Wu et al., 2023]. For instance, the publicly available medical                 followed by a state-of-the-art model, such as a Transformer-
+time series dataset PhysioNet [Silva et al., 2012] has an aver-                based classifier [Lim and Zohren, 2021]. While this paradigm
+age missing rate exceeding 80%. This incompleteness poses                      offers slight improvements, it suffers from error propagation
+considerable difficulties for time series analysis, including (1)              introduced during the imputation phase, leading to biased
+
+
+
+                                                                        6597
+                         Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+
+
+
+analysis and suboptimal results.                                               train language model, to address the two challenges, respec-
+   To address the limitations of the above two paradigms,                      tively. (3) Theory: We propose a novel missing-state-aware
+we propose a novel end-to-end framework, named INTER,                          patch-dropping (MPD) strategy and theoretically prove that
+which introduces a new paradigm for incomplete multivari-                      MPD achieves lower sample variance for time series with the
+ate time series analysis by bypassing the imputation process.                  same dropout rate compared to other dropping strategies. (4)
+As shown in Figure 1(c), INTER directly analyzes incom-                        Experiment: We conduct extensive experiments on 11 real-
+plete time series data without requiring separate imputation.                  world datasets, demonstrating that INTER outperforms state-
+By eliminating error accumulation and effectively capturing                    of-the-art methods in terms of accuracy while maintaining
+missing patterns, INTER achieves significantly better accu-                    comparable computational efficiency.
+racy and robustness results than existing paradigms.
+   However, implementing INTER faces two challenging                           2    Related Work
+problems. First, how can we effectively extract missing pat-
+                                                                               Existing time series imputation models serve as the founda-
+terns and recover critical information from missing parts
+                                                                               tion for most multivariate time series analysis methods. They
+without performing explicit imputation? (CH1) The chal-
+                                                                               include statistical ones, attention-based ones, deep generative
+lenge lies in the fact that missing data patterns often exhibit
+                                                                               model based ones, and neural ordinary differential equation
+complex temporal and spatial dependencies, making them
+                                                                               (NODE) based ones. In particular, the statistical time se-
+difficult to model directly. Moreover, skipping the imputa-
+                                                                               ries imputation algorithms substitute missing values with the
+tion step can render traditional feature extraction methods in-
+                                                                               statistics, e.g., zero, mean, and last observed value or simple
+effective. Therefore, it is essential to design a mechanism ca-
+                                                                               statistical models, including ARIMA [Bartholomew, 1971].
+pable of capturing both explicit and implicit missing patterns,
+                                                                               The attention mechanism based time series imputation meth-
+which will enable accurate representation of incomplete time
+                                                                               ods contain TransI [Vaswani et al., 2017] and SAITS [Du et
+series. Second, how can we effectively adapt and transfer
+                                                                               al., 2023]. The deep generative model based time series im-
+the knowledge derived from the missing data to diverse mul-
+                                                                               putation methods use autoencoder and generative adversarial
+tivariate time series analysis tasks? (CH2) Incomplete time
+                                                                               network to impute missing values, including BRITS [Cao et
+series occur across various downstream tasks, such as fore-
+                                                                               al., 2018] and CSDI [Tashiro et al., 2021]. The NODE-based
+casting, anomaly detection, and imputation. When dealing
+                                                                               methods model the dynamics over time by virtue of the con-
+with datasets with high missing rates, excessive noise in such
+                                                                               tinuous nature of NODE, such as SaShiMi [Goel et al., 2022]
+datasets can prevent downstream time series analysis mod-
+                                                                               and LS4 [Zhou et al., 2023a].
+els from even bootstrapping effectively. Furthermore, differ-
+                                                                                  Multivariate time series analysis methods have attracted
+ent tasks require different utilizations of the missing informa-
+                                                                               extensive research focus from the AI community [Liang et
+tion, and a lack of alignment mechanisms makes it difficult to
+                                                                               al., 2024], and these approaches can be broadly catego-
+adapt and fine-tune the missing information for each specific
+                                                                               rized into three types. With the development of technolo-
+downstream task
+                                                                               gies such as Transformers, pretrained language models, and
+   To address these two challenges, INTER consists of two                      mixture of experts[Vaswani et al., 2017; Feng et al., 2024;
+key modules: the missing-aware patch learning (MPL) mod-                       Feng et al., 2025], Transformer-based models have become
+ule and the incomplete time series analysis (ITSA) module,                     increasingly effective in time series analysis, including In-
+each designed to tackle one of the challenges independently.                   former [Zhou et al., 2021], PatchTST [Nie et al., 2022], One-
+In the MPL module, we devise a novel missing-rate-aware                        FitsAll [Zhou et al., 2023b] and Timer[Liu et al., 2024]. The
+patch dropping (MPD) strategy and a missing-aware Trans-                       second category consists of non-Transformer-based models,
+former block, both of which we propose to enhance model                        such as CNN-based approaches like TimesNet [Wu et al., ]
+generalization, robustness, and the ability to capture under-                  and TriD-MAE [Zhang et al., 2023], which capture spatial
+lying patterns in the observed incomplete time series. In                      and temporal patterns using convolutions. With the develop-
+the ITSA module, we fine-tune a pre-trained language model                     ment of GNN methods [Zhu et al., 2023; Liao et al., 2024],
+(PLM) with a novel element-wise loss function. By leverag-                     models like FourierGNN [Yi et al., 2023a] have started lever-
+ing the pre-trained knowledge from the PLM, ITSA captures                      aging graph structures for multivariate time series forecast-
+the underlying structure of incomplete time series data and                    ing. MLP-based models like FreTS [Yi et al., 2023b] and
+refines it using the element-wise loss function, which is de-                  TSMixer [Ekambaram et al., 2023] focus on learning com-
+signed to minimize the interference from noise in the missing                  plex feature interactions in time series data. FilterNet [Yi
+data. This process enables INTER to effectively learn both                     et al., 2024] employs frequency filtering techniques to en-
+the distributions of observed data and the missing state distri-               hance forecasting performance. The third category involves
+butions from incomplete time series.                                           diffusion-based models, such as D3 VAE [Li et al., 2022] and
+   Our main contributions are as follows: (1) Paradigm:                        DiffTime [Coletta et al., 2024], which model time series dy-
+We propose INTER, an end-to-end, missing-aware frame-                          namics by progressively adding and removing noise, making
+work for the IMTSA problem that bypasses imputation and                        them effective for handling missing or uncertain data.
+achieves exceptional performance. To the best of our knowl-
+edge, this is the first attempt to develop an end-to-end frame-
+work for incomplete multivariate time series analysis. (2)                     3    Problem Definition
+Model: In INTER, we devise two novel modules, i.e., MPT                        The input multivariate time series dataset contains a set
+based on missing-aware transformer and ITSA based on pre-                      of samples D = {X1 , · · · , XN } with d dimensions
+
+
+
+                                                                        6598
+                                  Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+
+
+                                                                  MPL module                                                                                                            ITSA module
+   Mask Indicator Matrix     Incomplete Time Series               Missing-State-Aware               Missing-Aware
+  [0,0,0, … ] [1,1,0, … ]         Encoding                         Patch Dropping                   Transformer                                           +
+                                                                                                          ×𝑛
+
+
+
+
+                                                                                                                                                               Flatten + Linear Head
+                                [0.324,0.21, −0.791, … ]
+                                       Hidden State                Select
+                                                                                    ×
+                                                                                    ×    −𝑖𝑛𝑓
+                                                                   by 𝛾
+
+
+
+
+                               FFN
+
+
+
+
+                                                                                                                             Feed-Forward
+                                                                                                                Add & Norm
+
+
+                                                                                                                                            Add & Norm
+                                                                       Highly Dropped
+
+
+
+
+                                                                                                Missing-Aware
+𝑀 = (m:1 , … m:L ) ∈ ℝd×L
+                                                               Missing
+
+
+
+
+                                                                                                                                                         PLM
+                                                                       Missing Patch                                                                                              Ground truth XT = x:L+1 , … x:L+T ∈ ℝd×T
+
+
+
+
+                                                                                                  Attention
+ Input                                 Missing State            State
+                                                                        Patch
+                                                                Patch
+
+
+
+
+                                                   Embedding
+                                                                   Select
+
+                                        Patching
+                                                                                    ×
+                             Z-Score
+                             Scaling
+                                                                                    ×    −𝑖𝑛𝑓
+
+
+
+                                                     Input
+                                                                   by 𝛾
+
+
+                                                                                                     Transformer Encoder                                                               Output X T = x :L +1 , … x :L +T ∈ ℝd ×T
+ X = (x:1 , … x:L ) ∈ ℝd×L
+
+
+                                                                      Figure 2: The architecture of INTER
+
+
+and L timestamps. Formally, X = (x1 , · · · , xd )⊤ =                                          in K, i.e., Disc(H) = maxy,ŷ,k,k′ | Pr(H(X) = ŷ | Y =
+(x:1 , · · · , x:L ) ∈ Rd×L with xi being (xi1 , · · · , xiL ). In par-                        y, K = k) − Pr(H(X) = ŷ | Y = y, K = k ′ )|.
+ticular, xij is the i-th feature value of X at the j-th timestamp,                             Moreover, we use mutual information [Kraskov et
+which is probably missing in the incomplete multivariate time                                  al., 2004] to quantify the dependence between the
+series dataset.                                                                                missing
+                                                                                               P        matrix M and the label Y, i.e., I(M; Y) ≜
+                                                                                                        P
+Definition 1. Incomplete multivariate time series, IMTS.                                          m∈M      y PM,Y (m, y) log PM,Y (m, y)/(PM (m)PY (y)).
+To encode the missing information of each sample X in D,                                       The detailed proof can be found in Appendix A.
+a mask matrix M = (m1 , · · · , md )⊤ = (m:1 , · · · , m:L ) ∈                                 Observation 1. Suppose that the incomplete IMTS dataset
+{0, 1}d×L w.r.t. X is used to indicate whether the values in                                   X with the mask matrix M and label set Y consists of a sin-
+X exist or not. mi = (mi1 , · · · , miL ), and mij being 0 or 1                                gle discrete attribute K, which is subject to a complex miss-
+means that, xij is missing or observed.                                                        ingness mechanism, such as MAR or MNAR. Let α represent
+Definition 2. Incomplete multivariate time series repre-                                       the probability that the outcome of the three-class classifi-
+sentation learning, IMTSRL. Given an incomplete multi-                                         cation is not equal to 0 for a given sample. For any ϵ and
+variate time series X with its mask matrix M, the goal of                                      α ∈ ( 12 , 1), there exists a data distribution PK,X,Y such that
+incomplete time series representation learning is to train a                                   the optimal solution Fϵ (PK,X̂,Y ) is less than or equal to the
+neural network model (i.e., encoder) f : Rd 7→ Rdr , where
+                                                                                                                                                         
+                                                                                               optimal solution Fϵ (PK,X,Y ), i.e., supfimp Fϵ PK,X̂,Y ≤
+dr is the dimensionality of the representation, such that the
+representation z = f (X) can be informative for downstream                                     Fϵ (PK,X,Y ) − α, where fimp is the mapping function of the
+analysis tasks, e.g., multivariate time series classification.                                 IMTS imputation model. The imputed data X̂ = fimp (X).
+   Based on probability theory [Feng et al., 2023], we claim
+that, during model optimization, the analysis approach lever-                                  4         Methodology
+aging IMTSRL proves more effective than the imputation-
+                                                                                               4.1              Overall
+then-analysis solution, as highlighted in Observation 1.
+   Framing the classification task as the foundation for                                       Our proposed INTER framework consists of two key mod-
+IMTSRL, the objective is to train a classifier H that uses                                     ules: Missing-aware Patch Learning (MPL) and Incomplete
+the IMTS data X ∈ D to predict the label y. For ease of                                        Time Series Analysis (ITSA). The architecture of INTER is
+representation, we restrict our domain to a three-class task                                   shown in Figure 2. Specifically, INTER takes an incom-
+in this part, i.e., y ∈ {0, 1, 2}. Inspired by [Feng et al.,                                   plete multivariate time series X = {x1 , . . . , xL } ∈ Rd×L
+2023], we evaluate the classifier’s performance differences                                    as input and processes it sequentially through the MPL and
+across various categories in the discrete attribute K in X                                     ITSA to generate outputs for downstream tasks. Figure 2 il-
+that exhibits a complex missing mechanism, e.g., MAR                                           lustrates an example of the output for a time series forecast-
+and MNAR. Such a classifier is to solve a constrained                                          ing task, X̂T = {xL+1 , . . . , xL+T }. First, the MPL mod-
+optimization problem maxH E[I(H(X) = Y)] subject to                                            ule includes three components: incomplete time series en-
+Disc(H) ≤ ϵ, where ϵ ≥ 0 is a tolerance threshold. When the                                    coding (TSE), missing-state-aware patch dropping (MPD),
+optimization is over binary mappings, the optimal solution                                     and missing-aware Transformer (MAT). TSE applies main-
+of the constrained optimization problem only depends on                                        stream time series processing components for standard pre-
+the data distribution PK,X,Y and ϵ. We denote the opti-                                        processing and, moreover, learns the missing patterns in each
+mal solution of this problem by Fϵ (PK,X,Y ). Here, I is                                       incomplete multivariate time series. MPD adopts a novel
+the indicator function, returning 1 if H correctly predicts                                    patch-dropping strategy to reduce noise, enhancing model
+H(X) = Y, and 0 otherwise. Disc(H) represents the                                              generalization and robustness. MAT learns the observed data
+model’s disparity in performance across different categories                                   distribution and the missing state distribution based on a
+
+
+
+                                                                                        6599
+                         Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+
+
+
+transformer-based encoder. Second, the ITSA module lever-                         MPD: Missing-state-aware patch dropping. The core
+ages pre-trained language models to provide prior knowledge                    idea of the MPD is to perform dropping based on the miss-
+for bootstrapping the learning of underlying observed time se-                 ing states of the time series data. Unlike traditional dropout
+ries patterns. It then uses a flattening layer and linear head to              methods, which apply a uniform dropping probability across
+project the learned representations onto specific downstream                   all data points, MPD introduces a random incomplete patch
+tasks. Additionally, an element-wise loss function is intro-                   dropping strategy. This strategy directly applies dropping to
+duced to mitigate the risk of learning incorrect information                   incomplete time series patches, rather than individual time se-
+from missing values. The pseudo-code of INTER can be                           ries values. Specifically, MPD drops incomplete time series
+found in Appendix B.                                                           patches at a rate of δ, such that, on average, δ · P patches are
+                                                                               masked in each time series. Moreover, the dropping probabil-
+4.2   MPL: Missing-aware Patch Learning                                        ity δip for each patch is dynamically determined based on its
+Traditional multivariate time series analysis models typically                 missing rate γip , with patches that have a higher proportion
+rely on imputation algorithms to handle missing data when                      of missing data being more likely to be dropped due to the
+performing IMTSA tasks. However, this paradigm introduces                      significant noise they carry.
+unnecessary training redundancy, error propagation, and ulti-                     The dropping operation in MPD can be viewed as a patch-
+mately leads to suboptimal performance. To address these is-                   sampling process. For each patch xpi in the time series, an
+sues, we propose the MPL module, which operates directly                       independent mask αi is generated to determine whether the
+on incomplete multivariate time series, extracting patches                     patch will be preserved, following a Bernoulli distribution:
+containing missing values and observed time series data. This
+                                                                                                      αi ∼ Bernoulli(1 − δ p ),             (1)
+process enables the model to learn the underlying patterns of
+missing data and generate high-level hidden representations                              p
+                                                                               where δ is the dropping probability dynamically assigned
+without imputation. Next, we elaborate on the three key com-                   to each patch xpi , based on its missing rate γ p . Specifically,
+ponents of the MPL module.                                                     the dropping probability δ p for each patch is designed to be
+   TSE: Incomplete Time Series Encoding. The TSE serves                        positively correlated with its missing rate γ p , such that:
+two primary purposes for processing incomplete time series
+data: (1) extracting missing state information and (2) gener-                                       δ p = f (γ p ),    f (γ p ) ∝ γ p ,     (2)
+ating embedded representations of the time series.                                           p
+                                                                               where f (γ ) is a function that increases with the patch’s miss-
+   For the first purpose, TSE employs a feedforward neu-                       ing rate, enabling an adaptive dropping strategy that effec-
+ral network (FFN) to extract the missing-state matrix Ms ∈                     tively addresses the challenges posed by patches containing
+Rd×L from the mask indicator matrix M ∈ {0, 1}d×L . To                         a high proportion of missing values. Subsequently, for each
+achieve this, the mask indicator matrix is divided into patches                patch xpi and its corresponding missing state ms,p  i , the mask
+P , which are then passed through the FFN to learn the miss-                   αi is generated based on the Bernoulli distribution with the
+ing state matrix, where for the i-th patch, the missing state                  dropping probability δ p . Finally, the perturbed time series
+ms,p
+   i  = fFFN (mpi ). This learned missing state is then used in                matrix is obtained by performing element-wise multiplication
+the MPD module to provide a missing pattern of each patch                      of each patch with its corresponding mask αi .
+for further refinement.                                                           The effectiveness and theoretical advantages of the MPD
+   For the second purpose, TSE first normalizes the incom-                     strategy are demonstrated through rigorous analysis. Specifi-
+plete time series using Z-score scaling. Specifically, for each                cally, Theorem 1 shows that the MPD strategy based on miss-
+time series xi ∈ X with its corresponding mask vector                          ing rates results in lower sample variance at the same dropout
+mi ∈ M, we calculate the mean µi and standard deviation                        rate, contributing to a more stable training process. There-
+σi across the observed elements, i.e.,                                         fore, the MPD strategy can serve as an additional regulariza-
+       PL                          PL                  2                       tion term of INTER, thereby improving the model’s robust-
+          j=1 xi,j · mi,j     i2       j=1 (xi,j − µi ) · mi,j                 ness. The detailed proof can be found in Appendix C.
+ µi =     PL              , σ    =         PL                  .
+             j=1 mi,j                         j=1 mi,j                         Theorem 1. Compared to two existing dropping strategies,
+   Then, for each observed value in xi , we subtract µi and di-                i,e, (i) a value-based dropping strategy, and (ii) a random
+vide by σi . This normalization reduces variability, promoting                 patch-dropping strategy based on uniform distribution, the
+stable learning across the data. Note that a de-normalization                  MPD strategy achieves a smaller sample variance on time
+procedure is applied to the forecasted data to ensure that the                 series with the same dropout rate.
+predicted time series are interpretable in relation to the his-                   MAT: Missing-aware Transformer. The MAT module
+torical data. After normalization, we divide the time series                   leverages an n-layer Transformer to process missing state-
+into non-overlapping patches ẍpi ∈ RP ×N , where each patch                   aware patches and time series patches, capturing hidden tem-
+corresponds to a subseries-level segment of the time series                    poral patterns and producing a sequence of hidden represen-
+[Nie et al., 2022]. Finally, we apply an Input Embedding                       tations {zi }Ni=1 that integrate both observed data and missing
+layer to project the time series embedding ẍpi to xpi , where                 state information.
+xpi is mapped to the required dimensions for the subsequent                       First, the time series vector xpi and the corresponding miss-
+pre-trained model [Zhou et al., 2023b]. This embedding cap-                    ing state ms,pi   are concatenated to form a combined repre-
+tures complex dependencies across time steps and is crucial                    sentation for each patch, i.e., zpi = concat(xpi , ms,p
+                                                                                                                                     i ). This
+for facilitating the learning process in later modules.                        embeds the missing state distribution into the time series
+
+
+
+                                                                        6600
+                         Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+
+
+
+patches, enriching the input representation with information                   forecasting (both long-term and short-term), anomaly detec-
+about both observed data and missing patterns.                                 tion, and imputation on incomplete time series data. Taking
+   Next, during the self-attention computation, patches                        the incomplete time series forecasting task as an example, the
+marked as dropped need to be excluded by masking their                         ITSA module is designed to effectively learn the mapping be-
+attention scores. Therefore, we devise a missing-aware at-                     tween incomplete historical time series and future observa-
+tention with a new score-updating mechanism. Specifically,                     tions. To achieve this, we propose an incomplete time series
+given the attention score matrix A ∈ RN ×N , the scores are                    Mean Squared Error (MSE) loss function, defined as:
+updated as follows:                                                                                 " Pd
+                                                                                                                 T
+                                                                                                                          T     T  2
+                                                                                                                                      #
+                                                                                            1 X         i=1 || mi ⊙ (xi − x̂i )||2
+                     
+                       −∞ if i ∈ D or j ∈ D,                                     LMSE =                                                 , (4)
+             Ai,j =                                      (3)                               N                     ||MT ||22
+                                                                                                  X∈X
+                       Ai,j otherwise,
+                                                                               where ⊙ is the element-wise multiplication. || · ||22 represents
+   where D is the dropped data. This ensures that dropped                      the squared Euclidean norm, which is the sum of the squares
+patches do not influence the attention mechanism, focusing                     of the elements of a vector. xTi is the ground-truth future data
+the model only on valid patches.                                               of the time series xi ∈ X. mTi in MT is the mask vector
+   Finally, the remaining patches are passed through the                       w.r.t. xTi . The incomplete time series forecasting loss func-
+Transformer, which performs missing-aware self-attention                       tion LMSE is designed to enforce the consistency between the
+and feedforward operations to generate the hidden represen-                    true underlying data distribution in incomplete future time se-
+tation for each patch, i.e., z̃pi = Transformer({zpj | j ∈
+                                                         / D}).                ries and output data distribution. It can be easily generalized
+This enables the Transformer to aggregate temporal depen-                      to other time series analysis tasks, e.g., the incomplete time
+dencies across patches while incorporating missing state in-                   series classification, as described in Appendix D.
+formation into the learned representations. The MAT mod-
+ule outputs the sequence of hidden representations Z̃p =                       5     Experiment
+       P −|D|
+{z̃pi }i=1 , where each vector effectively encodes both ob-
+                                                                               In this section, we evaluate the performance of our proposed
+served time series data and missing state information, provid-
+                                                                               model INTER on five tasks—long-term forecasting, short-
+ing a robust foundation for downstream tasks.
+                                                                               term forecasting, imputation, classification, and anomaly
+4.3   ITSA: Incomplete Time Series Analysis                                    detection—using 11 (in)complete multivariate time series
+                                                                               datasets. The performance is compared with a total of 8 state-
+After the MPL module, INTER employs the incomplete time
+                                                                               of-the-art time series analysis methods. All approaches were
+series analysis (ITSA) module, which processes each patch
+                                                                               implemented in Python. The experiments were conducted on
+independently in a sequence-to-sequence framework. ITSA
+                                                                               a server with an Intel Core 2.80GHz processor, 3 NVIDIA
+leverages pre-trained parameters from NLP models, specifi-
+                                                                               A40 GPUs, and 192GB RAM, running Ubuntu 18.04.
+cally GPT-2 [Radford et al., 2019], to enhance the represen-
+tation of incomplete time series data.                                         5.1    Experiment Settings
+    Architecture. In ITSA, time series patches Z̃p from MPL                    Metrics. We evaluate the effectiveness of models in time se-
+are treated as sequence tokens and passed through the pre-                     ries forecasting tasks using the mean square error (MSE) and
+trained language model (PLM). ITSA retains the PLM’s posi-                     mean absolute error (MAE), where smaller metric values in-
+tional embeddings and self-attention blocks. As most knowl-                    dicate better prediction performance. For time series classi-
+edge resides in the self-attention and FFN layers, these are                   fication tasks, we use Accuracy as the evaluation metric to
+frozen during fine-tuning, allowing only final layers to adapt                 measure model effectiveness. To evaluate the effectiveness
+and better capture temporal dependencies in time series data.                  of forecasting models on incomplete multivariate time series
+    Specifically, the input to ITSA is a sequence of patches                   datasets, we randomly remove 50% of the observed values
+Z̃p . The PLM processes this as: H = PLM(Z̃p ), where                          prior to model training. Each metric value is obtained by av-
+H ∈ RN ×D is the output hidden representation and D is                         eraging the results of five experimental runs on each dataset.
+the PLM hidden size. GPT-2 is used as the PLM in our                              Baselines. In the experiments, the baselines include six
+experiments. During fine-tuning, only the output layers are                    state-of-the-art time series forecasting methods, including:
+updated, while self-attention and FFN remain frozen. The                       Informer [Zhou et al., 2021], PatchTST [Nie et al., 2022],
+output H captures complex temporal patterns from incom-                        TimesNet [Wu et al., ], OneFitsAll [Zhou et al., 2023b],
+plete multivariate time series. ITSA is designed to leverage                   Timer [Liu et al., 2024], and TriD-MAE [Zhang et al., 2023].
+PLM knowledge to model incomplete structures. Fine-tuning                      Since almost all the above baselines cannot be trained with
+on incomplete patches improves the model’s ability to learn                    incomplete time series data, we employ five state-of-the-art
+latent temporal dependencies, helping INTER better handle                      multivariate time series imputation methods, i.e., Zero [Che
+missing values and uncover hidden patterns for downstream                      et al., 2018], BRITS [Cao et al., 2018], TransI [Vaswani et
+tasks.                                                                         al., 2017], SAITS [Du et al., 2023], and CSDI [Tashiro et al.,
+    Objective. On top of PLM, ITSA applies a flatten layer                     2021] to impute missing values.
+(FL) and a linear head (LH) to infer future time series: x̂Ti =
+(x̂1i , · · · , x̂di ) = F L(LH(H)). where H is the ITSA output.               5.2    Comparison Study
+Moreover, the ITSA module incorporates distinct objective                      Overall, the proposed method, INTER, outperforms other
+functions specifically designed for various tasks, including                   models across various tasks, including incomplete time series
+
+
+
+                                                                        6601
+                            Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+
+
+
+                               Electricity                       Weather                             Exchange                            Illness
+             Models
+                         MSE              MAE             MSE            MAE                  MSE             MAE                MSE             MAE
+        Zero          0.352 ± 0.012 0.428 ± 0.009      0.463 ± 0.001 0.458 ± 0.012         0.524 ± 0.007 0.564 ± 0.003        5.706 ± 0.123 1.480 ± 0.051
+ Informer
+
+
+       BRITS          0.358 ± 0.006 0.434 ± 0.004      0.514 ± 0.007 0.480 ± 0.005         0.522 ± 0.005 0.576 ± 0.007        5.552 ± 0.456 1.591 ± 0.032
+       TransI         0.356 ± 0.015 0.432 ± 0.015      0.462 ± 0.014 0.444 ± 0.009         0.504 ± 0.009 0.570 ± 0.005        5.168 ± 0.789 1.510 ± 0.076
+       SAITS          0.352 ± 0.01 0.430 ± 0.007       0.510 ± 0.019 0.475 ± 0.016         0.549 ± 0.001 0.588 ± 0.009        5.706 ± 0.012 1.616 ± 0.091
+       CSDI           \               \                \              \                    0.508 ± 0.006 0.570 ± 0.001        5.278 ± 0.345 1.532 ± 0.043
+        Zero          0.222 ± 0.018 0.320 ± 0.018      0.201 ± 0.015 0.279 ± 0.007         0.582 ± 0.008 0.580 ± 0.004        3.943 ± 0.678 1.402 ± 0.025
+ PatchTST
+
+
+
+
+       BRITS          0.201 ± 0.02 0.299 ± 0.012       0.146 ± 0.01 0.190 ± 0.014          0.143 ± 0.003 0.288 ± 0.008        2.729 ± 0.901 1.104 ± 0.087
+       TransI         0.207 ± 0.01 0.303 ± 0.016       0.163 ± 0.003 0.204 ± 0.018         0.362 ± 0.012 0.471 ± 0.006        3.024 ± 0.234 1.216 ± 0.036
+       SAITS          0.198 ± 0.018 0.296 ± 0.008      0.143 ± 0.012 0.181 ± 0.01          0.266 ± 0.004 0.367 ± 0.003        2.520 ± 0.567 1.052 ± 0.019
+       CSDI           \               \                \              \                    0.05 ± 0.007   0.156 ± 0.002       8.191 ± 3.191 1.640 ± 0.057
+        Zero          0.202 ± 0.014 0.311 ± 0.014      0.473 ± 0.004 0.480 ± 0.015         0.978 ± 0.004 0.753 ± 0.01         5.253 ± 0.135 1.620 ± 0.049
+ TimesNet
+
+
+
+
+       BRITS          0.175 ± 0.019 0.284 ± 0.019      0.144 ± 0.017 0.198 ± 0.017         0.194 ± 0.009 0.352 ± 0.007        3.949 ± 0.246 1.366 ± 0.067
+       TransI         0.183 ± 0.02 0.289 ± 0.002       0.159 ± 0.002 0.213 ± 0.004         0.408 ± 0.011 0.508 ± 0.004        4.436 ± 0.369 1.499 ± 0.008
+       SAITS          0.172 ± 0.012 0.282 ± 0.006      0.144 ± 0.009 0.196 ± 0.009         0.114 ± 0.005 0.263 ± 0.005        3.926 ± 0.789 1.354 ± 0.099
+       CSDI           \               \                \              \                    0.061 ± 0.008 0.180 ± 0.001        7.140 ± 0.012 1.805 ± 0.027
+        Zero          0.267 ± 0.01 0.359 ± 0.011       0.277 ± 0.005 0.361 ± 0.001         0.720 ± 0.006 0.677 ± 0.009        5.009 ± 0.395 1.571 ± 0.041
+ OneFisAll
+
+
+
+
+       BRITS          0.213 ± 0.017 0.301 ± 0.014      0.159 ± 0.016 0.206 ± 0.008         0.133 ± 0.003 0.291 ± 0.008        3.579 ± 0.678 1.421 ± 0.056
+       TransI         0.219 ± 0.012 0.305 ± 0.005      0.175 ± 0.007 0.217 ± 0.019         0.366 ± 0.007 0.487 ± 0.006        3.287 ± 0.901 1.308 ± 0.013
+       SAITS          0.21 ± 0.02     0.296 ± 0.019    0.159 ± 0.011 0.198 ± 0.006         0.083 ± 0.01 0.216 ± 0.003         4.328 ± 0.234 1.531 ± 0.078
+       CSDI           \               \                \              \                    0.052 ± 0.001 0.161 ± 0.002        6.455 ± 0.567 1.638 ± 0.009
+        Zero          0.272 ± 0.016 0.378 ± 0.016      0.290 ± 0.019 0.411 ± 0.007         0.800 ± 0.004 0.737 ± 0.007        5.343 ± 0.89 1.720 ± 0.083
+ Timer
+
+
+
+
+       BRITS          0.186 ± 0.013 0.281 ± 0.007      0.179 ± 0.003 0.236 ± 0.014         0.173 ± 0.008 0.311 ± 0.001        3.549 ± 0.135 1.461 ± 0.045
+       TransI         0.193 ± 0.002 0.285 ± 0.003      0.215 ± 0.008 0.260 ± 0.018         0.386 ± 0.002 0.457 ± 0.005        3.337 ± 0.246 1.318 ± 0.015
+       SAITS          0.167 ± 0.016 0.267 ± 0.015      0.184 ± 0.015 0.212 ± 0.005         0.059 ± 0.006 0.188 ± 0.01         2.674 ± 0.369 1.091 ± 0.06
+       CSDI           \               \                \              \                    0.053 ± 0.007 0.196 ± 0.012        4.288 ± 0.789 1.501 ± 0.031
+   TriD-MAE           0.311 ± 0.018 0.391 ± 0.004      0.233 ± 0.027 0.322 ± 0.091         1.388 ± 0.200 0.940 ± 0.009        8.290 ± 0.012 2.170 ± 0.092
+ INTER (Ours)         0.147 ± 0.01 0.250 ± 0.018       0.139 ± 0.017 0.192 ± 0.020         0.049 ± 0.003 0.158 ± 0.013        2.104 ± 0.345 0.984 ± 0.007
+
+                                Table 1: Long-term forecasting performance comparison under different datasets
+
+
+long-term and short-term forecasting, classification, anomaly                                                          M4-Yearly           M4-Monthly
+                                                                                             Models
+detection, and imputation. Due to space limitations, the ex-                                                       SMAPE MASE           SMAPE MASE
+perimental results for anomaly detection and imputation tasks                          TimesNet          Zero       18.523   7.512       17.421   2.980
+are presented in Appendix E.1. These results highlight the                                              SAITS       15.460   5.079       14.371   1.922
+effectiveness and robustness of the proposed INTER frame-                             OneFitsAll         Zero       17.531   7.015       17.283   4.965
+work in handling incomplete time series data.                                                           SAITS       15.419   5.033       14.320   1.870
+   In addition, we investigate the influence of different ele-                           Timer           Zero       18.586   7.180       17.491   5.046
+ments of INTER on the prediction performance over the in-                                               SAITS       15.510   5.124       14.478   1.982
+complete multivariate time series data, i.e., Ablation Study.                       INTER (Ours)           \        15.322      4.913   14.106     1.790
+The detailed experimental results are described in Appendix
+                                                                                               Table 2: Short-term forecasting performance
+E.2. We can observe that, each component of INTER pos-
+itively affects performance. Then, we study the Effect of
+Missing Rate (i.e., how many features/values in multivari-                        This is caused by the much higher complexity of CSDI’s
+ate time series data are dropped) on the time series analysis                     score-based diffusion model compared to other imputation
+performance. The detailed experimental results are described                      methods.
+in Appendix E.3. One can observe that, INTER basically
+                                                                                     It can be observed that INTER substantially outperforms
+achieves the best forecasting performance in each case.
+                                                                                  all baselines. In forecasting accuracy (MSE and MAE),
+Incomplete Long-term Time Series Forecasting                                      INTER surpasses the best imputation-based method (Timer
+Setups. To fully evaluate model performance in forecasting,                       with SAITS) by 20.91% on average, reaching 24.46% on Ill-
+we adopt two benchmark types: long-term and short-term.                           ness in terms of MSE. Compared to TriD-MAE, which inte-
+For the long-term setting, we use four widely-used public                         grates built-in imputation, INTER achieves an average im-
+multivariate time series datasets: Electricity [Gasparin et al.,                  provement of 76.20% in MSE, demonstrating a significant
+2022], Weather [Zhou et al., 2021], Exchange [Zhang and                           accuracy gain. This is attributed to INTER’s use of an ef-
+Berardi, 2001], and Illness [Zhou et al., 2021], covering four                    fective analysis model that combines a missing-state-aware
+real-world scenarios.                                                             dropping strategy with an incomplete forecasting loss, thus
+   Results. Table 1 presents the experimental results of in-                      boosting accuracy.
+complete time series forecasting methods. For Electricity and                        Visualization. Figure 3 visualizes forecasting results for the
+Weather, results of CSDI-based baselines are unavailable (de-                     top 4 features of a randomly selected sample from Exchange.
+noted as “\”) due to exceeding the 105 -second time limit.                        It clearly shows that INTER yields much better accuracy than
+
+
+
+                                                                           6602
+                                                       Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+
+
+
+                         Informer                  PatchTST                                   TimesNet                 OneFitsAll                                Timer            TriD-MAE                                   INTER              Ground-truth
+
+
+                  2.97                                                                -0.15                                                           0.96                                                        3.36
+Predicted value
+
+
+
+
+                                                                                                                                    Predicted value
+
+
+
+
+                                                                                                                                                                                                Predicted value
+                                                                    Predicted value
+                  2.42                                                                -0.47                                                           0.73                                                        2.77
+
+
+                  1.86                                                                -0.78                                                           0.50                                                        2.17
+
+
+                  1.30                                                                -1.09                                                           0.26                                                        1.58
+                         0   7      15   23       31    39     47                             0   7   15    23    31     39   47                             0    7   15    23   31   39   47                            0     7     15   23   31   39   47
+                                     Timestamp                                                         Timestamp                                                         Timestamp                                                    Timestamp
+                  (a) Feature x1 in Exchange                                          (b) Feature x2 in Exchange                                      (c) Feature x3 in Exchange                                  (d) Feature x4 in Exchange
+                                                       Figure 3: Visualization of incomplete multivariate time series forecasting on Exchange
+
+
+                     Models              Impu.          Physionet                        Heartbeat         JapaneseVowels                              model’s capacity for high-level representation learning. We
+                    Informer              Zero           0.774                            0.724                0.904                                   use three public real-world time series datasets: two represen-
+                      2021               BRITS           0.786                            0.730                0.962                                   tative multivariate datasets from the UEA Time Series Clas-
+                                         SAITS           0.803                            0.735                0.962
+                   PatchTST               Zero           0.867                            0.780                0.910
+                                                                                                                                                       sification Archive [Bagnall et al., 2018] (i.e., Heartbeat and
+                     2022                BRITS           0.877                            0.737                0.965                                   JapaneseVowels), and one public medical dataset (i.e., Phys-
+                                         SAITS           0.875                            0.780                0.964                                   ionet) [Goldberger et al., 2000]. We pre-process the datasets
+                    Dlinear               Zero           0.769                            0.717                0.874                                   following the descriptions in [Zerveas et al., 2021], where
+                     2023                BRITS           0.782                            0.722                0.912                                   subsets vary in sequence length.
+                                         SAITS           0.797                            0.727                0.929
+                   TimesNet               Zero           0.865                            0.722                0.906
+                                                                                                                                                          Results. Table 3 presents a comparative analysis of clas-
+                     2023                BRITS           0.878                            0.751                0.964                                   sification performance across the three datasets. INTER
+                                         SAITS           0.874                            0.756                0.963                                   achieves the best performance in all cases, surpassing the best
+                  OneFitsAll              Zero           0.873                            0.728                0.912                                   baseline, OneFitsAll with BRITS, by an average of 3.56%
+                    2023                 BRITS           0.886                            0.761                0.966
+                                         SAITS           0.882                            0.757                0.965                                   in accuracy. Compared with the analysis method incorporat-
+                     Timer                Zero           0.872                            0.734                0.876                                   ing built-in imputation, TriD-MAE, INTER achieves an aver-
+                     2024                BRITS           0.885                            0.767                0.914                                   age improvement of 14.91% in accuracy. Moreover, INTER
+                                         SAITS           0.881                            0.763                0.931                                   demonstrates the most stable classification accuracy, further
+                  TriD-MAE                    \              0.776                            0.723              0.856                                 validating its effectiveness.
+       INTER (Ours)                           \              0.897                            0.820              0.989
+
+                     Table 3: Classification accuracy under different datasets                                                                         6         Conclusion
+                                                                                                                                                       In this paper, we propose INTER, a novel end-to-end frame-
+                                                                                                                                                       work for incomplete multivariate time series analysis that by-
+baselines, consistently being closest to the ground truth, fur-                                                                                        passes traditional imputation methods by leveraging PLM to
+ther confirming its strong forecasting ability on incomplete                                                                                           directly learn the distribution of incomplete time series data.
+multivariate time series.                                                                                                                              We further provide a theoretical analysis showing that the
+Incomplete Short-term Time Series Forecasting                                                                                                          MPD strategy in INTER achieves lower sample variance for
+Setups. For the short-term setting, we adopt the M4 [Makri-                                                                                            time series with the same dropout rate compared to alterna-
+dakis, 2018] dataset and its representative subsets, including                                                                                         tive dropping strategies, demonstrating its statistical advan-
+yearly and monthly collected univariate marketing data. The                                                                                            tage. Extensive experiments conducted on 11 publicly avail-
+M4 dataset contains 100,000 time series at varying frequen-                                                                                            able real-world time series datasets show that INTER greatly
+cies. We adopt three baselines with strong performance on                                                                                              beats the state-of-the-art methods in effectiveness.
+this task: TimesNet, OneFitsAll, and Timer. For each impute-
+then-analysis method, we use two representative imputation                                                                                             Acknowledgments
+algorithms, Zero and SAITS, to fill in the missing data.
+   Results. Table 2 presents the experimental results of mul-                                                                                          This work was supported in part by the “Pioneer” and “Lead-
+tivariate time series analysis methods for the short-term fore-                                                                                        ing Goose” R&D Program of Zhejiang (No. 2024C01212),
+casting task. It can be observed that INTER clearly outper-                                                                                            and the Ningbo Yongjiang Talent Programme Grant 2024A-
+forms all baselines, exceeding the best-performing method                                                                                              158-G. Mengyin Zhu is the corresponding author of the
+(i.e., OneFitsAll with SAITS) by an average of 2.90%,                                                                                                  work.
+demonstrating its strong capability in short-term forecasting
+tasks.                                                                                                                                                 References
+Incomplete Time Series Classification                                                                                                                  [Bagnall et al., 2018] Anthony Bagnall, Hoang Anh Dau, Ja-
+Setups. We adopt sequence-level classification to verify the                                                                                             son Lines, Michael Flynn, James Large, Aaron Bostrom,
+
+
+
+                                                                                                                               6603
+                        Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+
+
+
+  Paul Southam, and Eamonn Keogh. The uea multivari-                          [Goel et al., 2022] Karan Goel, Albert Gu, Chris Donahue,
+  ate time series classification archive, 2018. arXiv preprint                  and Christopher Ré. It’s raw! audio generation with state-
+  arXiv:1811.00075, 2018.                                                       space models. In ICML, pages 7616–7633, 2022.
+[Bartholomew, 1971] David J Bartholomew. Time series                          [Goldberger et al., 2000] Ary L Goldberger, Luis AN Ama-
+  analysis forecasting and control. Journal of the Opera-                       ral, Leon Glass, Jeffrey M Hausdorff, Plamen Ch Ivanov,
+  tional Research Society, 22(2):199–201, 1971.                                 Roger G Mark, Joseph E Mietus, George B Moody,
+                                                                                Chung-Kang Peng, and H Eugene Stanley. Physiobank,
+[Buuren and Groothuis-Oudshoorn, 2010] S van Buuren and
+                                                                                physiotoolkit, and physionet: components of a new re-
+  Karin Groothuis-Oudshoorn. mice: Multivariate imputa-                         search resource for complex physiologic signals. circu-
+  tion by chained equations in r. Journal of Statistical Soft-                  lation, 101(23):e215–e220, 2000.
+  ware, pages 1–68, 2010.
+                                                                              [Kraskov et al., 2004] Alexander     Kraskov,    Harald
+[Cao et al., 2018] Wei Cao, Dong Wang, Jian Li, Hao Zhou,
+                                                                                Stögbauer, and Peter Grassberger. Estimating mutual
+  Lei Li, and Yitan Li. Brits: Bidirectional recurrent imputa-                  information. Physical Review E—Statistical, Nonlinear,
+  tion for time series. In NeurIPS, pages 6775–6785, 2018.                      and Soft Matter Physics, 69(6):066138, 2004.
+[Che et al., 2018] Zhengping Che, Sanjay Purushotham,                         [Li et al., 2022] Yan Li, Xinjiang Lu, Yaqing Wang, and De-
+  Kyunghyun Cho, David Sontag, and Yan Liu. Recurrent                            jing Dou. Generative time series forecasting with diffu-
+  neural networks for multivariate time series with missing                      sion, denoise, and disentanglement. Advances in Neural
+  values. Scientific Reports, 8(1):6085, 2018.                                   Information Processing Systems, 35:23009–23022, 2022.
+[Coletta et al., 2024] Andrea Coletta, Sriram Gopalakrish-                    [Liang et al., 2024] Yuxuan Liang, Haomin Wen, Yuqi Nie,
+  nan, Daniel Borrajo, and Svitlana Vyetrenko. On the con-                       Yushan Jiang, Ming Jin, Dongjin Song, Shirui Pan, and
+  strained time-series generation problem. Advances in Neu-                      Qingsong Wen. Foundation models for time series anal-
+  ral Information Processing Systems, 36, 2024.                                  ysis: A tutorial and survey. In Proceedings of the 30th
+[Du et al., 2023] Wenjie Du, David Côté, and Yan Liu. Saits:                   ACM SIGKDD conference on knowledge discovery and
+  Self-attention-based imputation for time series. Expert                        data mining, pages 6555–6565, 2024.
+  Systems with Applications, 219:119619, 2023.                                [Liao et al., 2024] Weibin Liao, Yifan Zhu, Yanyan Li,
+[Ekambaram et al., 2023] Vijay Ekambaram,           Arindam                      Qi Zhang, Zhonghong Ou, and Xuesong Li. Revgnn:
+  Jati, Nam Nguyen, Phanwadee Sinthong, and Jayant                               Negative sampling enhanced contrastive graph learning for
+  Kalagnanam. Tsmixer: Lightweight mlp-mixer model for                           academic reviewer recommendation. ACM Transactions
+  multivariate time series forecasting. In Proceedings of the                    on Information Systems, 43(1):1–26, 2024.
+  29th ACM SIGKDD Conference on Knowledge Discovery                           [Lim and Zohren, 2021] Bryan Lim and Stefan Zohren.
+  and Data Mining, pages 459–469, 2023.                                          Time-series forecasting with deep learning: a sur-
+[Feng et al., 2023] Raymond Feng, Flavio P Calmon, and                           vey. Philosophical Transactions of the Royal Society A,
+   Hao Wang. Adapting fairness interventions to missing val-                     379(2194):20200209, 2021.
+   ues. In NeurIPS, pages 59388–59409, 2023.                                  [Liu et al., 2024] Yong Liu, Haoran Zhang, Chenyu Li, Xi-
+[Feng et al., 2024] Yu Feng, Zhen Tian, Yifan Zhu, Zongfu                        angdong Huang, Jianmin Wang, and Mingsheng Long.
+   Han, Haoran Luo, Guangwei Zhang, and Meina Song. Cp-                          Timer: Generative pre-trained transformers are large time
+   prompt: Composition-based cross-modal prompting for                           series models. In ICML, 2024.
+   domain-incremental continual learning. In Proceedings of                   [Makridakis, 2018] Spyros Makridakis.         M4 dataset,
+   the 32nd ACM International Conference on Multimedia,                         2018. https://github.com/M4Competition/M4-methods/
+   pages 2729–2738, 2024.                                                       tree/master/Dataset (Accessed: 2025-01-24).
+[Feng et al., 2025] Yu Feng, Yangli-ao Geng, Yifan Zhu,                       [Miao et al., 2021] Xiaoye Miao, Yangyang Wu, Jun Wang,
+   Zongfu Han, Xie Yu, Kaiwen Xue, Haoran Luo,                                  Yunjun Gao, Xudong Mao, and Jianwei Yin. Generative
+   Mengyang Sun, Guangwei Zhang, and Meina Song. Pm-                            semi-supervised learning for multivariate time series im-
+   moe: Mixture of experts on private model parameters for                      putation. In AAAI, pages 8983–8991, 2021.
+   personalized federated learning. In Proceedings of the
+                                                                              [Miao et al., 2022] Xiaoye Miao, Yangyang Wu, Lu Chen,
+   ACM on Web Conference 2025, pages 134–146, 2025.
+                                                                                Yunjun Gao, Jun Wang, and Jianwei Yin. Efficient and
+[Franceschi et al., 2019] Jean-Yves Franceschi, Aymeric                         effective data imputation with influence functions. Pro-
+   Dieuleveut, and Martin Jaggi. Unsupervised scalable                          ceedings of the VLDB Endowment, 15(3):624–632, 2022.
+   representation learning for multivariate time series. In                   [Moody et al., 2011] George B Moody, Roger G Mark, and
+   NeurIPS, volume 32, pages 1–12, 2019.
+                                                                                Ary L Goldberger. Physionet: Physiologic signals, time
+[Gasparin et al., 2022] Alberto Gasparin, Slobodan Lukovic,                     series and related open source software for basic, clinical,
+  and Cesare Alippi. Deep learning for time series forecast-                    and applied research. In 2011 Annual International Con-
+  ing: The electric load case. CAAI Transactions on Intelli-                    ference of the IEEE Engineering in Medicine and Biology
+  gence Technology, 7(1):1–25, 2022.                                            Society, pages 8327–8330. IEEE, 2011.
+
+
+
+                                                                       6604
+                        Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+
+
+
+[Nie et al., 2022] Yuqi Nie, Nam H Nguyen, Phanwadee                          [Yi et al., 2024] Kun Yi, Jingru Fei, Qi Zhang, Hui He,
+   Sinthong, and Jayant Kalagnanam. A time series is worth                       Shufeng Hao, Defu Lian, and Wei Fan. Filternet: Harness-
+   64 words: Long-term forecasting with transformers. In                         ing frequency filters for time series forecasting. Advances
+   ICLR, pages 1–24, 2022.                                                       in Neural Information Processing Systems, 37:55115–
+[Radford et al., 2019] Alec Radford, Jeffrey Wu, Rewon                           55140, 2024.
+   Child, David Luan, Dario Amodei, Ilya Sutskever, et al.                    [Zerveas et al., 2021] George Zerveas, Srideepika Jayara-
+   Language models are unsupervised multitask learners.                          man, Dhaval Patel, Anuradha Bhamidipaty, and Carsten
+   OpenAI Blog, 1(8):9, 2019.                                                    Eickhoff. A transformer-based framework for multivariate
+[Silva et al., 2012] Ikaro Silva, George Moody, Daniel J                         time series representation learning. In Proceedings of the
+   Scott, Leo A Celi, and Roger G Mark.                Predict-                  27th ACM SIGKDD conference on knowledge discovery &
+   ing in-hospital mortality of icu patients: The phys-                          data mining, pages 2114–2124, 2021.
+   ionet/computing in cardiology challenge 2012. In CINC,                     [Zhang and Berardi, 2001] Guoqiang Peter Zhang and Vic-
+   pages 245–248, 2012.                                                          tor L Berardi. Time series forecasting with neural network
+[Tashiro et al., 2021] Yusuke Tashiro, Jiaming Song, Yang                        ensembles: An application for exchange rate prediction.
+   Song, and Stefano Ermon. Csdi: Conditional score-based                        Journal of the Operational Research Society, 52:652–664,
+   diffusion models for probabilistic time series imputation.                    2001.
+   In NeurIPS, volume 34, pages 24804–24816, 2021.                            [Zhang et al., 2023] Kai Zhang, Chao Li, and Qinmin Yang.
+[Vaswani et al., 2017] Ashish Vaswani, Noam Shazeer, Niki                        Trid-mae: A generic pre-trained model for multivariate
+   Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez,                          time series with missing values. In Proceedings of the
+   Łukasz Kaiser, and Illia Polosukhin. Attention is all you                     32nd ACM International Conference on Information and
+   need. In NeurIPS, pages 1–11, 2017.                                           Knowledge Management, pages 3164–3173, 2023.
+                                                                              [Zhou et al., 2021] Haoyi Zhou, Shanghang Zhang, Jieqi
+[Wang et al., 2022] Heyuan Wang, Tengjiao Wang, Shun Li,
+                                                                                 Peng, Shuai Zhang, Jianxin Li, Hui Xiong, and Wancai
+   Jiayi Zheng, Shijie Guan, and Wei Chen. Adaptive long-
+                                                                                 Zhang. Informer: Beyond efficient transformer for long se-
+   short pattern transformer for stock investment selection. In
+                                                                                 quence time-series forecasting. In AAAI, volume 35, pages
+   IJCAI, pages 3970–3977, 2022.
+                                                                                 11106–11115, 2021.
+[Wen et al., 2022] Qingsong Wen, Linxiao Yang, Tian Zhou,
+                                                                              [Zhou et al., 2023a] Linqi Zhou, Michael Poli, Winnie Xu,
+   and Liang Sun. Robust time series analysis and applica-
+                                                                                 Stefano Massaroli, and Stefano Ermon. Deep latent state
+   tions: An industrial perspective. In Proceedings of the 28th
+                                                                                 space models for time-series generation. In ICML, pages
+   ACM SIGKDD Conference on Knowledge Discovery and
+                                                                                 42625–42643, 2023.
+   Data Mining, pages 4836–4837, 2022.
+                                                                              [Zhou et al., 2023b] Tian Zhou, Peisong Niu, Liang Sun,
+[Wu et al., ] Haixu Wu, Tengge Hu, Yong Liu, Hang Zhou,
+                                                                                 Rong Jin, et al. One fits all: Power general time series anal-
+   Jianmin Wang, and Mingsheng Long. Timesnet: Temporal
+                                                                                 ysis by pretrained lm. NeurIPS, 36:43322–43355, 2023.
+   2d-variation modeling for general time series analysis. In
+   The Eleventh International Conference on Learning Rep-                     [Zhu et al., 2023] Yifan Zhu, Fangpeng Cong, Dan Zhang,
+   resentations.                                                                 Wenwen Gong, Qika Lin, Wenzheng Feng, Yuxiao Dong,
+[Wu et al., 2022] Yangyang Wu, Jun Wang, Xiaoye Miao,                            and Jie Tang. Wingnn: dynamic graph neural networks
+                                                                                 with random gradient aggregation window. In Proceed-
+   Wenjia Wang, and Jianwei Yin. Differentiable and scalable
+                                                                                 ings of the 29th ACM SIGKDD conference on knowledge
+   generative adversarial models for data imputation. ArXiv
+                                                                                 discovery and data mining, pages 3650–3662, 2023.
+   Preprint ArXiv:2201.03202, 2022.
+[Wu et al., 2023] Yangyang Wu, Xiaoye Miao, Xinyu
+   Huang, and Jianwei Yin. Jointly imputing multi-view data
+   with optimal transport. In AAAI, volume 37, pages 4747–
+   4755, 2023.
+[Yi et al., 2023a] Kun Yi, Qi Zhang, Wei Fan, Hui He, Liang
+   Hu, Pengyang Wang, Ning An, Longbing Cao, and Zhen-
+   dong Niu. Fouriergnn: Rethinking multivariate time series
+   forecasting from a pure graph perspective. Advances in
+   neural information processing systems, 36:69638–69660,
+   2023.
+[Yi et al., 2023b] Kun Yi, Qi Zhang, Wei Fan, Shoujin
+   Wang, Pengyang Wang, Hui He, Ning An, Defu Lian,
+   Longbing Cao, and Zhendong Niu. Frequency-domain
+   mlps are more effective learners in time series forecast-
+   ing. Advances in Neural Information Processing Systems,
+   36:76656–76679, 2023.
+
+
+
+                                                                       6605
+

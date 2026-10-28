@@ -1,0 +1,1001 @@
+                                        JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, APRIL 2025                                                                                         1
+
+
+
+
+                                             Tackling Incomplete Data in Air Quality Prediction: A Bayesian
+                                                     Deep Learning Framework for Uncertainty Quantification
+                                        Yuzhuang Pian , Taiyu Wang , Shiqi Zhang , Graduate Student Member, IEEE, Rui Xu , and Yonghong Liu
+
+
+
+                                           Abstract—Accurate air quality forecasts are vital for public
+                                        health alerts, exposure assessment, and emissions control. In
+                                        practice, observational data are often missing in varying pro-
+                                        portions and patterns due to collection and transmission issues.
+                                        These incomplete spatio-temporal records-combined with the
+                                        lack of explicit mechanisms for modeling measurement noise
+arXiv:2511.02175v1 [cs.LG] 4 Nov 2025
+
+
+
+
+                                        and predictive uncertainty—impede reliable inference and risk
+                                        assessment and can lead to overconfident extrapolation. To
+                                        address these challenges, we propose an end-to-end framework,
+                                        the channel gated learning unit based spatio-temporal bayesian
+                                        neural field (CGLU-BNF). It uses Fourier features with a graph
+                                        attention encoder to capture multiscale spatial dependencies
+                                        and seasonal temporal dynamics. A channel gated learning
+                                        unit, equipped with learnable activations and gated residual
+                                        connections, adaptively filters and amplifies informative features.
+                                        Bayesian inference jointly optimizes predictive distributions and
+                                        parameter uncertainty, producing point estimates and calibrated
+                                        prediction intervals. We conduct a systematic evaluation on two
+                                        real world datasets, covering four typical missing data patterns
+                                        and comparing against five state-of-the-art baselines. CGLU-BNF
+                                        achieves superior prediction accuracy and sharper confidence
+                                        intervals. In addition, we further validate robustness across
+                                        multiple prediction horizons and analysis the contribution of                 Fig. 1: Schematic of air quality observations and missing
+                                        extraneous variables. This research lays a foundation for reliable
+                                        deep learning based spatio-temporal forecasting with incomplete               data patterns. Measurements are collected in real time by
+                                        observations in emerging sensing paradigms, such as real world                fixed monitors and mobile platforms. Two spatial–temporal
+                                        vehicle borne mobile monitoring.                                              resolutions are considered: (i) 500 m × 500 m at 1-h
+                                           Index Terms—Air quality prediction, incomplete data, uncer-                intervals and (ii) 250 m × 250 m at 1-h intervals.
+                                        tainty quantification, Bayesian deep learning, CGLU-BNF.
+
+                                                                                                                      further exacerbate data loss [5]. For instance, at a spatial
+                                                                 I. I NTRODUCTION                                     resolution of 500 m × 500 m and a temporal resolution of
+                                              IR pollution events will cause serious environmental                    1 hour, the missing rate can reach approximately 26%, and
+                                        A     disasters (greenhouse effect [1], photochemical smog [2])
+                                        and will also lead to an increase in public health risks such as
+                                                                                                                      when the temporal resolution is refined to 5 minutes, it may
+                                                                                                                      soar to 95%.
+                                        respiratory and cardiovascular diseases [3], especially partic-                  Incomplete spatio-temporal observations disrupt cross site
+                                        ulate matter. Therefore, leveraging sensor observations for air               information flow and distort the covariance structure, obscur-
+                                        quality prediction is crucial to accurately assess atmospheric                ing spatial dependence and heterogeneity [6] (Fig.2(a)). Tem-
+                                        conditions and to enable early warnings of pollution events.                  poral gaps smooth fluctuations, attenuate periodic and high
+                                           Due to financial constraints and deployment complexities,                  frequency components, bias the delineation of seasonal cycles,
+                                        achieving uniform sensor coverage across urban areas remains                  and reduce forecasting accuracy [7] (Fig.2(b)). These effects
+                                        challenging, resulting in substantial spatial and temporal gaps               pose substantial challenges for modeling spatio-temporal dy-
+                                        in observational data [4] (Fig.1). Moreover, sensor malfunc-                  namics.
+                                        tions, maintenance activities, and unstable data transmission                    Furthermore, under incomplete observations, reconstructing
+                                                                                                                      a spatio-temporal field is non-unique: finite measurements with
+                                           Yuzhuang Pian, Shiqi Zhang, Rui Xu, and Yonghong Liu are with the
+                                        School of Intelligent Systems Engineering, Sun Yat-sen University, Shenzhen   missing entries typically admit a set of feasible solutions rather
+                                        518107, China; the Guangdong Provincial Key Laboratory of Intelligent         than a single one. Fig.2(c) illustrates this with ten stations, four
+                                        Transportation System, Guangzhou 510006, China; and the Guangdong             of which lack data. Subject to physical smoothness and statis-
+                                        Provincial Engineering Research Center for Traffic Environmental Monitor-
+                                        ing and Control, Guangzhou 510006, China((email: {pianyzh, zhangshq73,        tical consistency, multiple concentration fields can fit the ob-
+                                        xurui27, liuyh3}@mail2.sysu.edu.cn). Taiyu Wang is with the School of         servations equally well (Fig.2(ii)); their two-dimensional slices
+                                        Intelligent Systems Engineering, Sun Yat-sen University, Shenzhen 518107,     expose the resulting spatial multi solution behavior (Fig.2(iii)).
+                                        China(email:wangty56@mail3.sysu.edu.cn).
+                                           Corresponding authors: Yonghong Liu (email: liuyh3@mail.sysu.edu.cn)       Yet most existing methods return only a single deterministic
+                                           Manuscript received 0, 2025; revised 0, 2025.                              estimate, neglecting epistemic and aleatoric uncertainties and
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, APRIL 2025                                                                            2
+
+
+
+
+                                                                    Fig. 3: Two methodological ideas for prediction tasks facing
+                                                                    incomplete data.
+
+
+                                                                    gaps, we propose a novel Bayesian deep learning framework:
+Fig. 2: Challenges of air quality prediction tasks with
+                                                                    the channel gated learning unit based spatio-temporal bayesian
+incomplete observations.
+                                                                    neural field (CGLU-BNF). This framework supports air quality
+                                                                    prediction and uncertainty quantification under various missing
+offering no rigorous assessment of predictive reliability [8].      data patterns. Our study emphasizes improving both prediction
+Therefore, it is essential to develop effective methods for         accuracy and confidence intervals sharpness when historical
+automatically extracting and analyzing meaningful patterns          spatio-temporal data are incomplete. In the feature extraction,
+from incomplete data, in order to improve both prediction           the model first applies a graph attention network to capture
+accuracy and uncertainty estimation.                                spatial dependencies among monitoring stations. It then aug-
+   Although methods such as ConvLSTM, Transformer, and              ments these representations with temporal seasonal and spa-
+their variants excel when observations are complete or nearly       tial Fourier features to enrich spatio-temporal embeddings in
+so, they face limitations with incomplete spatio-temporal data.     sparse observation scenarios. The channel gated learning unit
+These models assume that inputs fully and accurately capture        integrates a learnable activation function, channel attention,
+the underlying physical state. They also require a fixed spatial    and a gated residual mechanism. It non-linearly transforms the
+grid and uniform time intervals [9]. Discarding any record that     input, recalibrates channels, and fuses original and transformed
+contains missing values causes information loss and introduces      features to adaptively filter and enhance information. Finally,
+estimation bias [10]. The two-stage framework [11]–[13] was         at the Bayesian inference layer, the model uses maximum a
+used to address this issue. It first complements missing data       posteriori estimation and multi-particle integration to jointly
+and then trains a prediction model on the completed dataset         optimize the predictive distribution and parameter uncertainty.
+(Fig.3(a)). However, this direct coupling has limitations. Exist-   The framework directly outputs prediction means along with
+ing imputation methods struggle to learn the fine grain spatio-     their confidence intervals. The main contributions are summa-
+temporal features required for high precision air quality fore-     rized below:
+casting [14]. Moreover, systematic studies on how imputation           • We propose CGLU-BNF, an end-to-end Bayesian deep
+
+accuracy affects prediction performance remain scarce.                    learning framework that unifies feature extraction, target
+   To address these limitations, end-to-end models have                   prediction, and uncertainty quantification. It enables di-
+emerged. They optimize feature extraction, data completion,               rect forecasting under diverse missing data patterns, elim-
+and target prediction simultaneously within a single framework            inating pre-interpolation and other auxiliary imputation
+(Fig.3(b)). Hybrid probabilistic deep models [15], [16] are now           steps.
+prominent end-to-end approaches that couple the expressive             • We combine graph attention, temporal harmonics, and
+power of deep networks with the closed-form interpolation                 spatial Fourier embeddings to build a multilevel spatio-
+and uncertainty quantification of probabilistic methods. In               temporal encoder that robustly captures cross scale de-
+this study, we adopt Gaussian processes (GPs) [17], treat-                pendencies and correlations under irregular sampling.
+ing missing observations as latent variables so that arbitrary         • We introduce a channel gated learning unit that integrates
+missing patterns can be handled within a unified probabilistic            channel attention, gated residual networks, and learnable
+framework. However, applying this approach to air quality                 activation functions to dynamically filter and enhance
+forecasting presents two major challenges. First, posterior               key informative channels, suppress noise, and stabilize
+inference incurs substantial computational cost O(N 3 ) [18].             training.
+Second, selecting key parameters—such as the covariance                • Across two real world air quality datasets, CGLU-BNF
+kernel and mean function—depends heavily on expert domain                 delivers lower errors and narrower confidence intervals
+knowledge [19]. Thus, designing a probabilistic prediction                under four typical missing data patterns and across mul-
+model that ensures high accuracy and reliable uncertainty                 tiple forecast time domains.
+quantification while flexibly handling varying degrees of miss-        The remainder of this paper is organized as follows. Section
+ing data remains a major research challenge.                        II reviews related work on air quality forecasting in complete
+   To overcome these challenges and close existing research         data. Section III formalizes the problem. Section IV presents
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, APRIL 2025                                                                                3
+
+
+
+the CGLU-BNF framework and details its modules. Section             to unstable convergence and high computational cost [29].
+V reports experiments under different missing data patterns         Consequently, most air quality applications remain limited to
+and rates. Section VI examines the effects of forecast time         small scale or offline settings, falling short of the reliability de-
+domains and architectural choices. Section VII concludes the        manded by multiple missingness model and complex dynamic
+paper.                                                              environments.
+                                                                        To address these limitations, probabilistic approaches based
+                       II. R ELATED W ORK                           on Gaussian processes have been extensively explored.
+                                                                    They model pollutant concentrations as a continuous spatio-
+   This section reviews strategies for handling incomplete ob-
+                                                                    temporal random field and treat missing observations as la-
+servations, including explicit imputation in two-stage pipelines
+                                                                    tent variables inferred jointly in the posterior. They natu-
+and end-to-end predictive approaches.
+                                                                    rally accommodate arbitrary missingness and provide inter-
+                                                                    polation, prediction, and uncertainty quantification in closed
+A. Two-stage Predictive Model                                       form. However, these methods face key bottlenecks: posterior
+   To address missing data, existing prediction methods can         inference is computationally expensive; performance is sen-
+be categorized into two training paradigms: two-stage and           sitive to hyperparameter choices that often rely on domain
+end-to-end approaches. In the two-stage framework, missing          expertise; and standard kernels are insufficiently flexible for
+values are first imputed using statistical or machine learning      non-smooth dynamics and high dimensional structure [30].
+techniques, after which a prediction model is trained on the        These limitations have motivated hybrid models that couple
+completed dataset. Among these, generative approaches—such          GP priors with deep spatio-temporal encoders to balance
+as variational auto encoders (VAEs) and generative adversarial      expressiveness and tractability. Hamelijnck et al. presented
+networks (GANs)—have gained popularity and demonstrate              ST-SVGP [15], which integrates a state space formulation
+superior interpolation performance. Zhao [12] combined a            with natural gradient variational inference and employs sparse
+Transformer with a GAN: the Transformer extracts temporal           inducing points to model large, incomplete datasets efficiently
+features, and the GAN improves data generation and gener-           under non-conjugate likelihoods.
+alization. Asaei [13] proposed DAerosol.GAN.NTM, which                  Inspired by previous research, this study presents CGLU-
+first imputes missing air quality records with a GAN and then       BNF based on GPs, a Bayesian deep learning framework
+applies a neural turing machine for time series prediction,         for air quality prediction with incomplete data. The model
+markedly increasing multi-pollutant forecast accuracy.              first fuses a graph attention network with Fourier transforms
+   Despite their success in interpolation and forecasting, cas-     to extract spatio-temporal features from sparse observations.
+caded two-stage frameworks often lack end-to-end synergy            It then employs a channel gated learning unit to adaptively
+because the modules are trained independently. Specifically,        filter and amplify salient information. Finally, a multi-particle
+existing interpolation methods fail to capture fine grain spatio-   maximum a posteriori ensemble produces predictions and con-
+temporal dependencies, impairing high precision forecasts and       fidence intervals, enabling accurate prediction and uncertainty
+propagating errors downstream [14]. Multi-city studies con-         quantification under multiple mode missing data conditions.
+firm that pre-prediction interpolation yields suboptimal results,
+with performance declining sharply as missing rates rise [20].                       III. P ROBLEM F ORMULATION
+Moreover, most interpolation algorithms produce only single         A. Incomplete Air Quality Monitoring Information
+point estimates, preventing reliable uncertainty propagation to        Let the air quality monitoring network have nodes
+the prediction stage [21], [22].                                    V = {1, . . . , N } observed at discrete times T =
+                                                                    {t1 , · · · , tT , · · · , tT +H }. Each station v ∈ V has geographic
+B. End-to-end Predictive Model                                      coordinates sv ∈ Rds (typically longitude and latitude, ds =
+                                                                    2). Let yt,v denote the pollutant concentration at node v and
+   To mitigate error propagation between task modules, end-
+                                                                    time t, and let zt,v denote a vector of exogenous covariates
+to-end predictive framework jointly model the missing data
+                                                                    (e.g., meteorology, land use). We partition the timeline into a
+mechanism and the prediction target, enabling imputation and
+                                                                    history window T1 = T≤tT = {t1 , · · · , tT } and a prediction
+forecasting to share a single objective function. The most
+                                                                    horizon T2 = T>tT = {tT +1 , · · · , tT +H }. In practice, sensor
+direct implementation is the mask-driven deterministic deep
+                                                                    failures, maintenance, and unstable data transmission cause
+network (e.g., STSM [23], HD-TTS [24]), which concatenates
+                                                                    random or structured missing observations, leading to spatio-
+observations with a binary mask and uses gating or self-
+                                                                    temporal discontinuities.
+attention to ignore missing entries. Although lightweight, these
+models struggle to capture long range dependencies under
+high missing rates or extended gaps [25], and they yield only       B. Monitoring Graph
+point forecasts without uncertainty estimates [26]. Generative         We encode the geospatial topology of the urban monitoring
+latent variable approaches address these drawbacks. Variants        network as a graph G = (V, E) to capture spatial correlations
+based on VAEs [27] and diffusion models [28] learn the joint        and enhance prediction under sparse observations. Edges E
+data distribution, sample plausible imputations in latent space,    represent site connectivity. The adjacency matrix A is con-
+and produce predictions with associated confidence. However,        structed from pairwise distances dij = ∥si − sj ∥2 , where σd
+they require dual networks or adversarial training, leading         controls the spatial decay scale.
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, APRIL 2025                                                                                                                  4
+
+
+
+TABLE I: Comparison of existing air quality prediction methods under incomplete observation conditions.
+                                                                   Missing data    Uncertainty       Computational
+  Paradigm                       Representative work                                                                      Key limitation
+                                                                    robustness    quantification       efficiency
+  Complete data forecasting      CMAQ, ARIMA, STHTNN, etc.             ×               ×                  △               Requires complete input data
+  Discriminative methods         Kriging, MissForest, MICE, etc.       △               ×                  ✓               Error accumulation
+                                 DAerosol.GAN.NTM,
+  Generative methods                                                   △               △                   ×              GAN instability, High computational cost
+                                 Transformer-GAN, etc.
+  Mask-driver models             HD-TTS, STSM, etc.                    △               ×                  ✓               Long gaps, Deteriorate predictions
+  Latent variable models         PVGAE, iMMAir, etc.                   ✓               △                  ×               Slow convergence, Training expensive
+                                                                                                                          High computational complexity,
+  Probabilistic predict models   ST-SVGP, VSMTGP, etc.                 ✓               ✓                  △
+                                                                                                                          Limited non-stationary feature representation
+  Probabilistic predict models   CGLU-BNF(Our)                        ✓✓             ✓✓                   ✓               -
+ 1 Missing data robustness: ✓ ✓ (multiple pattern & long gap), ✓ (High), △ (Moderate), × (Low).
+ 2 Uncertainty quantification: ✓✓ (Small interval sharpness), ✓ (Bayesian), △ (Partial or heuristic), × (None).
+ 3 Computational efficiency: ✓ (High), △ (Moderate), × (Low)
+
+
+
+
+                                                                                  Fourier embeddings, and GAT to capture seasonal periodic-
+                Aij = exp(−d2ij /σd 2 ), i ̸= j, Aii = 0                   (1)    ities and cross site dependencies under irregular sampling.
+                                                                                  Second, the FEMP module employs multi-layer channel gated
+C. Air Quality Forecasting Under Missing Observations                             learning units to adaptively filter and enhance spatio-temporal
+   Let O ⊆ T × V be the set of observed indices used in                           features, mapping them to conditional means. Finally, the BPP
+the loss, and let η = |O|. Our goal is to learn a stochastic                      module performs particle based maximum a posteriori (MAP)
+mapping that outputs the predictive mean µθ and a calibrated                      inference to estimate the predictive distribution and to produce
+uncertainty estimate for t ∈ T2 .                                                 point forecasts with confidence intervals.
+   Formally, we aim to learn a probabilistic model ρθ that                           CGLU-BNF takes incomplete historical sequences and aux-
+specifies the conditional distribution of future pollutant con-                   iliary features as input and outputs per-node predictions and
+centrations given the available information.                                      quantiles over the forecast horizon. This end-to-end design
+                                                                                  avoids pre-interpolation, accommodates multiple missingness
+                                                                                  patterns, and preserves computational efficiency and accuracy.
+                                                               
+                ρθ YT2 ,V | YT1 ,V , ZT1 ,V , T1 , SV , G                  (2)
+   The model outputs the predictive distribution ρθ , from
+which the predictive mean µθ and quantile intervals for YT2 ,V                    B. Data Acquistion and Preprocessing
+are obtained. Under the assumption of Gaussian observation      
+noise with variance σ 2 , i.e., yt,v | θ, σ 2 ∼ N µθ (t, v), σ 2 ,                   To ensure stable training with incomplete observations, we
+the negative log-likelihood for a single observation is given                     adopt a three-step preprocessing pipeline: (i) sample filtering
+by                                                                                invalid records that lack target values. (ii) temporal discretiza-
+                                                                                  tion: timestamps are mapped to integer indices by calculating
+                  1                     2 1                                      offsets from a reference time, with the minimum shifted
+    ℓt,v (θ, σ 2 ) =    yt,v − µθ (t, v) + log(2πσ 2 )   (3)                      to zero. (iii) feature normalization: apply z-score scaling to
+                 2σ 2                          2
+                                                                                  all non-temporal features to mitigate scale disparities. For
+  Aggregating over all spatio-temporal locations in a given                       each (t, v) we assemble the model input by concatenating
+prediction window, the loss function for model training can                       the normalized time features, the spatial coordinates, and
+be written as:                                                                    exogenous variables.
+                                X                                                    After processing, each sample fi is represented as:
+               LNLL (θ, σ 2 ) =         ℓt,v (θ, σ 2 )   (4)
+                                       (t,v)∈O
+                                                                                                        t′ i = index(ti ) − index(t0 )                               (5)
+                     IV. M ETHODOLOGY
+A. Overall Framework
+   The CGLU-BNF framework captures and enhances long                                                     fi = [t′ i , s′ i , y ′ ti ,vi , Z′ ti ,vi ]                (6)
+range spatio-temporal dynamics in incomplete observations,
+produces direct predictions under diverse missing data pat-                         All processed samples are stacked to form the feature matrix
+terns, and supplies reliable uncertainty estimates. It comprises                  Fprepro :
+three key components: multilevel spatio-temporal feature en-
+coding (MSFE), feature enhancement and mean prediction                                             Fprepro = [f1T , · · · , fηT ] ∈ Rη×dprepro                       (7)
+(FEMP), and Bayesian probabilistic prediction (BPP). Fig.4
+presents the overall architecture of the proposed CGLU-BNF                          Among them, dprepro is the total feature dimension after
+model for air quality prediction.                                                 data preprocessing. t′ i is the discretized time index, s′ i the
+   First, the MSFE module builds a high dimensional spatio-                       normalized spatial coordinate vector, y ′ ti ,vi the normalized
+temporal representation from historical observations and ex-                      pollutant concentration, and Z′ ti ,vi the corresponding vector
+ogenous covariates. It combines temporal harmonics, spatial                       of normalized exogenous covariates.
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, APRIL 2025                                                                                5
+
+
+
+
+Fig. 4: The CGLU-BNF prediction framework architecture diagram.
+
+
+C. Multilevel Spatio-temporal Feature Encoding                      in the temporal evolution of the same location. Their mathe-
+   Conventional spatio-temporal encoders face three main lim-       matical form can be expressed as:
+itations: (i) conflating seasonal periodicity with long term
+trends; (ii) relying on position invariant spatial kernels; and               Fts = (T ⊙ Slatitude ) ⊕ (T ⊙ Slongitude )              (8)
+(iii) assigning equal importance to all features. These issues
+                                                                       On the other hand, the space-space interaction term can
+are exacerbated when observations are sparse or unevenly
+                                                                    implicitly capture nonlinear geographic correlations in low
+distributed. To overcome them, we build a multilevel spatio-
+                                                                    dimensional spatial coordinates, thereby enhancing the abil-
+temporal feature encoder that converts raw and incomplete
+                                                                    ity to characterize complex diffusion patterns and regional
+inputs into a unified high dimensional representation while
+                                                                    differences. Specifically, for spatial vectors, we consider the
+preserving the temporal seasonality and spatial correlations
+                                                                    interaction between their two dimensions:
+that govern air quality dynamics.
+   Specifically, we retain the preprocessed features Fprepro
+                                                                                      Fss = Slatitude ⊙ Slongitude                    (9)
+and augment them with spatio-temporal interaction terms Fts
+and purely spatial longitude–latitude products Fss . Temporal          2) Temporal Seasonality Terms (TST): To explicitly rep-
+harmonics are introduced to capture multiscale seasonality, and     resent seasonality across minutes to years and decouple it
+spatial harmonics to model smooth geographic gradients. The         from long term trends, we introduce harmonic time features.
+GAT generates site-level attention embeddings that provide          We use orthogonal sine–cosine pairs as fixed bases that inte-
+neighborhood context. Each feature block is assigned a learn-       grate smoothly into gradient based training. This construction
+able scaling coefficient optimize together with the network         captures multiple periods without adding trainable parameters
+weights. All features are concatenated, and a channel attention     to the basis itself. Let P = {p1 , · · · , pL } denote the set of
+layer rescales their magnitudes before they enter the feature       base periods, and for each pl define the harmonic orders
+enhancement and mean prediction module. This integrated             Hpl = {1, · · · , Hpmax  } (with Hpmax     ≤ |pl /2|). Given the
+                                                                                          l             l
+structure disentangles linear, periodic, and local dependencies,                     ′
+                                                                    reindexed time t i , the h-th harmonic for period pl is
+automatically balances their scales and saliencies, and yields
+numerically stable, informative representations robust to in-                  ξl,h (t′ i ) = [cos 2πht′ i /pl , sin 2πht′ i /pl ]   (10)
+complete spatio-temporal sampling.
+   1) Interaction Terms: In spatio-temporal dynamic model-             Then, all harmonics are concatenated by channel to form
+ing, temporal or spatial characteristics alone often cannot fully   the seasonal characteristic term Fseasonality .
+characterize the nonlinear evolution of pollutants. Therefore,         3) Spatial Fourier Terms (SFT): To mitigate the low fre-
+we explicitly introduce spatio-temporal interaction and the         quency bias of deep networks and resolve multi-scale spa-
+purely spatial interaction. Spatio-temporal interaction terms       tial structure at the city block scale [31], we apply Fourier
+are used to characterize the dynamic dependencies inherent          feature mapping to the normalized coordinates s′ . For axis
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, APRIL 2025                                                                               6
+
+
+
+c ∈ {longitude, latitude}, define the harmonic orders Kc =             mechanisms: a learnable adaptive scaling layer and a channel
+{0, 1, · · · , Kc−1 } and map the scalar coordinate s′c to             attention gate. The scaling layer automatically adjusts each
+                                                                       feature’s magnitude during training, whereas the attention gate
+          ψc (s′ c ) = [cos(2π2k s′ c ), sin(2π2k s′ c )]k∈Kc   (11)   models inter channel dependencies, amplifies salient informa-
+                                                                       tion, and suppresses redundancy. And placing scaling before
+   With the full spatial embedding Fspatial . This yields multi
+                                                                       attention avoids gate saturation and lets attention focus on
+frequency sine–cosine channels that enhance the resolution of
+                                                                       information rather than raw magnitude.
+spatial patterns.
+                                                                          Let ζ be a set of learnable scaling coefficients. We scale
+   4) Spatial Aggregation Terms: SFT mitigate low frequency
+                                                                       each channel by broadcasting exp(ζ) ∈ RM in the batch,
+bias and recover stationary, translation invariant structure.
+                                                                       achieving automatic rescaling of feature scales.
+However, they do not encode network topology or flow di-
+rection, limiting their ability to model neighborhood specific,                                            T
+
+nonstationary couplings common in urban air quality (e.g.,                                   Fscale = eζ ⊙ F′                      (15)
+local advection, street canyon effects).
+                                                                         The channel attention gate first applies global average pool-
+   To address this limitation, we augment SFT with a single
+                                                                       ing to the scaled features Fscale , extracting channel statistics
+layer, multi-head graph attention network. The GAT preserves
+                                                                       and removing spatial bias.
+a distance-decay prior while learning direction-aware edge
+weights from data, thereby adapting to local topology and                                              B
+                                                                                                 1 X
+nonstationary dependencies. It also aggregates information                                 z=        Fscale [b, :]                 (16)
+from adjacent and multi-hop neighbors, improving robustness                                      B
+                                                                                                   b=1
+to sparse or irregular sampling. In this hybrid design, SFT
+                                                                         A two-layer fully connected network then produces a gating
+supplies a global, frequency rich basis for stable learning
+                                                                       vector wca that captures nonlinear inter channel dependencies.
+of large scale, quasi-stationary patterns, whereas GAT injects
+adaptive local structure and directionality to capture anisotropy
+and nonstationary couplings.                                                                 1,1
+                                                                         wca = Sigmoid(ReLU(Wca  z + b1,1  1,2   1,2
+                                                  (0)                                                 ca )Wca + bca ) (17)
+   For node i, we form a static site descriptor hi from robust
+statistics (the long term mean and the 25th/75th percentiles),           The final re-weighted representation is Fca .
+which is resilient to missingness and outliers. O-head GAT
+propagates messages only along edges with nonzero entries                                  Fca = Fscale ⊙ wca ⊤                    (18)
+in A, and its attention weights are adjusted by a Gaussian
+connectivity prior. The attention is
+                                                                       D. Feature Enhancement and Mean Prediction
+                              h               i
+   
+   
+       (o)                              (0)
+     eij = LeakyReLU a(o)⊤ W(o) hi ∥ W(o) hj
+                                            (0)                           In settings with incomplete spatio-temporal observations,
+                                                                       multilevel feature encoding yields unified representations but
+   
+   
+   
+    ē(o) = A · e(o)
+   
+    ij
+   
+   
+   
+              ij  ij
+                                                                     still contains noise and imbalance from missing data and
+       (o)                    (o)                                      channel heterogeneity. To suppress this noise, emphasize crit-
+     aij = softmaxj∈N (i) ēij                                  (12)
+   
+   
+   
+   
+                                                                     ical signals, and map high dimensional features to pollutant
+                                                                       concentrations robustly, we add a feature enhancement and
+                    X
+    (o)                  (o)       (0)
+                         aij W(o) hj 
+   
+   h = ELU 
+    i                                                                 mean prediction layer. Let h(l) denote the input to the l-th
+   
+   
+                     j∈N (i)
+                                                                       channel gated learning unit (CGLU). Each CGLU comprises a
+  Outputs are concatenated and linearly projected:                     residual block with a learnable mixture activation and channel
+                                       (1)        (O)                  wise attention, followed by a lightweight MLP that produces
+               gi = Wout concat(hi , · · · , hi         )       (13)   the conditional mean.
+   where N (i) = {j : Aij > 0}. The learnable projection                  To mitigate vanishing gradients, we employ a soft gated
+matrix of the O-th head is W(o) , and a(o) is the associated           residual architecture that regulates information flow. The gates
+attention kernel. Aggregating gi over time yields the spatial          suppress noise while maintaining stable gradient propagation.
+feature FGAT .                                                         Within each residual block, we first compute intermediate
+   5) Adaptive Scaling and Channel Reweighting: Spatio-                features via a linear transformation.
+temporal encoding yields a batch feature matrix F′ ∈ RB×M ,
+                                                                                                 (l)           (l)   (l)   (l)
+where B is the batch size and M is the channel count.                            f (l) = ELU(W1 h(l) + b1 )W2 + b2                 (19)
+
+                                                                          Here, h(l) denotes the input feature vector at layer l; W(l)
+ F′ = Fprepro ⊕ Fts ⊕ Fss ⊕ Fseasonality ⊕ Fspatial ⊕ FGAT (14)        and b(l) are the linear projection weights and bias vector of the
+  The concatenated spatio-temporal features vary widely in             gated residual subnetwork. The gating vector γ (l) is computed
+amplitude, variance, and correlation. High amplitude channels          to adaptively fuse the original and enhanced features, where
+                                                                          (l)       (l)
+dominate the gradients, weak signals are obscured, and redun-          Wg and bg are the parameters used to generate γ (l) .
+dant or noisy channels hinder efficiency and generalization.
+To counter these effects, the encoder employs two weighting                          γ (l) = Sigmoid(Wg(l) h(l) + b(l)
+                                                                                                                   g )             (20)
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, APRIL 2025                                                                               7
+
+
+
+    Note that conventional residual or deep networks fix the
+activation function (e.g., ReLU or ELU). Such rigid nonlin-                                  h                                i
+                                                                        (θ ∗ , σ ∗ ) ∈ argmax log ρ(Y | X, θ, σ) + log π(θ, σ) (26)
+earities limit expressiveness and can saturate when the input                           θ, σ
+distribution shifts, especially at high missing rates. To enable
+                                                                          By running MAP optimization from multiple random ini-
+adaptive selection of nonlinearities and refine hidden represen-
+                                                                       tializations, we obtain M local modes {(θ m , σm )}M    m=1 . To
+tations during training, we replace the fixed activation function
+                                                                       enhance stability and convergence, training uses Adam with a
+with a trainable convex combination of ELU and Tanh. This
+                                                                       cosine-annealed learning rate and global gradient clipping. At
+design enhances both model fitting and uncertainty quan-
+                                                                       test time, each solution (θ m , σm ) yields a Gaussian predictive
+tification. ELU preserves negative responses and accelerates                             (m)   2(m)
+                                                                       component N (µ∗ , σ∗ ) for a new input. An equal weight
+convergence, whereas Tanh provides smooth, bounded outputs.
+                                                                       mixture of these components approximates the posterior pre-
+The resulting learnable activation is defined as follows:
+                                                                       dictive distribution:
+         ϕα(l) (u) = α(l) ELU(u) + (1 − α(l) )Tanh(u)           (21)
+                                                                                                  M
+                                                                                               1 X           (m)  2(m) 
+   The hybrid activation ϕα(l) learns a convex mixture of ELU               ρ(y∗ | x∗ , D) ≈         N y∗ | µ∗ , σ∗ I              (27)
+                                                                                               M m=1
+and Tanh via the trainable coefficient α(l) ∈ [0, 1]. Together
+with the gating mechanism, it yields the gated residual output            Here, µ∗
+                                                                                  (m)
+                                                                                       and σ∗
+                                                                                               2(m)
+                                                                                                   denote the predictive mean and
+r(l) :                                                                 the observation noise variance of the m-th posterior mode,
+                                                                       respectively.
+          r(l) = (1 − γ (l) ) ⊙ h(l) + γ (l) ⊙ ϕα(l) (f (l) )                                                           (m)
+                                                                                                                 PM
+                                                                (22)      The final output mean is E[y∗ ] = M 1
+                                                                                                                  m=1 µ∗ , which
+                                                                       corresponds to the prediction uncertainty:
+   To enhance discriminative spatio-temporal feature selection,
+we incorporate channel attention to adaptively recalibrate each                                   M
+                                                                                            1 X 2(m)         (m) 
+channel. As in Eqs.16–18, global average pooling followed by                     Var(y∗ ) =       σ∗ + Varm µ∗                     (28)
+                                                     (l)                                    M m=1
+a two-layer MLP produces the attention weights ω ca , which
+are then used to reweight the channels.
+                                                                                               V. E XPERIMENTS
+                         ĥ(l) = r(l) ⊙ ω (l)                   (23)     This section assesses the CGLU-BNF framework for air
+                                          ca
+                                                                       quality prediction under multiple data missing scenarios.
+  After L stacked CGLUs, the conditional mean is produced
+by a lightweight MLP.                                                  A. Dataset and Configurations
+                                                                          1) Dataset Description: To quantitatively assess CGLU-
+                     µθ = Wmlp ĥ(l) + bmlp                     (24)   BNF’s predictive performance under incomplete observations,
+   where µθ denotes the point estimate, and Wmlp and bmlp              we conduct P M10 forecasting experiments on two publicly
+are the MLP weight matrix and bias vector.                             available, large scale air quality datasets. The two datasets
+                                                                       are distributed in different regions with different missing rates
+                                                                       and can cover a variety of complex scenarios. Table II lists
+E. Bayesian Probabilistic Prediction                                   the detailed information of the datasets, and Fig.5 shows
+  We append a Bayesian output layer to the deterministic               their spatio-temporal observation snapshots, which visualize
+backbone to quantify predictive uncertainty under missing and          the nonstationarity and periodicity of the air quality data and
+noisy observations. We instantiate the conditional prediction          other statistical features. Notably, the London dataset includes
+model in Eq.2 using a Gaussian likelihood function and                 only spatio-temporal attributes (time, latitude and longitude)
+weakly informative logistic prior. Given the spatio-temporal           and P M10 concentrations, whereas the Hong Kong dataset
+input matrix X, the FEMP module provides the conditional               additionally provides exogenous covariates(SO2 , N O2 , O3 ,
+mean µθ (X). Assuming i.i.d. Gaussian observation noise with           P M2.5 ). Furthermore, we do not impute missing ground truth
+variance σ 2 , the likelihood is                                       values; instead, we exclude them during evaluation so that all
+                                                                       models are assessed on the same set of observed targets.
+                  Y | θ, σ 2 ∼ N µθ (X), σ 2 Iη
+                                                   
+                                                                (25)      2) Experimental Setting: To assess robustness across mod-
+                                                                       els and varying degrees of incompleteness, we simulate four
+   Where, σ denotes the standard deviation of the observation          common missing data scenarios. (i) random missing, where
+noise; θ collects all network parameters (e.g. scaling coeffi-         values are lost sporadically in the data stream (e.g., packets
+cients, weights, biases, and activation mixing coefficients); and      dropped during transient communication degradation); (ii)
+η is the number of observed entries contributing to the training       node missing, where all observations from a single node are
+loss in Eqs.3–4.                                                       absent for an extended period (e.g., continuous sensor failure);
+   We place independent Logistic(0, 1) priors on log σ and             (iii) timestamp missing, where data from every node are simul-
+on each component of θ to mitigate overfitting and enhance             taneously unavailable at a specific time (e.g., a localized power
+robustness. Parameters are estimated via multiple MAP opti-            outage); and (iv) block missing, where gaps form contiguous
+mizations initialized from different starting points.                  spatio-temporal blocks (e.g., a moving sensor passing through
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, APRIL 2025                                                                                   8
+
+
+
+TABLE II: Data description
+     Datasets         Regions     Frequency            Time span            Nodes    Time points     Observations   Missing rate
+ Air quality1 [15]    London        Hourly      2018-12-31 to 2019-03-31      72        2161           155592           7.32%
+ Air quality2 [32]   Hong Kong      Hourly      2023-01-01 to 2024-12-31      18       17544           315792           3.09%
+
+
+
+                                                                           that produce confidence intervals (ST-SVGP, BayesNF).
+                                                                             • Historical Average (HA). This baseline computes the
+                                                                                mean hourly pollutant concentration at each node from
+                                                                                historical data and uses this constant value to forecast all
+                                                                                future time steps.
+                                                                             • Random Forest (RF) [33]. An ensemble of decision trees
+                                                                                is trained on bootstrap samples with randomly selected
+                                                                                feature subsets, and their outputs are averaged, enabling
+                                                                                robust spatio-temporal forecasting and effective modeling
+                                                                                of nonlinear relationships.
+                                                                             • Spatio-Temporal Gradient Boosting Trees (STGBOOST)
+                                                                                [34]. This extension of gradient boosting trees adapts
+                                                                                the algorithm to spatio-temporal data, using recursive
+                                                                                partitioning to capture nonlinear interactions between
+Fig. 5: Slices of spatial and temporal observations of air                      spatial and temporal factors and thus improve predictive
+quality datasets. The first row shows spatial slices of air                     accuracy.
+quality across monitoring stations in London and Hong Kong                   • Spatio-Temporal Sparse Variational Gaussian Process
+
+at a fixed time. The second row presents temporal slices of                     (ST-SVGP) [15]. Employs a sparse variational Gaussian
+complete air quality time series at a representative station in                 process with inducing points to handle high dimensional
+each city. The third row displays temporal slices of sparse                     spatio-temporal data, enabling scalable, non-parametric
+air quality observations at the same stations and                               predictions with quantified uncertainty.
+corresponding time periods.                                                  • Bayesian Neural Fields (BayesNF) [30]. Models high di-
+                                                                                mensional spatio-temporal function fields with Bayesian
+                                                                                neural networks and employs MAP inference to deliver
+                                                                                both predictive means and their associated uncertainty
+a tunnel that creates a persistent blind spot). For each scenario,
+                                                                                estimates.
+the missing rate is varied from 10% to 80% in 10% increments.
+And target values are removed according to the specified                     4) Performance Metrics: To evaluate predictive accuracy
+missing pattern. For cross validation, observation sites are               and uncertainty quality, we report root mean square error
+randomly partitioned into five disjoint subsets. In each fold,             (RMSE), mean absolute error (MAE), coefficient of determi-
+the last month of records from sites in the held-out subset                nation (R2 ), and symmetric mean absolute percentage error
+constitutes the test set. The training set includes all remaining          (SMAPE) for point forecasts, along with average interval
+data: full period observations from the other sites and non-test           width (AIW) and relative interval width mean (RIWM) for
+periods from the held-out sites.                                           predictive intervals. The metrics are defined as follows:
+   All experiments were conducted on a server equipped with                            η
+an Intel Xeon Gold 6133 CPU and four NVIDIA GeForce                                   1X
+                                                                                          (µθ (i, upper) − µθ (i, lower)),
+                                                                              
+                                                                              
+                                                                               AIW =
+RTX4090 GPUs. The CGLU-BNF model comprises three                              
+                                                                                     η        i=1
+stacked channel-gated learning layers, each with 512 hidden                              η                                             (29)
+units and 16 particles. Training uses the AdamW optimizer
+                                                                                      1 X µθ (i, upper) − µθ (i, lower)
+                                                                                RIWM =                                   .
+                                                                              
+                                                                              
+                                                                              
+with an initial learning rate of 5 × 10−3 , a batch size of
+                                                                                      η       i=1
+                                                                                                         y          i
+512, and a maximum of 5000 epochs. Hyperparameters were
+first tuned in preliminary trials, and the contribution of each            B. Experimental Results
+module was assessed through ablation studies. Under identical                1) Prediction Accuracy: Table III summarizes predictive
+settings, CGLU-BNF and all baseline models were trained and                performance on both datasets, and Fig.6 plots predicted versus
+validated on five non-overlapping splits of each dataset, and              observed series for CGLU-BNF and the three uncertainty
+average performance metrics were reported to enable a fair                 aware baselines. At low missing rates in original data, all meth-
+comparison under incomplete observation scenarios.                         ods benefit from dense observations; nevertheless, CGLU-BNF
+   3) Baselines: To benchmark the CGLU-BNF framework                       achieves the best point forecast accuracy and the sharpest
+under incomplete data conditions, we compare it against five               prediction intervals among probabilistic models. On the Lon-
+baseline models on two public datasets. Baselines comprise                 don dataset, RMSE and MAE decrease to 7.26 µg/m3 and
+classical statistical and machine learning predictors (HA, RF,             4.04 µg/m3 , yielding relative gains of 6.74% and 7.95% over
+STGBOOST) and end-to-end Gaussian process based methods                    the next best BayesNF. More importantly, its average interval
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, APRIL 2025                                                                                     9
+
+
+
+
+Fig. 6: Predictive performance of the CGLU-BNF and baselines methods on the original London and Hong Kong datasets
+
+
+width is only 11.86 µg/m3 , which is 18.85% narrower than                 struggles with complex seasonality and nonstationarity, while
+that of BayesNF. Consistent improvements are observed on the              manual selection of inducing points adds approximation bias.
+Hong Kong dataset, with improvements of 4.35% and 5.63%                   BayesNF improves performance by jointly learning Fourier-
+in RMSE and MAE, respectively.                                            based temporal trends and spatial kernels, and by generating
+                                                                          prediction intervals through a particle-based MAP head. How-
+TABLE III: Results of the comparison of the prediction                    ever, because it lacks explicit spatial structure and feature
+performance of the baseline model at the original missing                 selection mechanisms, local heterogeneity and noise are not
+rate for the two datasets. R2 and SMAPE are reported in                   sufficiently addressed. As a result, the model requires wider
+percentage (%).                                                           intervals to maintain adequate coverage.
+   Dataset     Method     RMSE    MAE     R2      SMAPE    AIW     RIWM      CGLU-BNF delivers additional performance gains for two
+                  HA      15.67   11.01   0.09    48.27      0       0    principal reasons. First, because the few remaining gaps are
+                  RF      10.37    6.09   0.61    28.64      0      0     sparsely distributed when most sensors report normally, com-
+               ST-SVGP     9.74    6.08   0.65    29.33    44.03   2.49
+   London                                                                 bined with the spatio-temporal feature coding layer of the
+              STGBOOST     8.80    5.12   0.72    24.35    25.45   1.15
+               BayesNF     7.78   4.39    0.78    21.06    14.61   1.80   graph attention can explicitly model nodes adjacency and data
+              CGLU-BNF     7.26    4.04   0.81    19.47    11.86   1.64   statistics. This design attenuates residual spatial patterns, tight-
+                  HA      25.11   20.19   -1.21   52.37      0       0    ens posterior spatial variance, and produces a smoother, more
+                  RF      4.81     3.63    0.92    8.61      0      0
+                                                                          accurate reconstruction. Second, the channel gated learning
+               ST-SVGP    4.59     3.44    0.93    8.24    35.72   1.86
+  Hong Kong
+              STGBOOST    4.38     3.22    0.93    7.74    16.59   0.81
+                                                                          unit adaptively re-weights feature maps, suppressing noisy
+               BayesNF    3.36    2.40     0.96   5.60     8.34    0.20   channels while amplifying informative ones; its gated residuals
+              CGLU-BNF     3.22    2.27    0.96    5.24    8.07    0.19   connections preserve gradient flow, allowing a deeper network
+                                                                          without overfitting and thus reducing both residual and model
+   Specifically, HA still yields large errors and an almost zero          uncertainty.
+R2 , underscoring its inability to follow temporal fluctuations              2) Random Missing Patterns: Random missing in oper-
+once the data depart from a smooth mean. RF reduces errors by             ational atmospheric networks typically stem from transient
+a large amount, showing that nonlinear tree splits can exploit            packet loss or brief sensor interference. These point-like voids,
+local covariates; however, its lack of explicit temporal and              lacking fixed structure, offer a stringent test of model ro-
+spatial modeling limits accuracy when dynamic dependencies                bustness and generalization. We evaluated CGLU-BNF under
+and neighborhood correlations are present. ST-GBOOST nar-                 random missing rates from 10% to 80% (square-marked curves
+rows the gap by embedding coarse time lags into gradient                  in Fig.7). As missingness increases, performance declines
+boosted trees and produces plausible confidence intervals, yet            slightly without a critical breakpoint. Specifically, on the
+hand-crafted lags cannot fully capture multiscale dependen-               London dataset, RMSE rises from 7.29 µg/m3 to 7.86 µg/m3 .
+cies. ST-SVGP reproduces the overall trend but suffers from               The Hong Kong dataset exhibits the same trend.
+sizable point- and interval-prediction errors, likely because                Under a representative 30% random missing setting, CGLU-
+the Matérn kernel with separable spatio-temporal structure               BNF achieved the best performance on all metrics and de-
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, APRIL 2025                                                                                         10
+
+
+
+
+Fig. 7: Predictive performance of CGLU-BNF under varying missing rates and missing data patterns. The first row shows the
+results for the London dataset, and the second row shows the results for the Hong Kong dataset.
+
+
+livered the narrowest prediction intervals (TableIV). Across              hardware failure or power outage), causing the simultaneous
+both datasets, it reduced RMSE and MAE by 4.49% and                       loss of all observations. We operationalize this as a 24-hour
+5.48%, respectively, relative to the next-best model, BayesNF.            outage at a site on a given day. As shown by the circle-
+Additionally, compared to the predictions based on the orig-              marked curve in Fig.7, CGLU-BNF’s performance declines
+inal data, the results offer two new insights. First, raising             gradually as the missing rate increases from 10% to 80%. On
+the random missing rate to 30% inflates errors and inter-                 the London dataset, RMSE and MAE rise by 1.28 µg/m3
+val widths for every model, underscoring the influence of                 and 1.07 µg/m3 , respectively, indicating strong resilience to
+missingness patterns; the deterioration is most pronounced                sporadic station failures. When outages become widespread,
+for probabilistic methods such as ST-SVGP and BayesNF,                    the graph structure sparsifies and long range paths shrink,
+whereas CGLU-BNF retains strong robustness. Second, the                   substantially increasing the difficulty of spatial extrapolation.
+performance gap widens: CGLU-BNF’s RMSE is 25.10%
+lower than ST-SVGP’s and 5.43% lower than BayesNF’s.                      TABLE V: Predictive performance of different models in
+These gains indicate that CGLU-BNF’s dynamic channel re-                  scenarios with 30% node missing data
+weighting distinguishes genuine fluctuations from information                Dataset    Method    RMSE    MAE     R2      SMAPE   AIW     RIWM
+gaps and prunes redundant uncertainty, while baseline models                               HA     15.69   10.95   0.09    48.03     0       0
+                                                                                           RF     10.33    6.14   0.61    28.75     0       0
+compensate for missing data by broadening their intervals.
+                                                                                       STGBOOST    8.89    5.17   0.71    24.63   27.59   1.43
+                                                                             London
+                                                                                        ST-SVGP    9.85    6.18   0.64    29.90   44.08   2.47
+TABLE IV: Predictive performance of different models in
+                                                                                        BayesNF    7.91   4.52    0.77    21.67   14.51   1.71
+scenarios with 30% random missing data                                                 CGLU-BNF    7.53    4.26   0.79    20.47   12.84   1.45
+                                                                                           HA     25.39   20.46   -1.23   53.29     0       0
+   Dataset     Method     RMSE    MAE     R2      SMAPE    AIW     RIWM
+                                                                                           RF     4.98     3.75    0.91    8.91     0       0
+                  HA      15.71   11.05   0.08    48.41      0       0
+                                                                                       STGBOOST   4.47     3.30    0.93    7.95   16.80   0.82
+                  RF      10.38    6.11   0.61    28.65      0      0      Hong Kong
+                                                                                        ST-SVGP    4.67    3.55    0.92    8.64   36.72   1.87
+              STGBOOST     8.81    5.13   0.72    24.39    27.65   1.43
+   London                                                                               BayesNF   3.56    2.56     0.96   6.01    8.38    0.21
+               ST-SVGP     9.85    6.16   0.64    29.72    44.56   2.50
+                                                                                       CGLU-BNF    3.35    2.38    0.96    5.53   7.62    0.19
+               BayesNF     7.80   4.44    0.78    21.31    14.76   1.70
+              CGLU-BNF     7.38    4.14   0.80    19.91    11.83   1.27
+                  HA      25.11   20.20   -1.21   52.39      0       0       Under the 30% node missing scenario, CGLU-BNF remains
+                  RF      4.85     3.66    0.92    8.69      0      0     the top performer (Table V). On the London dataset, its
+  Hong Kong
+              STGBOOST    4.43     3.26    0.93    7.84    16.74   0.82   RMSE and MAE are 7.53 µg/m3 and 4.26 µg/m3 , improving
+               ST-SVGP    4.71     3.50    0.92    8.43    36.74   1.85
+               BayesNF    3.40    2.43     0.96   5.67     8.29    0.20
+                                                                          over BayesNF by 5.35% and 6.39%, respectively; the Hong
+              CGLU-BNF     3.28    2.33    0.96    5.41    7.54    0.19   Kong dataset shows comparable gains with 3.35 µg/m3 and
+                                                                          2.38 µg/m3 . Although probabilistic baselines capture spatial
+ 3) Node Missing: Node missing occurs when an entire                      correlations, their lack of explicit spatial interpolation and
+monitoring station is offline for an extended period (e.g.,               limited local feature modeling cause marked degradation. By
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, APRIL 2025                                                                                         11
+
+
+
+contrast, CGLU-BNF leverages multi-source spatial structure:                 5) Block Missing: To evaluate robustness under simulta-
+a graph attention layer aggregates multi-hop information from             neous temporal and spatial outages, we simulate a spatio-
+neighboring stations when nodes are missing, while spatial                temporal block missing scenario in which every station lacks
+Fourier embeddings provide global periodic bases that bridge              a continuous 24-hour segment on a given day. The diamond-
+local gaps and support long range extrapolation. Notably, most            marked curve in Fig.7 shows that errors increase monoton-
+models perform worse under node missing than under random                 ically as the missing rate rises from 10% to 80%. On the
+or timestamp missing, underscoring the need for fine grain                London dataset, CGLU-BNF’s RMSE and MAE increase by
+inter-site dependency modeling to sustain accuracy.                       0.89 µg/m3 and 0.69 µg/m3 , respectively; on the Hong Kong
+   4) Timestamp Missing: To evaluate temporal generalization              dataset, they rise by 0.17 µg/m3 and 0.18 µg/m3 . Com-
+under sudden data outages, we construct a timestamp missing               pared with the random, node, and timestamp missing settings,
+scenario in which all stations simultaneously lack observations           London exhibits the largest degradation under block missing,
+at specific moments. As shown by the triangle-marked curve                whereas Hong Kong shows the smallest. The likely cause is
+in Fig.7, CGLU-BNF degrades smoothly as the missing rate                  that block missing in London breaks both spatial connectiv-
+increases from 10% to 80%, with negligible variation at low               ity and temporal continuity, forcing complex spatio-temporal
+rates. On the London dataset, RMSE and MAE rise by 0.83                   extrapolation. By contrast, the Hong Kong dataset includes
+µg/m3 and 0.63 µg/m3 , respectively; on the Hong Kong                     exogenous covariates (e.g., multiple pollutant concentrations)
+dataset, they increase by 0.28 µg/m3 and 0.29 µg/m3 . These               that remain observed, providing continuous conditioning and
+results indicate that the model effectively leverages cross day           cross-pollutant constraints. These inputs reduce extrapolation
+periodicity to infer short- to medium-term gaps. Moreover,                difficulty and yield the lowest errors in this scenario.
+errors grow less than under node-level missingness because
+spatial information remains intact, allowing the model to                 TABLE VII: Predictive performance of different models in
+exploit inter station correlations and maintain superior overall          scenarios with 30% block missing data
+performance.                                                                 Dataset    Method    RMSE    MAE     R2      SMAPE   AIW     RIWM
+                                                                                           HA     15.80   11.28   0.07    49.13     0       0
+TABLE VI: Predictive performance of different models in                                    RF     12.38    7.32   0.44    32.13     0       0
+                                                                                       STGBOOST   10.14    6.00   0.63    27.19   27.39   1.39
+scenarios with 30% timestamp missing data                                    London
+                                                                                        ST-SVGP   11.38    7.27   0.53    34.06   47.49   2.38
+   Dataset     Method    RMSE     MAE     R2      SMAPE    AIW     RIWM                 BayesNF    9.20   5.31    0.69    24.81   14.91   1.76
+                  HA      15.77   11.15   0.08    48.78      0       0                 CGLU-BNF    8.67    4.95   0.73    23.49   13.69   1.86
+                  RF      10.45    6.18   0.60    28.92      0      0                      HA     25.77   20.90   -1.33   54.98     0       0
+              STGBOOST     8.85    5.13   0.71    24.34    27.55   1.40                    RF     4.93     3.69    0.92    8.71     0       0
+   London
+               ST-SVGP     9.79    6.09   0.65    29.40    47.26   2.45                STGBOOST   4.43     3.26    0.93    7.80   16.41   0.81
+                                                                           Hong Kong
+               BayesNF     8.04   4.59    0.76    21.95    14.45   1.74                 ST-SVGP    4.74    3.49    0.92    8.08   40.95   1.99
+              CGLU-BNF     7.50    4.23   0.79    20.41    12.69   1.43                 BayesNF   3.38    2.43     0.96   5.72    7.97    0.20
+                  HA      25.57   20.68   -1.29   54.16      0       0                 CGLU-BNF    3.20    2.26    0.96    5.25   7.29    0.18
+                  RF      4.82     3.65    0.92    8.63      0      0
+              STGBOOST    4.36     3.20    0.93    7.67    16.65   0.83
+  Hong Kong                                                                  At a representative 30% spatio-temporal block missing rate
+               ST-SVGP    4.57     3.55    0.93    8.31    41.08   1.98
+               BayesNF    3.34    2.40     0.96   5.60     7.92    0.19
+                                                                          (Table VII), CGLU-BNF remains superior to all baselines. On
+              CGLU-BNF     3.26    2.31    0.96    5.36    7.13    0.17   the London dataset, it achieves an RMSE of 8.67 µg/m3 and
+                                                                          an MAE of 4.95 µg/m3 , improving over BayesNF by 5.76%
+   Under a representative 30% timestamp missing setting,                  and 6.78% and over STGBOOST by 14.50% and 17.50%.
+CGLU-BNF outperforms all baselines on every metric (Table                 The Hong Kong dataset shows the same pattern, with RMSE
+VI). On the London dataset, it reduces RMSE and MAE by                    and MAE gains of 5.33% and 7.00% relative to BayesNF,
+6.75% and 7.80% relative to BayesNF, and by 15.25% and                    and 27.77% and 30.67% relative to STGBOOST. These results
+17.54% relative to STGBOOST. On the Hong Kong dataset,                    indicate higher point forecast accuracy and sharper interval
+RMSE and MAE drop by 2.31% and 3.70% compared with                        estimates even under block missing conditions.
+BayesNF. This divergence arises because timestamp missing
+creates simultaneous, moment wide gaps across sites, demand-                                      VI. D ISCUSSION
+ing strong cross-moment information propagation and robust                   This section analyzes the impact of prediction task re-
+extraction of cyclical trends. Traditional statistical models lack        quirements and model structure on accuracy and robustness
+explicit mechanisms for inter-temporal transfer, yielding low             from four complementary perspectives, including the effect of
+accuracy. Probabilistic baselines capture spatial structure but           prediction duration, ablation studies of structural modules, and
+struggle to represent fine grain, long period temporal patterns,          the contribution of exogenous covariates.
+making whole moment gaps difficult to bridge. By contrast,
+CGLU-BNF’s Fourier time series decomposition explicitly
+models long range trends and multiscale seasonality, while the            A. Impact Analysis of Predicted Duration
+channel gated residual unit amplifies persistent periodic signals           To quantify how forecast horizon length affects accuracy
+and suppresses short term noise. Together, these components               and uncertainty, we evaluated the performance of CGLU-BNF
+enable superior performance even under complete temporal                  under two observation conditions: the original London dataset
+outages.                                                                  and its counterpart with 30% random missing values. Test sets
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, APRIL 2025                                                                                                      12
+
+
+
+were configured with time spans of 1 day, 7 days, 14 days,
+and 21 days.
+   As shown in Table VIII, both observation settings exhibit
+an error curve that first increases and then decreases with
+the prediction time span, peaking on the seventh day. This
+non-monotonic pattern aligns with weekly cycles: phase mis-
+matches amplify errors toward the end of the first week. Upon
+entering the second week, the seasonal components of the
+cycle become more readily captured and mutually offset by the
+model, leading to a contraction in short-term high-frequency
+errors. The average interval width exhibits the same trend.                                    Fig. 8: Performance comparison of ablation models on the
+                                                                                               London dataset.
+TABLE VIII: Predictive performance of different models
+facing different prediction time horizon in the original data
+and 30% random missing data                                                                    SFT increases RMSE by 10.6% and doubles AIW, indicat-
+                                                                                               ing that without the global spatial basis, the model strug-
+            Data                Original                        30% random missing
+  Model            1 day   7 days   14 days   21 days   1 day   7 days   14 days     21 days
+                                                                                               gles to reconstruct urban-scale long-wave gradients and high
+            RMSE    7.22    7.85      7.61      7.30     7.49    7.98      7.64        7.40    amplitude fluctuations, compensating passively by widening
+            MAE     4.39    4.81      4.40     4.02      4.57   4.95      4.46        4.14
+             R2     0.87    0.82      0.79     0.80      0.87   0.81      0.79        0.79
+                                                                                               intervals through local smoothing. Removing TST increases
+   Our     SMAPE   14.30   14.62     16.63     20.08    14.80   15.03     16.91       20.41    error by 8.4%, demonstrating the critical role of multiple scale
+             AIW   12.99   14.75     13.64     12.42    12.70   14.65     13.77       12.43
+           RIWM     0.47    0.50      0.59      1.27     0.47    0.50      0.60        1.39
+                                                                                               periodic bases in capturing long term trends. Removing GRN
+            RMSE    8.32    8.43      7.88      7.81     8.36    8.49      7.93        7.82    caused MAE to rise by 7.3% and AIW by 23%, reflecting
+            MAE     5.15    5.35      4.70     4.38      5.06   5.39      4.74        4.41
+             R2     0.83    0.80      0.78     0.77      0.83   0.79      0.78        0.77
+                                                                                               that insufficient deep nonlinear integration simultaneously
+ BayesNF   SMAPE   16.58   16.35     17.92     21.70    16.10   16.47     18.07       21.71    amplifies mean bias and variance mismatch. Removing CA
+             AIW   16.46   17.34     15.78     14.51    15.97   17.45     15.62       14.54
+                                                                                               increases RMSE by 0.8% and AIW by 0.18 µg/m3 , indicat-
+           RIWM     0.62    0.60      0.70      1.73     0.60    0.60      0.69        1.75
+                                                                                               ing that dynamic channel reweighting suppresses redundant
+                                                                                               features and enhances interval sharpness. Removing GAT
+   Introducing 30% random missingness increases errors at
+                                                                                               increases RMSE by 0.7%, indicating that multi-hop adjacency
+short and medium horizons; however, as the horizon lengthens,
+                                                                                               aggregation helps inject neighboring station anomalies and
+the error gap between settings narrows. This suggests that low
+                                                                                               background gradients into target stations, thereby enhancing
+frequency trends and multiple scale seasonality dominate long
+                                                                                               spatial extrapolation and robustness under structured missing
+range forecasts, while the disruptive effect of random gaps
+                                                                                               data scenarios. Overall, CGLU-BNF achieves the smallest
+diminishes. Across both observation settings and all horizons,
+                                                                                               error and sharpest intervals while maintaining good coverage
+CGLU-BNF outperforms the baselines, effectively capturing
+                                                                                               when retaining all components, demonstrating complementary
+weekly cycles and remaining robust to random omissions.
+                                                                                               synergy among submodules in balancing prediction accuracy
+Specifically, on the original data the MAE improvement is
+                                                                                               and interval sharpness.
+11.04%, and under 30% random missingness it is 8.17%.
+                                                                                               C. Hyperparameter Sensitivity Analysis
+B. Ablation Experiments                                                                           We also assessed the model’s hyperparameter sensitivity
+                                                                                               (Table 9) by varying network depth, width, and activation
+   To assess the contribution of each model component, we
+                                                                                               functions on the London dataset. Reducing the hidden layers
+designed ablation experiments using the London air quality
+                                                                                               from three to two (Deep-2) or increasing them to four (Deep-
+dataset. To ensure comparability, all five model variants re-
+                                                                                               4) show a significant decrease in RMSE, MAE, R2 , and
+tained the training settings from the preceding section. Results
+                                                                                               SMAPE, indicating that the three layer configuration already
+are presented in Table 8.
+                                                                                               captures the essential spatio-temporal structure and that perfor-
+  • No-TST: Temporal seasonal terms were removed from                                          mance is relatively insensitive to depth. Expanding the hidden
+    the Spatio-Temporal Feature Coding module;                                                 dimension from 256 to 1024 yields slight accuracy gains
+  • No-SFT: Spatial Fourier terms were removed from the                                        but incurs substantial training time and memory overhead,
+    Spatio-Temporal Feature Coding module;                                                     implying diminishing returns for wider networks when mod-
+  • No-GAT: GAT is removed from the Spatio-Temporal                                            elling high dimensional, sparse spatio-temporal dependencies.
+    Feature Coding module;                                                                     Replacing the learnable composite activation with a fixed,
+  • No-CA: CA in the Concentration Inference module is                                         single activation modestly degrades all metrics, reaffirming
+    removed;                                                                                   that adaptive nonlinearities are valuable for extracting latent
+  • No-GRN: The GRN structure is replaced by the MLP                                           signals and improving forecast accuracy. Overall, a three layer
+    network architecture;                                                                      architecture with 512 hidden units and a learnable activation
+  • CGLU-BNF: The model is structurally complete.                                              mechanism offers a balanced trade-off between accuracy and
+   The ablation results in Table 8 reveal the relative con-                                    computational efficiency while maintaining robust recovery of
+tributions of each submodule within the model. Removing                                        sparse spatio-temporal data.
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, APRIL 2025                                                                                         13
+
+
+
+                                                                     multiple channel gated learning unit adaptively filters and am-
+                                                                     plifies informative features, substantially improving predictive
+                                                                     accuracy for sparse datasets.
+                                                                        Experimental results demonstrate that the proposed model
+                                                                     substantially outperforms other air quality prediction methods
+                                                                     with uncertainty estimation across four common missing data
+                                                                     scenarios: random missing, node missing, timestamp missing,
+                                                                     and spatio-temporal block missing. Its robustness is further
+                                                                     validated in varying prediction horizon tasks, where it consis-
+                                                                     tently surpasses the state-of-the-art BayesNF. Ablation studies
+Fig. 9: Effect of different hyperparameter settings on model         also confirm the effectiveness of the individual strategies and
+prediction effectiveness.                                            modules within CGLU-BNF.
+                                                                        Future work will focus on architectural optimizations to
+                                                                     accelerate training for long horizon forecasting on large scale
+D. Analysis of P M10 Concentration Impacts                           datasets. We will also examine model performance under ex-
+                                                                     tremely sparse observation regimes, such as in-vehicle mobile
+   To quantify the marginal value of exogenous covariates for
+                                                                     monitoring.
+P M10 forecasting, we adopt a single variable incremental
+protocol on the Hong Kong dataset while holding the model
+architecture and training procedure fixed. In each run, we           VIII. CR EDI T AUTHORSHIP C ONTRIBUTION S TATEMENT
+retain only the spatio-temporal features and add one exogenous          The model was designed and implemented by Yuzhuang
+variable to assess its contribution. As shown in Fig.10, P M2.5      Pian and Taiyu Wang. Evaluations were designed by Yuzhuang
+delivers the largest accuracy gain. Gaseous pollutants yield         Pian. Implemented by Yuzhuang Pian, Rui Xu and Shiqi
+smaller but meaningful improvements, with N O2 contributing          Zhang. Yonghong Liu provided guidance and oversight.
+the most among them.                                                 Yuzhuang Pian drafted the manuscript, all authors contributed
+                                                                     to its revision and completion.
+
+                                                                             IX. D ECLARATION OF C OMPETING I NTEREST
+                                                                        The authors declare that they have no known competing
+                                                                     financial interests or personal relationships that could have
+                                                                     appeared to influence the work reported in this paper.
+
+                                                                                           X. ACKNOWLEDGMENTS
+                                                                       This work was supported by the Fundamental Research Key
+                                                                     Program of Shenzhen (No. JCYJ20241202130016022) and the
+Fig. 10: Contribution of different exogenous covariates to the       Guangzhou National Games Air Quality Enhancement Project
+P M10 concentration prediction task                                  (No. SYSU-76160-20240710-0002).
+
+   This phenomenon has a reasonable physical basis. P M2.5                                         R EFERENCES
+and P M10 co-vary because they share emission sources and             [1] S. H. Schneider, “The greenhouse effect: science and policy,” Science,
+undergo coupled aerosol-mass evolution. Including P M2.5                  vol. 243, no. 4892, pp. 771–781, 1989.
+                                                                      [2] R. Dickerson, S. Kondragunta, G. Stenchikov, K. Civerolo, B. Dod-
+therefore improves accuracy and narrows prediction intervals.             dridge, and B. Holben, “The impact of aerosols on solar ultraviolet
+Among the gases, N O2 is the strongest predictor of P M10                 radiation and photochemical smog,” Science, vol. 278, no. 5339, pp.
+because it serves as a robust proxy for traffic-related emissions.        827–830, 1997.
+                                                                      [3] F. B. Bennitt, S. Wozniak, K. Causey, S. Spearman, C. Okereke,
+                                                                          V. Garcia, N. Hashmeh, C. Ashbaugh, A. Abdelkader, M. Abdoun et al.,
+                                                                          “Global, regional, and national burden of household air pollution, 1990–
+          VII. C ONCLUSION AND F UTURE W ORKS                             2021: a systematic analysis for the global burden of disease study 2021,”
+                                                                          Lancet, vol. 405, no. 10485, pp. 1167–1181, 2025.
+   This study introduces CGLU-BNF, a Bayesian deep learning           [4] J. S. Apte and C. Manchanda, “High-resolution urban air pollution
+framework for air quality prediction, with three key advan-               mapping,” Science, vol. 385, no. 6707, pp. 380–385, 2024.
+                                                                      [5] P. Ferrer-Cid, J. M. Barcelo-Ordinas, and J. Garcia-Vidal, “Graph
+tages: (i) It eliminates the need for preprocessing steps such            learning techniques using structured data for iot air pollution monitoring
+as spatial interpolation or temporal padding, enabling direct             platforms,” IEEE Internet Things J., vol. 8, no. 17, pp. 13 652–13 663,
+extraction of spatio-temporal feature evolution from incom-               2021.
+                                                                      [6] J. Xue, Y. Xu, W. Wu, T. Zhang, Q. Shen, H. Zhou, and W. Zhuang,
+plete observations while simultaneously quantifying predictive            “Sparse mobile crowdsensing for cost-effective traffic state estimation
+uncertainty. (ii) Its feature encoding module, which integrates           with spatio–temporal transformer graph neural network,” IEEE Internet
+Fourier functions with a graph attention mechanism, effec-                Things J., vol. 11, no. 9, pp. 16 227–16 242, 2024.
+                                                                      [7] A. S. AlSalehy and M. Bailey, “Improving time series data quality:
+tively captures multi-scale spatial dependencies and seasonal             identifying outliers and handling missing values in a multilocation gas
+temporal patterns across different frequencies. (iii) Its paired          and weather dataset,” Smart Cities, vol. 8, no. 3, p. 82, 2025.
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, APRIL 2025                                                                                                      14
+
+
+
+ [8] H. Papadopoulos, “Guaranteed coverage prediction intervals with gaus-        [32] Hong      Kong      Environmental     Protection    Department,      “Air
+     sian process regression,” IEEE Trans. Pattern Anal. Mach. Intell.,                quality      database     (Hong     Kong),”      [Online].    Available:
+     vol. 46, no. 12, pp. 9072–9083, 2024.                                             https://cd.epic.epd.gov.hk/EPICDI/air/station/, [Accessed: Sep. 1,
+ [9] Y. Wang, J. Wu, M. Long, and J. B. Tenenbaum, “Probabilistic video                2025].
+     prediction from noisy data with a posterior confidence,” in IEEE Conf.       [33] L. Breiman, “Random forests,” Mach. Learn., vol. 45, pp. 5–32, 2001.
+     Comput. Vis. Pattern Recognit., June 2020.                                   [34] F. Pedregosa, G. Varoquaux, A. Gramfort, V. Michel, B. Thirion,
+[10] R. J. Little and D. B. Rubin, Statistical analysis with missing data. John        O. Grisel, M. Blondel, P. Prettenhofer, R. Weiss, V. Dubourg et al.,
+     Wiley & Sons, 2019.                                                               “Scikit-learn: Machine learning in python,” J. Mach. Learn. Res., vol. 12,
+[11] Z. Guo, C. Yang, D. Wang, and H. Liu, “A novel deep learning model                pp. 2825–2830, 2011.
+     integrating cnn and gru to predict particulate matter concentrations,”
+     Process Saf. Environ. Protect., vol. 173, pp. 604–613, 2023.
+[12] H. Zhao, J. Wang, T. Zhang, and H. Hao, “A prediction method for
+     atmospheric monitoring data based on transformer and gan,” in IEEE
+     Inf. Technol. Netw. Electr. Autom. Control Conf., vol. 7. IEEE, 2024,
+     pp. 1472–1477.
+[13] Z.-S. Asaei-Moamam, F. Safi-Esfahani, S. Mirjalili, R. Mohammadpour,
+     and M.-H. Nadimi-Shahraki, “Air quality particulate-pollution prediction
+     applying gan network and the neural turing machine,” Appl. Soft.
+     Comput., vol. 147, p. 110723, 2023.
+[14] A. Wang, Y. Ye, X. Song, S. Zhang, and J. J. Yu, “Traffic prediction
+     with missing data: A multi-task learning approach,” IEEE Trans. Intell.
+     Transp. Syst., vol. 24, no. 4, pp. 4189–4202, 2023.
+[15] O. Hamelijnck, W. Wilkinson, N. Loppi, A. Solin, and T. Damoulas,
+     “Spatio-temporal variational gaussian processes,” in Adv. Neural Inf.
+     Process. Syst., vol. 34. Curran Associates, Inc., 2021, pp. 23 621–
+     23 633.
+[16] P. Das and M. Agarwal, “Less but better towards better aq monitoring
+     by learning inducing points for multi-task ggaussian processes,” in Adv.
+     Neural Inf. Process. Syst., 2023.
+[17] P. D. Sampson and P. Guttorp, “Nonparametric estimation of nonstation-
+     ary spatial covariance structure,” J. Am. Stat. Assoc., vol. 87, no. 417,
+     pp. 108–119, 1992.
+[18] J. Zhang, Y. Ju, B. Mu, R. Zhong, and T. Chen, “An efficient im-
+     plementation for spatial–temporal gaussian process regression and its
+     applications,” Automatica, vol. 147, p. 110679, 2023.
+[19] H. Liu, Y.-S. Ong, X. Shen, and J. Cai, “When gaussian process meets
+     big data: A review of scalable gps,” IEEE Trans. Neural Netw. Learn.
+     Syst., vol. 31, no. 11, pp. 4405–4423, 2020.
+[20] V. Hua, T. Nguyen, M.-S. Dao, H. D. Nguyen, and B. T. Nguyen, “The
+     impact of data imputation on air quality prediction problem,” PLoS One,
+     vol. 19, no. 9, p. e0306303, 2024.
+[21] Z. Dai, Z. Bu, and Q. Long, “Multiple imputation with neural network
+     gaussian process for high-dimensional incomplete data,” in Proc. Mach.
+     Learn. Res., vol. 189. PMLR, 12–14 Dec 2023, pp. 265–279.
+[22] X. Chen, Z. He, and L. Sun, “A bayesian tensor decomposition approach
+     for spatiotemporal traffic data imputation,” Transp. Res. Pt. C-Emerg.
+     Technol., vol. 98, pp. 73–84, 2019.
+[23] X. Su, J. Qi, E. Tanin, Y. Chang, and M. Sarvi, “Spatial-
+     temporal forecasting for regions without observations,” arXiv preprint
+     arXiv:2401.10518, 2024.
+[24] I. Marisca, C. Alippi, and F. M. Bianchi, “Graph-based forecasting with
+     missing data through spatiotemporal downsampling,” in Int. Conf. Mach.
+     Learn., 2024.
+[25] W. Du, D. Côté, and Y. Liu, “Saits: Self-attention-based imputation for
+     time series,” Expert Syst. Appl., vol. 219, p. 119619, 2023.
+[26] D. Wu, L. Gao, M. Chinazzi, X. Xiong, A. Vespignani, Y.-A. Ma, and
+     R. Yu, “Quantifying uncertainty in deep spatiotemporal forecasting,” in
+     Proc. ACM SIGKDD Int. Conf. Knowl. Discov. Data Min., ser. KDD
+     ’21. Association for Computing Machinery, 2021, p. 1841–1851.
+[27] E. Rodrigo-Bonet and N. Deligiannis, “Physics-guided variational graph
+     autoencoder for air quality inference,” in ICASSP IEEE Int Conf Acoust
+     Speech Signal Process Proc, 2024, pp. 6940–6944.
+[28] J. Fan, M. Qi, L. Liu, and H. Ma, “Diffusion-driven incomplete
+     multimodal learning for air quality prediction,” ACM Trans. Internet
+     Things, vol. 6, no. 1, pp. 1–24, 2025.
+[29] M. Wiatrak, S. V. Albrecht, and A. Nystrom, “Stabilizing generative
+     adversarial networks: A survey,” arXiv preprint arXiv:1910.00927, 2019.
+[30] F. Saad, J. Burnim, C. Carroll, B. Patton, U. Köster, R. A. Saurous, and
+     M. Hoffman, “Scalable spatiotemporal prediction with bayesian neural
+     fields,” Nat. Commun., vol. 15, no. 1, p. 7942, 2024.
+[31] M. Tancik, P. Srinivasan, B. Mildenhall, S. Fridovich-Keil, N. Raghavan,
+     U. Singhal, R. Ramamoorthi, J. Barron, and R. Ng, “Fourier features let
+     networks learn high frequency functions in low dimensional domains,”
+     in Adv. neural inf. proces. syst., vol. 33. Curran Associates, Inc., 2020,
+     pp. 7537–7547.
+

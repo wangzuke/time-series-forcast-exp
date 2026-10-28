@@ -1,0 +1,649 @@
+            GraFITi: Graphs for Forecasting Irregularly Sampled Time Series
+      Vijaya Krishna Yalavarthi1 , Kiran Madhusudhanan1 , Randolf Scholz1 , Nourhan Ahmed1 ,
+             Johannes Burchert1 , Shayan Jawed1 , Stefan Born2 , Lars Schmidt-Thieme1
+               1
+                Information Systems and Machine Learning Lab (ISMLL), University of Hildesheim, Germany
+                                      2
+                                        Institute of Mathematics, TU Berlin, Germany
+          {yalavarthi, kiranmadhusud, scholz, ahmedn, burchert, shayan, schmidt-thieme}@ismll.uni-hildesheim.de,
+                                                   born@math.tu-berlin.de
+
+
+                           Abstract                                              observation range    forecasting range
+  Forecasting irregularly sampled time series with missing val-
+  ues is a crucial task for numerous real-world applications
+  such as healthcare, astronomy, and climate sciences. State-
+  of-the-art approaches to this problem rely on Ordinary Dif-
+  ferential Equations (ODEs) which are known to be slow and          (a) Forecasting regular multivariate time series (MTS)
+  often require additional features to handle missing values. To
+  address this issue, we propose a novel model using Graphs
+  for Forecasting Irregularly Sampled Time Series with miss-
+  ing values which we call GraFITi. GraFITi first converts the
+  time series to a Sparsity Structure Graph which is a sparse
+  bipartite graph, and then reformulates the forecasting prob-
+  lem as the edge weight prediction task in the graph. It uses
+  the power of Graph Neural Networks to learn the graph and            (b) Forecasting irregular multivariate time series
+  predict the target edge weights. GraFITi has been tested on
+  3 real-world and 1 synthetic irregularly sampled time series
+  dataset with missing values and compared with various state-
+  of-the-art models. The experimental results demonstrate that
+  GraFITi improves the forecasting accuracy by up to 17% and
+  reduces the run time up to 5 times compared to the state-of-
+  the-art forecasting models.                                        (c) Forecasting irregularly sampled time series with
+                                                                     missing values (IMTS)
+                     1    Introduction
+Time series forecasting predicts future values based on past         Figure 1: Illustrating forecasting task in various multivariate
+observations. While extensively studied, most research fo-           time series.
+cuses on regularly sampled and fully observed multivari-
+ate time series (MTS) (Lim and Zohren 2021; Zeng et al.
+2022; De Gooijer and Hyndman 2006). Limited attention is             ODE-based models (Schirmer et al. 2022; De Brouwer et al.
+given to irregularly sampled time series with missing values         2019; Biloš et al. 2021; Scholz et al. 2023) are able to fore-
+(IMTS) which is commonly seen in many real-world appli-              cast at arbitrary time points. However, ODE models can
+cations. IMTS has independently observed channels at irreg-          be slow because of their auto-regressive nature and com-
+ular intervals, resulting in sparse data alignment. The focus        putationally expensive numerical integration process. Also,
+of this work is on forecasting IMTS. Additionally, there is          some ODE models cannot directly handle missing values
+another type called irregular multivariate time series which         in the observation space, hence, they often rely on missing
+is fully observed at irregular time intervals (Figure 1 illus-       value indicators (De Brouwer et al. 2019; Biloš et al. 2021)
+trates the differences) which is not the interest of this paper.     which are given as additional channels in the data.
+   Ordinary Differential Equations (ODE) model continuous               To circumvent the above challenges, in this work, we pro-
+time series, and predict system evolution over time based on         pose a novel model called GraFITi: graphs for forecasting
+the rate of change of state variables as shown in Eq. 1.             IMTS. GraFITi converts IMTS data into a Sparsity Structure
+                                                                     Graph and formulates forecasting as edge weight prediction
+                     d                                               in the graph. This approach represents channels and time-
+                        x(t) = f (t, x(t))                     (1)
+                     dt                                              points as disjoint nodes connected by observation values as
+                                                                     edges in a bipartite graph. GraFITi uses multiple graph neu-
+Copyright © 2024, Association for the Advancement of Artificial      ral network (GNN) layers with attention and feed-forward
+Intelligence (www.aaai.org). All rights reserved.                    mechanisms to learn node and edge interactions. Our Spar-
+sity Structure Graph, by design, provides a more dynamic         MTS tasks such as forecasting, imputation and reconstruc-
+and adaptive approach to process IMTS data, and improves         tion. Early GNN-based approaches, such as (Wu et al. 2020),
+the performance of the forecasting task.                         required a pre-defined adjacency matrix to establish relation-
+   We evaluated GraFITi for forecasting IMTS using 3 real-       ships between the time series channels. More recent mod-
+world and 1 synthetic dataset. Comparing it with state-of-       els like the Spectral Temporal Graph Neural Network (Cao
+the-art methods for IMTS and selected baselines for MTS,         et al. 2020) and the Time-Aware Zigzag Network (Chen,
+we show that GraFITi provides superior forecasts. Our con-       Segovia, and Gel 2021) improved on this by using GNNs
+tributions are summarized as follows:                            to capture dependencies between variables in the time series.
+                                                                 On the other hand, Satorras, Rangapuram, and Januschowski
+ • We introduce a novel representation of irregularly sam-
+                                                                 (2022) proposed a bipartite setup with induced nodes to re-
+   pled time series with missing values (IMTS) as sparse
+                                                                 duce graph complexity, built solely from the channels. Ex-
+   bipartite graphs, the Sparsity Structure Graph, that ef-
+                                                                 isting graph-based time series forecasting models focus on
+   ficiently can handle missing values in the observation
+                                                                 learning correlations or similarities between channels, with-
+   space of the time series (Section 4).
+                                                                 out fully exploiting the graph structure. Note that although
+ • We propose a novel model based on this representation,        graphs have been used for MTS forecasting, state-of-the-art
+   GraFITi, that can leverage any graph neural network to        approaches apply attention (Zhou et al. 2021, 2022) or lin-
+   perform time series forecasting for IMTS (section 5).         ear layers (Zeng et al. 2022). It is not trivial to directly ap-
+ • We provide extensive experimental evaluation on 3 real        ply them to IMTS due to presence of missing values and
+   world and 1 synthetic dataset that shows that GraFITi         irregular sampling. Recently, GNNs were used for imputa-
+   improves the forecasting accuracy of the best existing        tion and reconstruction of MTS with missing values, treat-
+   models by up to 17% and the run time improvement              ing MTS as sequences of graphs where nodes represent sen-
+   up to 5 times (section 6). Implementation code: https:        sors and edges denote correlation (Cini, Marisca, and Alippi
+   //github.com/yalavarthivk/GraFITi.                            2022; Marisca, Cini, and Alippi 2022; Ahmed and Schmidt-
+                                                                 Thieme 2023). Similar to previous studies, they learn simi-
+                   2    Related Work                             larity or correlation among channels.
+
+This work focuses on the forecasting of irregularly sampled      Graph Neural Networks for edge weight prediction
+time series data with missing values using graphs. We dis-       Graph Neural Networks (GNNs) are designed to process
+cuss the research done in: IMTS forecasting models, Graphs       graph-based data. While most GNN literature such as Graph
+for MTS, and models for edge weight prediction in graphs.        Convolutional Networks, Graph Attention Networks focuses
+                                                                 on node classification (Kipf and Welling 2017; Velickovic
+Forecasting of IMTS Research on IMTS has mainly fo-              et al. 2017), a few studies have addressed edge weight pre-
+cused on classification (Yalavarthi, Burchert, and Schmidt-      diction. Existing methods (De Sá and Prudêncio 2011; Fu
+Thieme 2022; Li and Marlin 2015; Lipton, Kale, and Wet-          et al. 2018) in this domain rely on latent features and graph
+zel 2016; Rubanova, Chen, and Duvenaud 2019; Shukla and          heuristics, such as node similarity (Zhao et al. 2015), prox-
+Marlin 2021; Horn et al. 2020; Tashiro et al. 2021) and inter-   imity measures (Murata and Moriyasu 2007), and local rank-
+polation (Che et al. 2018; Rubanova, Chen, and Duvenaud          ings (Yang and Wang 2020). Recently, deep learning-based
+2019; Shukla and Marlin 2021; Tashiro et al. 2021; Shukla        approaches (Hou and Holder 2017; Zulaika et al. 2022; You
+and Marlin 2022; Yalavarthi, Burchert, and Schmidt-Thieme        et al. 2020) were proposed. Another branch of research deals
+2023), with limited attention to forecasting tasks. Existing     with edge weight prediction in weighted signed graphs (Ku-
+models for these tasks mostly rely on Neural ODEs (Che           mar et al. 2016) tailored to social networks. However, all
+et al. 2018). In Latent-ODE (Rubanova, Chen, and Duve-           proposed methods typically operate in a transductive setup
+naud 2019), an ODE was combined with a Recurrent Neural          with a single graph split into training and testing data, which
+Network (RNN) for updating the state at the point of new ob-     may not be suitable for cases involving multiple graphs like
+servation. The GRU-ODE-Bayes model (De Brouwer et al.            ours, where training and evaluation need to be done on sep-
+2019) improved upon this approach by incorporating GRUs,         arate graph partitions.
+ODEs, and Bayesian inference for parameter estimation.
+The Continuous Recurrent Unit (CRU) (Schirmer et al.                3    The Time Series Forecasting Problem
+2022) based model uses a state-space model with stochastic
+differential equations and kalman filtering. The recent Lin-     An irregularly sampled times series with missing val-
+ODENet model (Scholz et al. 2023) enhanced CRU by using          ues, is a finite sequence of pairs S = (tn , xn )n=1:N where
+linear ODEs and ensures self-consistency in the forecasts.       tn ∈ R is the n-th observation timepoint and xn ∈
+Another branch of study involves Neural Flows (Biloš et al.     (R ∪ {NaN})C is the n-th observation event. Components
+2021), which use neural networks to model ODE solution           with xn,c ̸= NaN represent observed values by channel c at
+curves, rendering the ODE integrator unnecessary. Among          event time tn , and xn,c = NaN represents a missing value.
+various flow architectures, GRU flows have shown good per-       C is the total number of channels.
+formance.                                                           A time series query is a pair (Q, S) of a time series S and
+                                                                 a sequence Q = (qk , ck )k=1:K such that the value of channel
+Using graphs for MTS In addition to CNNs, RNNs, and              ck ∈ {1, . . . , C} is to be predicted at time qk ∈ R. We call
+Transformers, graph-based methods have been studied for          a query a forecasting query, if all its query timepoints are
+                                                                                  t1      Missing values represented by NaN-values are unsuited
+                                                                                       for standard arithmetical operations. Therefore, they are of-
+                                                              1)                       ten encoded by dedicated binary variables called missing
+           0.4                                          0.3 ,
+     0.3
+                      0.2
+                            ?                          ( 0.4, 1)
+                                                            (
+                                                                                  t2   value indicators or masks: xn ∈ (R × {0, 1})C . Here,
+c1                                                                                     (xn,c,1 , 1) encodes an observed value and (0, 0) encodes a
+                                                c1
+                                                                     (0.2,             missing value. Usually, both components are seen as differ-
+     t1     t2         t3 t4        ts2graph                  1)             1)
+                                                       .   4,       (0            t3   ent scalar variables: the real value xn,c,1 and its binary miss-
+           0.4
+                                ?                    (0               ,0               ing value indicator / mask xn,c,2 , the relation between both
+                                                c2                      )
+c2                                                                                     is dropped and observations simply modeled as xn ∈ R2C .
+                                                                   (0             t4   The main motivation behind the proposed Sparsity Structure
+            t2              t5                                       ,0
+                                                                       )               Graph is to represent IMTS avoiding missing value indica-
+                                                                                       tors in the observation space.
+                                                                                  t5      We propose a novel representation of a time series S us-
+                                                                                       ing a bipartite graph G = (V, E). The graph has nodes for
+           (a) IMTS                          (b) Sparsity Structure Graph              channels and timepoints, denoted as VC and VT respectively
+                                                                                       (V = VC ∪˙ VT ). Edges E ⊆ VC × VT connect each chan-
+                                                                                       nel node to its corresponding timepoint node with an obser-
+Figure 2: Representation of IMTS (a) as Sparsity Structure                             vation. Edge features F edge are the observation values and
+Graph (b). Timpoints and channels are the nodes, and obser-                            node features F node are the channel IDs and unique time-
+vation measurements are the edges. Target edges are differ-                            points. Nodes VC := {1, . . . , C} represent channels and
+entiated from observed ones with target indicator (2nd value                           nodes VT := {C + 1, . . . , C + N } represent timepoints:
+in the edge feature).
+                                                                                          V := {1, . . . , C + N } = VC ∪˙ VT
+                                                                                               
+                                                                                          E := {i, j} | xi−C,j ̸= NaN, i ∈ VT , j ∈ VC
+after the last timepoint of the time series S, an imputation                                   (
+                                                                                                 v : v ∈ VC
+                                                                                        node
+query if all of them are before the last timepoint of S and                            Fv :=
+                                                                                                 tj : v ∈ VT , j = v − C
+a mixed query otherwise. In this paper, we are interested in
+forecasting only.                                                                      Feedge := xi−C,j    for e = {i, j} ∈ E      with   i ∈ VT , j ∈ VC
+   A vector y ∈ RK we call an answer to the forecasting                                                                                                 (2)
+query: yk is understood as the predicated value of time se-
+                                                                                       For an IMTS, missing values make the bipartite graph
+ries S at time qk in channel ck . The difference between two
+                                                                                       sparse, meaning |E| ≪ C · N . However, for a fully ob-
+answers y, y ′ to the same query can be measured by any loss
+                                                                                       served time series, where there are no missing values, i.e.
+function, for example by a simple squared error
+                                                                                       |E| = C · N , the graph is a complete bipartite graph.
+                                        K                                                 We extend this representation to time series queries (S, Q)
+                                    1 X                                                by adding additional edges between queried channels and
+                 ℓ(y, y ′ ) :=          (yk − yk′ )2
+                                    K                                                  timepoints, and distinguish observed and queried edges by
+                                       k=1
+                                                                                       an additional binary edge feature called target indicator.
+   The time series forecasting problem is as follows: given                            Note that the target indicator used to differentiate the ob-
+a dataset of pairs D := (Qi , Si , yi )i=1:M of forecasting                            served edge and target edge is different from the missing
+queries and ground truth answers from an unknown distri-                               value indicator which is used to represent the missing ob-
+bution pdata and a loss function ℓ on forecasting answers,                             servations in the observation space. Given a query Q =
+find a forecasting model ŷ that maps queries (Q, S) to an-                            (qk , ck )k=1:K , let (t′1 , . . . , t′K ′ ) be an enumeration of the
+swers ŷ(Q, S) such that the expected loss between ground                              unique queried timepoints qk . We introduce additional nodes
+truth answers and forecasted answers is minimal:                                       VQ := {C + N + 1, . . . , C + N + K ′ } so that the augmented
+                                                                                       graph, together with the node and edge features is given as
+         L(ŷ; pdata ) := E(Q,S,y)∼pdata ℓ(y, ŷ(Q, S))
+                                                       
+                                                                                           V := VC ∪˙ VT ∪˙ VQ = {1, . . . , C + N + K ′ }
+                                                                                                  
+ 4    Sparsity Structure Graph Representation                                              E := {i, j} | xi−C,j ̸= NaN, i ∈ VT , j ∈ VC
+                                                                                                  ∪ {i, j} | i ∈ VQ , j ∈ VC , (t′i−N −C , j) ∈ Q
+                                                                                                   
+We describe the proposed Sparsity Structure Graph repre-
+sentation and convert the forecasting problem as an edge
+                                                                                                  
+                                                                                                  v : v ∈ VC
+weight prediction problem. Using this representation:                                  Fvnode := tj : v ∈ VT , j = v − C
+                                                                                                  ′
+ • We explicitly obtain the relationship between the chan-                                          tj : v ∈ V Q , j = v − C − N
+   nels and timepoints via observation values allowing the                                        
+                                                                                                    (xi,j,1 , 1) : e = {i, j} ∈ E, i ∈ VT , j ∈ VC
+   inductive bias of the data to pass into the model.                                  Feedge :=
+                                                                                                    (0, 0)       : e = {i, j} ∈ E, i ∈ VQ , j ∈ VC
+ • We elegantly handle the missing values in IMTS in the
+                                                                                                                                                         (3)
+   observation space by connecting edges only for the ob-
+   served values.                                                                      where (t′i−N −C , j)      ∈    Q is supposed to mean that
+                                                                  edge    edge
+
+
+
+
+          text
+
+
+
+
+                                                                  node     node
+
+
+
+
+Figure 3: Overall architecture of GraFITi. First a Sparsity Structure Graph is created from the given IMTS using TS2Graph.
+Then, we update edge and node embeddings using L many gnn layers. Final predictions are made using Graph2TS.
+
+
+(t′i−N −C , j) appears in the sequence Q. To denote this graph           adapting the Graph Attention Network (Velickovic et al.
+representation, we write briefly                                         2017) to our graph setting and incorporate essential compo-
+                                                                         nents for handling sparsity structure graphs. While a Graph
+          ts2graph(X, Q) := (V, E, F node , F edge )              (4)    Attention Network computes attention weights by adding
+The conversion of an IMTS to a Sparsity Structure Graph is               queries and keys, we found no advantage in using this ap-
+shown in Figure 2.                                                       proach. Thus, we utilize standard attention mechanism, in
+   To make the graph representation (V, E, F node , F edge ) of          our attention block. Additionally, we also use edge embed-
+a time series query processable by a graph neural network,               dings in our setup to update node embeddings in a principled
+node and edge features have to be properly embedded, oth-                manner.
+erwise, both, the nominal channel ID and the timepoint are
+hard to compute on. We propose an Initial Embedding
+                                                                         5.1      Graph Neural Network (gnn)
+layer that encodes channel IDs via a onehot encoding and                 First, we define Multi-head Attention block (MAB) and
+time points via a learned sinusoidal encoding (Shukla and                Neighborhood functions that are used in our gnn.
+Marlin 2021):                                                              A Multi-head attention block (MAB) (Vaswani et al.
+                                                                         2017) is represented as:
+                 FF(onehot(Fvnode )) : v ∈ VC
+               
+     node,0
+    hv      :=                                              (5)                    MAB(Q, K, V) := α(H + FF(H))
+                 sin(FF(Fvnode ))     : v ∈ VT ∪˙ VQ
+                                                                                     where H := α(Q + MHA(Q, K, V))                   (9)
+   hedge,0
+    e      := FF(Feedge ) for           e∈E                       (6)
+                                                                         where Q, K and, V are called queries, keys, and values
+where onehot denotes the binary indicator vector and FF                  respectively, MHA is multi-head attention (Vaswani et al.
+denotes a separate fully connected layer in each case.                   2017), α is a non-linear activation.
+  The final graph neural network layer (hnode,L , hedge,L ) has             The Neighborhood of a node u is defined as the set of all
+an embedding dimension 1. The scalar values of the query                 the nodes connected to u through edges in E:
+edges are taken as the predicted answers to the encoded fore-
+casting query:                                                                            N (u) := {v | {u, v} ∈ E}                  (10)
+ ŷ := graph2ts(hnode,L , hedge,L , V, E) = (hedge,L
+                                              ek     )k=1:K                GraFITi consists of L gnn layers. In each layer, node em-
+                                    ′                                    beddings are updated using neighbor node embeddings and
+       where ek = {C + N + k , ck }           with    t′k′ = qk   (7)
+                                                                         edge embeddings connecting them. For edge embeddings,
+                                                                         we use the embeddings of the adjacent nodes and the cur-
+            5    Forecasting with GraFITi                                rent edge embedding. The overall architecture of GraFITi is
+GraFITi first encodes the time series query to graph using               shown in Figure 3.
+Eq. 4 and compute initial embeddings for the nodes (hnode,0 )
+and edges (hedge,0 ) using Eqs. 5 and 6 respectively. Now, we            Update node embeddings To update embedding of a
+can leverage the power of graph neural networks for further              node u ∈ V , first, we create a sequence of features Hu
+processing the encoded graph. Node and edge features are                 concatenating its neighbor node embedding hnode,lv    and edge
+                                                                                        edge,l
+updated layer wise, from layer l to l + 1 using a graph neural           embedding he , e = {u, v} where v ∈ N (u). We then
+network:                                                                 pass hnode,l
+                                                                               u      as queries and Hu as keys and values to MAB.
+  (hnode,l+1 , hedge,l+1 ) := gnn(l) (hnode,l , hedge,l , V, E)            hnode,l+1  := MAB(l) hnode,l
+                                                                                                                        
+                                                                  (8)       u                           u     , Hu , Hu            (11)
+                                                                                               node,l    edge,l
+                                                                                                                
+  There have been a variety of gnn architectures such as                         Hu := [hv            ∥ he ] v∈N (u) , e = {u, v} (12)
+Graph Convolutional Networks (Kipf and Welling 2017),
+Graph Attention Networks (Velickovic et al. 2017), pro-                  Updating edge embeddings: To compute edge embed-
+posed in the literature. In this work, we propose a model                ding heedge,l+1 , e = {u, v} we concatenate hnode,l
+                                                                                                                      u      , hnode,l
+                                                                                                                                v      and
+Algorithm 1: Graph Neural Network (gnn(l) )                                   Name           #Sample     #Chan    Max.    Max.    Sparse
+                                                                                                                  len.    Obs.
+Require: hnode,l , hedge,l , V, E                                             USHCN            1,100       5      290     320     77.9%
+  for u ∈ V do                                                                MIMIC-III       21,000       96      96      710    94.2%
+     Hu ← [hnode,l    ∥ hedge,l
+                                  
+               v             e   ] v∈N (u)                //e = {u, v}        MIMIC-IV        18,000      102     710     1340    97.8%
+                                                                              Physionet’12    12,000       37      48      520    85.7%
+     hnode,l+1
+      u        ← MAB(l) (hnode,l
+                          u      , Hu , Hu )
+  for e = {u, v} ∈ E do
+                                                                         Table 1: Statistics of the datasets used in the experiments.
+     hedge,l+1 ← α hedge,l + FF(l)
+                                          node,l
+      e             e                     hu      ∥ hnode,l
+                                                     v      ∥ hedge,l
+                                                               e            Sparsity means the % missing observations in the time series
+  return hnode,l+1 , hedge,l+1
+
+
+Algorithm 2: Forward pass of GraFITi                                        test set, within in the graph. In contrast, GraFITi uses an in-
+                                                                            ductive approach. Here, each instance is a Sparsity Structure
+Require: Observed time series forecasting query (S, Q)                      Graph, tailored for time series data. In this structure, nodes
+  (V, E, Fnode , Fedge ) ← ts2graph(S, Q)                       //Eq. 4     are divided into distinct sets for channels and timepoints,
+  //Initial embeddings of nodes and edges
+  hnode,0 ← {hnode,0    |u∈V}                                   //Eq. 5
+                                                                            while the edges are the time series observations.
+                 u
+  hedge,0 ← {hu,vedge,0
+                        | {u, v} ∈ E}                           //Eq: 6
+  //Graph Neural Network                                                                        6      Experiments
+  for l ∈ {0, . . . , L − 1} do
+                                                                            6.1   Dataset Description
+     hnode,l+1 , hedge,l+1 ← gnn(l) (hnode,l , hedge,l , V, E) //Alg. 1
+  ŷ ← graph2ts(hnode,L , hedge,L , V, E)                       //Eq: 7     4 datasets including 3 medical and 1 synthetic climate IMTS
+  return ŷ                                                                 datasets are used for evaluating the proposed model. Basic
+                                                                            statistics of the datasets are provided in Table 1.
+                                                                               Physionet’12 (Silva et al. 2012) consists of ICU patient
+heedge,l , and pass it through a dense layer (FF) followed by a             records observed for 48 hours. MIMIC-III (Johnson et al.
+residual connection and nonlinear activation.                               2016) is also a medical dataset that contains measurements
+                                                                         of the ICU patients observed for 48 hours. MIMIC-IV (John-
+ hedge,l+1
+   e         := α hedge,l
+                      e     + FF(l) hnode,l
+                                       u     ∥ hnode,l
+                                                v      ∥ hedge,l
+                                                          e                 son et al. 2021) is built upon the MIMIC-III database.
+                                                                   (13)     USHCN (Menne, Williams Jr, and Vose 2015) is a climate
+                                                                            dataset that consists of the measurements of daily tempera-
+where e = {u, v}. Note that, although edges are undirected,                 tures, precipitation and snow observed over 150 years from
+edge embedding is computed by concatenating the embed-                      1218 meteorological stations in the USA. For MIMIC-III,
+dings in a specific order i.e., the channel embedding, time                 MIMIC-IV and USHCN, we followed the pre-processing
+embedding and edge embedding. We show the process of up-                    steps provided by Scholz et al. (2023); Biloš et al. (2021);
+dating nodes and edges in layer l using a gnnin Algorithm 1.                De Brouwer et al. (2019). Hence, observations in MIMIC-III
+                                                                            and MIMIC-IV are rounded for 30 mins and 1 min respec-
+Answering the queries As mentioned in Section 4, our
+                                                                            tively. Whereas for the Physionet’12, we follow the protocol
+last gnn(L) layer has embedding dimension 1. Hence, after
+                                                                            of Che et al. (2018); Cao et al. (2018); Tashiro et al. (2021)
+processing the graph features through L many gnn layers,
+                                                                            and processed the dataset to have hourly observations.
+we use Eq. 7 to decode the graph and provide the predicted
+answers to the time series query. A forward pass of GraFITi
+is presented in Algorithm 2.                                                6.2   Competing Algorithms
+                                                                            We select 4 IMTS forecasting models for comparison, in-
+Computational Complexity The computational com-
+                                                                            cluding GRU-ODE-Bayes (De Brouwer et al. 2019), Neural
+plexity of GraFITi primarily comes from using MAB in
+                                                                            Flows (Biloš et al. 2021), CRU (Schirmer et al. 2022) and
+Eq. 11. For a single channel node u, the maximum complex-
+                                                                            LinODENet (Scholz et al. 2023). Additionally, we use the
+ity for computing its embedding is N (u) since only neigh-
+                                                                            well established IMTS interpolation model mTAN (Shukla
+borhood connections are used for the update, and N (u) ⊆
+                                                                            and Marlin 2021). It is interesting to verify the performance
+{C + 1, ..., C + N + K ′ }. Thus, computing the embeddings
+                                                                            of well established MTS forecasting models for IMTS setup.
+of all channel nodes is O(|E|). Similarly, the computational
+                                                                            We do this by adding missing value indicators as sep-
+complexity of MAB for computing the embeddings of all
+                                                                            arate channels to the series and process the time series
+nodes in VT ∪˙ VQ is also O(|E|).
+                                                                            along with the missing value indicators. Hence we com-
+Delineating from GRAPE (You et al. 2020) You et al.                         pare with the Informer+, Fedformer+, DLinear+ and NLin-
+(2020) introduced GRAPE, a graph-based model for imput-                     ear+ which are variants of Informer (Zhou et al. 2021), Fed-
+ing and classifying vector datasets with missing values. This               Former (Zhou et al. 2022), DLinear and NLinear (Zeng et al.
+approach employs a bipartite graph, with nodes divided into                 2022) respectively. We also compare with the published re-
+separate sets for features and sample IDs. The edges of this                sults from (De Brouwer et al. 2019) for the NeuralODE-
+graph represent the feature values associated with the sam-                 VAE (Chen et al. 2018), Sequential VAE (Krishnan, Shalit,
+ples. Notably, GRAPE learns in a transductive manner, en-                   and Sontag 2015, 2017), GRU-Simple (Che et al. 2018),
+compassing all the data samples, including those from the                   GRU-D (Che et al. 2018) and T-LSTM (Baytas et al. 2017).
+                            USHCN                     MIMIC-III                             MIMIC-IV                            Physionet’12
+      DLinear+            0.347 ± 0.065              0.691 ± 0.016                         0.577 ± 0.001                       0.380 ± 0.001
+      NLinear+            0.452 ± 0.101              0.726 ± 0.019                         0.620 ± 0.002                       0.382 ± 0.001
+      Informer+           0.320 ± 0.047              0.512 ± 0.064                         0.420 ± 0.007                       0.347 ± 0.001
+      FedFormer+          2.990 ± 0.476              1.100 ± 0.059                         2.135 ± 0.304                       0.455 ± 0.004
+      NeuralODE-VAE      (0.960 ± 0.110)            (0.890 ± 0.010)                              −                                   −
+      Sequential VAE     (0.830 ± 0.070)            (0.920 ± 0.090)                              −                                   −
+      GRU-Simple         (0.750 ± 0.120)            (0.820 ± 0.050)                              −                                   −
+      GRU-D              (0.530 ± 0.060)            (0.790 ± 0.060)                              −                                   −
+      T-LSTM             (0.590 ± 0.110)            (0.620 ± 0.050)                              −                                   −
+      mTAN                0.300 ± 0.038              0.540 ± 0.036                              ME                             0.315 ± 0.002
+      GRU-ODE-Bayes       0.401 ± 0.089              0.476 ± 0.043                         0.360 ± 0.001                       0.329 ± 0.004
+                         (0.430 ± 0.070)            (0.480 ± 0.010)                       (0.379 ± 0.005)                            −
+      Neural Flow         0.414 ± 0.102              0.477 ± 0.041                         0.354 ± 0.001                       0.326 ± 0.004
+                                −                   (0.490 ± 0.004)                       (0.364 ± 0.008)                            −
+      CRU                 0.290 ± 0.060              0.592 ± 0.049                              ME                             0.379 ± 0.003
+      LinODEnet           0.300 ± 0.060              0.446 ± 0.033                         0.272 ± 0.002                       0.299 ± 0.001
+                         (0.290 ± 0.060)            (0.450 ± 0.020)                       (0.274 ± 0.002)                            −
+      GraFITi (ours)      0.272 ± 0.047 ↑ 9.3%       0.396 ± 0.030 ↑ 11.2%                 0.225 ± 0.001 ↑ 17.2%               0.286 ± 0.001 ↑ 4.3%
+
+Table 2: Forecasting next three time steps. Evaluation metric MSE, Lower is better. Best results are in bold. Published results
+are in open brackets, Physionet’12 dataset was not used by the baseline models hence do not have published results. ↑ indicates
+% improvement by GraFITi. ‘ME’ indicates Memory Error.
+
+
+6.3    Experimental Setup                                                                     GraFITi        Neural Flows                   CRU
+                                                                                              LinODENet      GRU-ODE-bayes
+Task protocol We followed Scholz et al. (2023); Biloš
+et al. (2021); De Brouwer et al. (2019), applied 5-fold cross-                   8
+                                                                                                                              25
+
+
+
+
+                                                                                                                   time (s)
+                                                                      time (s)
+
+validation and selected hyperparameters using a holdout val-                     5
+idation set (20%). For evaluation, we used 10% unseen data.                                                                   15
+All models were trained on Mean Squared Error, which is                          2
+                                                                                                                               5
+also the evaluation metric.                                                      0.27        0.32    0.37   0.42              0.37 0.42 0.47 0.52 0.57
+                                                                                      Mean Squared Error                            Mean Squared Error
+Hyperparamter search We searched the following hy-
+perparameters for GraFITi: L ∈ {1, 2, 3, 4}, #heads in                                      (a) USHCN                                (b) MIMIC-III
+MAB from {1, 2, 4}, and hidden nodes in dense layers from                        150                                          15
+{16, 32, 64, 128, 256}. We randomly sampled sets of 5 dif-
+                                                                      time (s)
+
+
+
+
+                                                                                     90
+                                                                                                                   time (s)   10
+ferent hyperparameters and choose the one that has the best
+performance on validation dataset. We used the Adam opti-                            30                                        5
+mizer with learning rate of 0.001, halving it when validation                        0.22     0.27   0.32   0.37                   0.29   0.33    0.37 0.40
+loss did not improve for 10 epochs. All models were trained                               Mean Squared Error                       Mean Squared Error
+for up to 200 epochs, using early stopping with a patience
+                                                                                          (c) MIMIC-IV                              (d) Physionet’12
+to 30 epochs. All the models were experimented using the
+PyTorch library on a GeForce RTX-3090 GPU.
+                                                                    Figure 4: Efficiency comparison: GraFITi, LinODEnet,
+6.4    Experimental Results                                         CRU, Neural Flows and GRU-ODE-Bayes.
+First, we set the observation and prediction range of the
+IMTS following (Scholz et al. 2023; Biloš et al. 2021;             around 11.2% and 17.2% improvement in forecasting ac-
+De Brouwer et al. 2019). For the USHCN dataset, the model           curacy compared to the next best model LinODEnet. The
+observes for the first 3 years and forecasts the next 3 time        results on the USHCN dataset have high variance making it
+steps. For the medical datasets, the model observes for the         challenging to compare the models on this dataset. However,
+first 36 hours in the series and predicts the next 3 time steps.    we experimented on it for completeness. Again, we achieve
+The results, including the mean and standard deviation, are         the best result with 9.2% improvement compared to the next
+presented in Table 2. The best result is highlighted in bold        best model. We note that, the MTS forecasting models that
+and the next best in italics. Additionally, we also provide the     are adapted for the IMTS task, perform worse than any of
+published results from (Scholz et al. 2023; Biloš et al. 2021;     the IMTS forecasting models demonstrating the limitation
+De Brouwer et al. 2019) in brackets for comparison.                 of MTS models applied to IMTS tasks.
+   The GraFITi model is shown to be superior compared to
+all baseline models across all the datasets. Specifically, in       Efficiency comparison We compare the efficiency of
+the MIMIC-III and MIMIC-IV datasets, GraFITi provides               leading IMTS forecasting models: GraFITi, LinODEnet,
+                     Obs. / Pred.   GraFITi (ours)    LinODEnet          CRU          Neural Flow    GRU-ODE-Bayes        ↑%
+                       24/12        0.438 ± 0.009    0.477 ± 0.021   0.575 ± 0.020   0.588 ± 0.014    0.591 ± 0.018       8.2%
+                       24/24        0.491 ± 0.014    0.531 ± 0.022   0.619 ± 0.028   0.651 ± 0.017    0.653 ± 0.023       7.5%
+      MIMIC-III
+                        36/6        0.457 ± 0.050    0.492 ± 0.019   0.647 ± 0.051   0.573 ± 0.043    0.580 ± 0.049       7.1%
+                       36/12        0.490 ± 0.027    0.554 ± 0.042   0.680 ± 0.043   0.620 ± 0.035    0.632 ± 0.044       10.8%
+                       24/12        0.285 ± 0.001    0.335 ± 0.002        ME         0.465 ± 0.003    0.366 ± 0.154       14.9%
+                       24/24        0.285 ± 0.002    0.336 ± 0.002        ME         0.465 ± 0.003    0.439 ± 0.003       15.1%
+      MIMIC-IV
+                        36/6        0.260 ± 0.002    0.309 ± 0.002        ME         0.405 ± 0.001    0.393 ± 0.002       15.9%
+                       36/12        0.261 ± 0.005    0.309 ± 0.002        ME         0.395 ± 0.001    0.393 ± 0.002       15.5%
+                       24/12        0.365 ± 0.001    0.373 ± 0.001   0.435 ± 0.001   0.431 ± 0.001    0.432 ± 0.003       2.1%
+                       24/24        0.401 ± 0.001    0.411 ± 0.001   0.467 ± 0.002   0.506 ± 0.002    0.505 ± 0.001       2.4%
+      Physionet’12
+                        36/6        0.319 ± 0.001    0.329 ± 0.001   0.396 ± 0.003   0.365 ± 0.001    0.363 ± 0.004       3.0%
+                       36/12        0.347 ± 0.001    0.357 ± 0.001   0.417 ± 0.001   0.398 ± 0.001    0.401 ± 0.003       2.8%
+
+Table 3: Experimental results on varying observation and forecasting ranges for the medical datasets. Evaluation measure is
+MSE. Lower is better. Best results are in bold. ME indicates memory error.
+
+
+CRU, Neural Flow, and GRU-ODE-Bayes. We evaluate                          Model         IMTS     AsTS    AsTS     AsTS    AsTS
+them in terms of both execution time (batch size: 64)                                                    +10%     +50%    +90%
+and MSE. The results, presented in Figure 4, show that                    GraFITi       0.396    0.931   0.845    0.547   0.413
+                                                                          LinODENet     0.446    0.894   0.815    0.581   0.452
+for datasets with longer time series like MIMIC-IV and
+USHCN, GraFITi significantly outpaces ODE and flow-                   Table 4: GraFITi with varying sparsity levels on MIMIC-III
+based models. Specifically, GraFITi is over 5 times faster            dataset. ‘IMTS’ dataset refers to the actual dataset, ‘AsTS’
+than the fastest ODE model, LinODEnet. Even for shorter               is a synthetic asynchronous time series dataset created by
+time series datasets like Physionet’12 and MIMIC-III,                 observing only 1 channel at each time point. ‘AsTS + x%’ is
+GraFITi remains twice as fast as LinODEnet.                           created by retrieving x% of the missing observations. Goal
+Varying observation and forecast ranges This experi-                  is to observe 36 hours and forecast the next 3 time steps.
+ment is conducted with two different observation ranges (24
+and 36 hours) and two different prediction ranges for each
+observation range. For the observation range of 24 hours, the         dataset. The performance of GraFITi deteriorates with in-
+prediction ranges are 12 and 24 hours, and for the observa-           crease in sparsity levels and gets worst when the series be-
+tion range of 36 hours, the prediction ranges are 6 and 12            come asynchronous. The breaking point is dataset-specific,
+hours. The results are presented in Table 3. Again GraFITi            as the model breaks when the graph is disconnected.
+is the top performer, followed by LinODENet. Significant
+                                                                         Moreover, the existing model cannot handle meta data as-
+gains in forecasting accuracy are observed in the MIMIC-
+                                                                      sociated with the IMTS. One possible solution to both the
+III and MIMIC-IV datasets. On average, GraFITi improves
+                                                                      challenges is to interconnect all the channel nodes includ-
+the accuracy of LinODEnet, the next best IMTS forecast-
+                                                                      ing meta data (assuming it as additional channel) if present,
+ing model, by 8.5% in MIMIC-III, 15.5% in MIMIC-IV, and
+                                                                      and apply a distinct multi-head attention on them. This will
+2.6% in the Physionet’12 dataset. Models avoiding miss-
+                                                                      help to share the information among all the nodes even in
+ing value indicators perform best in the related tasks such
+                                                                      asynchronous setup. In future, we aim to enhance GraFITi
+as IMTS interpolation and classification (Horn et al. 2020;
+                                                                      to handle AsTS datasets and meta data.
+Shukla and Marlin 2021, 2022; Yalavarthi, Burchert, and
+Schmidt-Thieme 2023, 2022), we see the similar trend for
+forecasting. Additionally, the Sparsity Structure Graph im-                               7     Conclusions
+proves model performance as, by design, it allows inductive
+bias of the data flows through the model.                             In this paper, we propose a Graph based model called
+                                                                      GraFITi for the forecasting of irregularly sampled time se-
+6.5     Limitations                                                   ries with missing values (IMTS). First, we represent the time
+The GraFITi model is a potential tool for IMTS fore-                  series as a Sparsity Structure Graph with channels and ob-
+casting. However, GraFITi faces a challenge when applied              servation times as nodes and observation measurements as
+to Asynchronous Time Series (AsTS) datasets. In such                  edges; and re-represent the task of time series forecasting as
+datasets, channels are observed asynchronously at various             an edge weight prediction problem in a graph. An attention
+time points, resulting in disconnected sparse graphs. This            based architecture is used for learning the interactions be-
+disconnection hinders the flow of information and can be              tween the nodes and edges in the graph. We experimented
+problematic when channels have a strong correlation to-               on 4 datasets including 3 real world and 1 synthetic dataset
+wards the forecasts as model may not be able to cap-                  for various observation and prediction ranges. The exten-
+ture these correlations. It can be seen from Table 4 where            sive experimental evaluation demonstrates that the proposed
+GraFITi is compared with the next best baseline model                 GraFITi provides superior forecasts compared to the state-
+LinODENet for varying sparsity levels using MIMIC-III                 of-the-art IMTS forecasting models.
+                    Acknowledgments                                   Joint Conference on Neural Networks (IJCNN), 2281–2288.
+This work was supported by the Federal Ministry for Eco-              IEEE.
+nomic Affairs and Climate Action (BMWK), Germany, within              Fu, C.; Zhao, M.; Fan, L.; Chen, X.; Chen, J.; Wu, Z.; Xia,
+the framework of the IIP-Ecosphere project (project number:           Y.; and Xuan, Q. 2018. Link weight prediction using super-
+01MK20006D); co-funded by the Lower Saxony Ministry of Sci-           vised learning methods and its application to yelp layered
+ence and Culture under grant number ZN3492 within the Lower           network. IEEE Transactions on Knowledge and Data Engi-
+Saxony “Vorab” of the Volkswagen Foundation and supported by          neering, 30(8): 1507–1518.
+the Center for Digital Innovations (ZDIN); and also by the Ger-       Horn, M.; Moor, M.; Bock, C.; Rieck, B.; and Borgwardt, K.
+man Federal Ministry of Education and Research (BMBF) through         2020. Set functions for time series. In International Confer-
+the Program ”International Future Labs for Artificial Intelligence”   ence on Machine Learning, 4353–4363. PMLR.
+(Grant 1DD20002A – KIWI-BioLab)”
+                                                                      Hou, Y.; and Holder, L. B. 2017. Deep learning approach to
+                                                                      link weight prediction. In 2017 International Joint Confer-
+                         References                                   ence on Neural Networks (IJCNN), 1855–1862. IEEE.
+Ahmed, N.; and Schmidt-Thieme, L. 2023. Structure-aware
+                                                                      Johnson, A.; Bulgarelli, L.; Pollard, T.; Horng, S.; and Celi,
+decoupled imputation network for multivariate time series.
+                                                                      L. 2021. Mark. R. MIMIC-IV (version 1.0). PhysioNet.
+Data Mining and Knowledge Discovery, 1–21.
+                                                                      Johnson, A. E.; Pollard, T. J.; Shen, L.; Lehman, L.-w. H.;
+Baytas, I. M.; Xiao, C.; Zhang, X.; Wang, F.; Jain, A. K.;
+                                                                      Feng, M.; Ghassemi, M.; Moody, B.; Szolovits, P.; An-
+and Zhou, J. 2017. Patient subtyping via time-aware LSTM
+                                                                      thony Celi, L.; and Mark, R. G. 2016. MIMIC-III, a freely
+networks. In Proceedings of the 23rd ACM SIGKDD In-
+                                                                      accessible critical care database. Scientific Data, 3(1): 1–9.
+ternational Conference on Knowledge Discovery and Data
+Mining, 65–74.                                                        Kipf, T. N.; and Welling, M. 2017. Semi-Supervised Clas-
+Biloš, M.; Sommer, J.; Rangapuram, S. S.; Januschowski,              sification with Graph Convolutional Networks. In Interna-
+T.; and Günnemann, S. 2021. Neural Flows: Efficient Al-              tional Conference on Learning Representations.
+ternative to Neural ODEs. Advances in Neural Information              Krishnan, R.; Shalit, U.; and Sontag, D. 2017. Structured
+Processing Systems, 34: 21325–21337.                                  inference networks for nonlinear state space models. In Pro-
+Cao, D.; Wang, Y.; Duan, J.; Zhang, C.; Zhu, X.; Huang, C.;           ceedings of the AAAI Conference on Artificial Intelligence,
+Tong, Y.; Xu, B.; Bai, J.; Tong, J.; et al. 2020. Spectral tem-       volume 31.
+poral graph neural network for multivariate time-series fore-         Krishnan, R. G.; Shalit, U.; and Sontag, D. 2015. Deep
+casting. Advances in Neural Information Processing Sys-               kalman filters. arXiv preprint arXiv:1511.05121.
+tems, 33: 17766–17778.                                                Kumar, S.; Spezzano, F.; Subrahmanian, V.; and Faloutsos,
+Cao, W.; Wang, D.; Li, J.; Zhou, H.; Li, L.; and Li, Y. 2018.         C. 2016. Edge weight prediction in weighted signed net-
+Brits: Bidirectional recurrent imputation for time series. Ad-        works. In 2016 IEEE 16th International Conference on Data
+vances in Neural Information Processing Systems, 31.                  Mining (ICDM), 221–230. IEEE.
+Che, Z.; Purushotham, S.; Cho, K.; Sontag, D.; and Liu, Y.            Li, S. C.-X.; and Marlin, B. M. 2015. Classification of
+2018. Recurrent neural networks for multivariate time series          Sparse and Irregularly Sampled Time Series with Mixtures
+with missing values. Scientific Reports, 8(1): 1–12.                  of Expected Gaussian Kernels and Random Features. In
+Chen, R. T.; Rubanova, Y.; Bettencourt, J.; and Duvenaud,             Proceedings of the Thirty-First Conference on Uncertainty
+D. K. 2018. Neural ordinary differential equations. Ad-               in Artificial Intelligence, 484–493.
+vances in Neural Information Processing Systems, 31.                  Lim, B.; and Zohren, S. 2021. Time-series forecasting with
+Chen, Y.; Segovia, I.; and Gel, Y. R. 2021. Z-GCNETs: time            deep learning: a survey. Philosophical Transactions of the
+zigzags at graph convolutional networks for time series fore-         Royal Society A, 379(2194): 20200209.
+casting. In International Conference on Machine Learning,             Lipton, Z. C.; Kale, D.; and Wetzel, R. 2016. Directly mod-
+1684–1694. PMLR.                                                      eling missing data in sequences with rnns: Improved clas-
+Cini, A.; Marisca, I.; and Alippi, C. 2022. Filling the G ap s:       sification of clinical time series. In Machine Learning for
+Multivariate Time Series Imputation by Graph Neural Net-              Healthcare Conference, 253–270. PMLR.
+works. In International Conference on Learning Represen-              Marisca, I.; Cini, A.; and Alippi, C. 2022. Learning to Re-
+tations.                                                              construct Missing Data from Spatiotemporal Graphs with
+De Brouwer, E.; Simm, J.; Arany, A.; and Moreau, Y. 2019.             Sparse Observations. In The First Learning on Graphs Con-
+GRU-ODE-Bayes: Continuous modeling of sporadically-                   ference.
+observed time series. Advances in Neural Information Pro-             Menne, M. J.; Williams Jr, C.; and Vose, R. S. 2015.
+cessing Systems, 32.                                                  United States historical climatology network daily tempera-
+De Gooijer, J. G.; and Hyndman, R. J. 2006. 25 years of               ture, precipitation, and snow data. Carbon Dioxide Informa-
+time series forecasting. International Journal of Forecast-           tion Analysis Center, Oak Ridge National Laboratory, Oak
+ing, 22(3): 443–473.                                                  Ridge, Tennessee.
+De Sá, H. R.; and Prudêncio, R. B. 2011. Supervised link            Murata, T.; and Moriyasu, S. 2007. Link prediction of so-
+prediction in weighted networks. In The 2011 International            cial networks based on weighted proximity measures. In
+IEEE/WIC/ACM International Conference on Web Intelli-           You, J.; Ma, X.; Ding, Y.; Kochenderfer, M. J.; and
+gence (WI’07), 85–88. IEEE.                                     Leskovec, J. 2020. Handling missing data with graph rep-
+Rubanova, Y.; Chen, R. T.; and Duvenaud, D. K. 2019. La-        resentation learning. Advances in Neural Information Pro-
+tent ordinary differential equations for irregularly-sampled    cessing Systems, 33: 19075–19087.
+time series. Advances in Neural Information Processing Sys-     Zeng, A.; Chen, M.; Zhang, L.; and Xu, Q. 2022. Are trans-
+tems, 32.                                                       formers effective for time series forecasting? arXiv preprint
+Satorras, V. G.; Rangapuram, S. S.; and Januschowski, T.        arXiv:2205.13504.
+2022. Multivariate time series forecasting with latent graph    Zhao, J.; Miao, L.; Yang, J.; Fang, H.; Zhang, Q.-M.; Nie,
+inference. arXiv preprint arXiv:2203.03423.                     M.; Holme, P.; and Zhou, T. 2015. Prediction of links and
+Schirmer, M.; Eltayeb, M.; Lessmann, S.; and Rudolph, M.        weights in networks by reliable routes. Scientific reports,
+2022. Modeling Irregular Time Series with Continuous Re-        5(1): 12261.
+current Units. In Proceedings of the 39th International Con-    Zhou, H.; Zhang, S.; Peng, J.; Zhang, S.; Li, J.; Xiong, H.;
+ference on Machine Learning, volume 162, 19388–19405.           and Zhang, W. 2021. Informer: Beyond efficient transformer
+PMLR.                                                           for long sequence time-series forecasting. In Proceedings of
+Scholz, R.; Born, S.; Duong-Trung, N.; Cruz-Bournazou,          the AAAI Conference on Artificial Intelligence, volume 35,
+M. N.; and Schmidt-Thieme, L. 2023. Latent Linear ODEs          11106–11115.
+with Neural Kalman Filtering for Irregular Time Series          Zhou, T.; Ma, Z.; Wen, Q.; Wang, X.; Sun, L.; and Jin,
+Forecasting.                                                    R. 2022. FEDformer: Frequency Enhanced Decomposed
+Shukla, S. N.; and Marlin, B. 2021. Multi-Time Attention        Transformer for Long-term Series Forecasting. In Pro-
+Networks for Irregularly Sampled Time Series. In Interna-       ceedings of the 39th International Conference on Machine
+tional Conference on Learning Representations.                  Learning, volume 162 of Proceedings of Machine Learning
+Shukla, S. N.; and Marlin, B. 2022. Heteroscedastic Tempo-      Research, 27268–27286. PMLR.
+ral Variational Autoencoder For Irregularly Sampled Time        Zulaika, U.; Sanchez-Corcuera, R.; Almeida, A.; and Lopez-
+Series. In International Conference on Learning Represen-       de Ipina, D. 2022. LWP-WL: Link weight prediction based
+tations.                                                        on CNNs and the Weisfeiler–Lehman algorithm. Applied
+Silva, I.; Moody, G.; Scott, D. J.; Celi, L. A.; and Mark,      Soft Computing, 120: 108657.
+R. G. 2012. Predicting in-hospital mortality of icu patients:
+The physionet/computing in cardiology challenge 2012. In
+2012 Computing in Cardiology, 245–248. IEEE.
+Tashiro, Y.; Song, J.; Song, Y.; and Ermon, S. 2021. CSDI:
+Conditional score-based diffusion models for probabilistic
+time series imputation. Advances in Neural Information
+Processing Systems, 34: 24804–24816.
+Vaswani, A.; Shazeer, N.; Parmar, N.; Uszkoreit, J.; Jones,
+L.; Gomez, A. N.; Kaiser, Ł.; and Polosukhin, I. 2017. At-
+tention is all you need. Advances in Neural Information Pro-
+cessing Systems, 30.
+Velickovic, P.; Cucurull, G.; Casanova, A.; Romero, A.; Lio,
+P.; and Bengio, Y. 2017. Graph attention networks. stat,
+1050: 20.
+Wu, Z.; Pan, S.; Long, G.; Jiang, J.; Chang, X.; and Zhang,
+C. 2020. Connecting the dots: Multivariate time series fore-
+casting with graph neural networks. In Proceedings of the
+26th ACM SIGKDD International Conference on Knowl-
+edge Discovery & Data Mining, 753–763.
+Yalavarthi, V. K.; Burchert, J.; and Schmidt-Thieme, L.
+2022. DCSF: Deep Convolutional Set Functions for Classi-
+fication of Asynchronous Time Series. In 2022 IEEE 9th In-
+ternational Conference on Data Science and Advanced An-
+alytics (DSAA), 1–10. IEEE.
+Yalavarthi, V. K.; Burchert, J.; and Schmidt-Thieme, L.
+2023. Tripletformer for Probabilistic Interpolation of Irreg-
+ularly sampled Time Series. In 2023 IEEE International
+Conference on Big Data (BigData), 986–995. IEEE.
+Yang, X.; and Wang, B. 2020. Local ranking and global fu-
+sion for personalized recommendation. Applied Soft Com-
+puting, 96: 106636.
+

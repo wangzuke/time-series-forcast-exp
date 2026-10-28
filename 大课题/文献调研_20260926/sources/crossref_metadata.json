@@ -1,0 +1,2888 @@
+[
+  {
+    "id": "P03",
+    "doi": "10.1145/3637528.3672055",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "GinAR: An End-To-End Multivariate Time Series Forecasting Model Suitable for Variable Missing"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0001-8314-8251",
+          "authenticated-orcid": false,
+          "given": "Chengqing",
+          "family": "Yu",
+          "sequence": "first",
+          "affiliation": [
+            {
+              "name": "Institute of Computing Technology, Chinese Academy of Sciences &amp; University of Chinese Academy of Sciences, Beijing, China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-3282-0535",
+          "authenticated-orcid": false,
+          "given": "Fei",
+          "family": "Wang",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Institute of Computig Technology, Chinese Academy of Sciences &amp; University of Chinese Academy of Sciences, Beijing, China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-0815-2768",
+          "authenticated-orcid": false,
+          "given": "Zezhi",
+          "family": "Shao",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Institute of Computing Technology, Chinese Academy of Sciences &amp; University of Chinese Academy of Sciences, Beijing, China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0001-5694-3831",
+          "authenticated-orcid": false,
+          "given": "Tangwen",
+          "family": "Qian",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Institute of Computing Technology, Chinese Academy of Sciences, Beijing, China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0001-6680-160X",
+          "authenticated-orcid": false,
+          "given": "Zhao",
+          "family": "Zhang",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Institute of Computing Technology, Chinese Academy of Sciences, Beijing, China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0003-4488-0102",
+          "authenticated-orcid": false,
+          "given": "Wei",
+          "family": "Wei",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan, China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0001-6647-0986",
+          "authenticated-orcid": false,
+          "given": "Yongjun",
+          "family": "Xu",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Institute of Computing Technology, Chinese Academy of Sciences, Beijing, China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2024,
+            8,
+            24
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2024,
+            8,
+            25
+          ]
+        ]
+      },
+      "published-online": {
+        "date-parts": [
+          [
+            2024,
+            8,
+            24
+          ]
+        ]
+      },
+      "page": "3989-4000",
+      "DOI": "10.1145/3637528.3672055",
+      "URL": "https://doi.org/10.1145/3637528.3672055"
+    }
+  },
+  {
+    "id": "P05",
+    "doi": "10.1145/3711896.3737046",
+    "status": "unavailable",
+    "error": "HTTPSConnectionPool(host='api.crossref.org', port=443): Max retries exceeded with url: /works/10.1145/3711896.3737046 (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1007)')))"
+  },
+  {
+    "id": "P11",
+    "doi": "10.1145/3534678.3539394",
+    "status": "unavailable",
+    "error": "HTTPSConnectionPool(host='api.crossref.org', port=443): Max retries exceeded with url: /works/10.1145/3534678.3539394 (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1007)')))"
+  },
+  {
+    "id": "P12",
+    "doi": "10.24963/ijcai.2024/228",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Reconstructing Missing Variables for Multivariate Time Series Forecasting via Conditional Generative Flows"
+      ],
+      "author": [
+        {
+          "given": "Xuanming",
+          "family": "Hu",
+          "sequence": "first",
+          "affiliation": [
+            {
+              "name": "Arizona State University"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Wei",
+          "family": "Fan",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "University of Oxford"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Haifeng",
+          "family": "Chen",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "NEC Laboratories America Inc"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Pengyang",
+          "family": "Wang",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "University of Macau"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Yanjie",
+          "family": "Fu",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Arizona State University"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Proceedings of the Thirty-ThirdInternational Joint Conference on Artificial Intelligence"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2024,
+            8
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2024,
+            8
+          ]
+        ]
+      },
+      "page": "2063-2071",
+      "DOI": "10.24963/ijcai.2024/228",
+      "URL": "https://doi.org/10.24963/ijcai.2024/228"
+    }
+  },
+  {
+    "id": "P13",
+    "doi": "10.1007/s10618-022-00903-7",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Graph convolutional networks for traffic forecasting with missing values"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0002-3251-6939",
+          "authenticated-orcid": false,
+          "given": "Jingwei",
+          "family": "Zuo",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Karine",
+          "family": "Zeitouni",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Yehia",
+          "family": "Taher",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Sandra",
+          "family": "Garcia-Rodriguez",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Data Mining and Knowledge Discovery"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2022,
+            12,
+            16
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2023,
+            3
+          ]
+        ]
+      },
+      "published-online": {
+        "date-parts": [
+          [
+            2022,
+            12,
+            16
+          ]
+        ]
+      },
+      "volume": "37",
+      "issue": "2",
+      "page": "913-947",
+      "DOI": "10.1007/s10618-022-00903-7",
+      "URL": "https://doi.org/10.1007/s10618-022-00903-7"
+    }
+  },
+  {
+    "id": "P14",
+    "doi": "10.1109/TITS.2022.3233890",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Traffic Prediction With Missing Data: A Multi-Task Learning Approach"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0002-8913-0885",
+          "authenticated-orcid": false,
+          "given": "Ao",
+          "family": "Wang",
+          "sequence": "first",
+          "affiliation": [
+            {
+              "name": "Department of Computer Science and Engineering, Guangdong Provincial Key Laboratory of Brain-inspired Intelligent Computation, Southern University of Science and Technology, Shenzhen, China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0001-9782-218X",
+          "authenticated-orcid": false,
+          "given": "Yongchao",
+          "family": "Ye",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Department of Computer Science and Engineering, Guangdong Provincial Key Laboratory of Brain-inspired Intelligent Computation, Southern University of Science and Technology, Shenzhen, China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-7861-8957",
+          "authenticated-orcid": false,
+          "given": "Xiaozhuang",
+          "family": "Song",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Department of Computer Science and Engineering, Guangdong Provincial Key Laboratory of Brain-inspired Intelligent Computation, Southern University of Science and Technology, Shenzhen, China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-0004-1801",
+          "authenticated-orcid": false,
+          "given": "Shiyao",
+          "family": "Zhang",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Research Institute for Trustworthy Autonomous Systems, Southern University of Science and Technology, Shenzhen, China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-6392-6711",
+          "authenticated-orcid": false,
+          "given": "James J. Q.",
+          "family": "Yu",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Department of Computer Science and Engineering, Guangdong Provincial Key Laboratory of Brain-inspired Intelligent Computation, Southern University of Science and Technology, Shenzhen, China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "IEEE Transactions on Intelligent Transportation Systems"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2023,
+            4
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2023,
+            4
+          ]
+        ]
+      },
+      "volume": "24",
+      "issue": "4",
+      "page": "4189-4202",
+      "DOI": "10.1109/tits.2022.3233890",
+      "URL": "https://doi.org/10.1109/tits.2022.3233890"
+    }
+  },
+  {
+    "id": "P15",
+    "doi": "10.1109/JSYST.2023.3268717",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Engineering Traffic Prediction With Online Data Imputation: A Graph-Theoretic Perspective"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0002-1890-5911",
+          "authenticated-orcid": false,
+          "given": "Wenwei",
+          "family": "Yue",
+          "sequence": "first",
+          "affiliation": [
+            {
+              "name": "State Key Laboratory of Integrated Services Networks, Xidian University, Xi&#x0027;an, China"
+            }
+          ],
+          "role": [
+            {
+              "role": "author",
+              "vocabulary": "crossref"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-8375-9236",
+          "authenticated-orcid": false,
+          "given": "Di",
+          "family": "Zhou",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "State Key Laboratory of Integrated Services Networks, Xidian University, Xi&#x0027;an, China"
+            }
+          ],
+          "role": [
+            {
+              "role": "author",
+              "vocabulary": "crossref"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0003-4347-6669",
+          "authenticated-orcid": false,
+          "given": "Shangbo",
+          "family": "Wang",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "School of Advanced Technology, Xi&#x0027;an Jiaotong Liverpool University, Suzhou, China"
+            }
+          ],
+          "role": [
+            {
+              "role": "author",
+              "vocabulary": "crossref"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-0686-8404",
+          "authenticated-orcid": false,
+          "given": "Peibo",
+          "family": "Duan",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "School of Software, Northeastern University, Shenyang, China"
+            }
+          ],
+          "role": [
+            {
+              "role": "author",
+              "vocabulary": "crossref"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "IEEE Systems Journal"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2023,
+            9
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2023,
+            9
+          ]
+        ]
+      },
+      "volume": "17",
+      "issue": "3",
+      "page": "4485-4496",
+      "DOI": "10.1109/jsyst.2023.3268717",
+      "URL": "https://doi.org/10.1109/jsyst.2023.3268717"
+    }
+  },
+  {
+    "id": "P16",
+    "doi": "10.1109/ICDM58522.2023.00152",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Uncertainty-aware Traffic Prediction under Missing Data"
+      ],
+      "author": [
+        {
+          "given": "Hao",
+          "family": "Mei",
+          "sequence": "first",
+          "affiliation": [
+            {
+              "name": "Arizona State University,School of Computing and Augmented Intelligence,Tempe,US"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Junxian",
+          "family": "Li",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Xi&#x2019;an Jiaotong University,School of Computer Science and Technology,Xi&#x2019;an,China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Zhiming",
+          "family": "Liang",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Xi&#x2019;an Jiaotong University,School of Computer Science and Technology,Xi&#x2019;an,China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Guanjie",
+          "family": "Zheng",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Shanghai Jiaotong University,School of Electronic Information and Electrical Engineering,Shanghai,China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Bin",
+          "family": "Shi",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Xi&#x2019;an Jiaotong University,School of Computer Science and Technology,Xi&#x2019;an,China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Hua",
+          "family": "Wei",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Arizona State University,School of Computing and Augmented Intelligence,Tempe,US"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "2023 IEEE International Conference on Data Mining (ICDM)"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2023,
+            12,
+            1
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2023,
+            12,
+            1
+          ]
+        ]
+      },
+      "page": "1223-1228",
+      "DOI": "10.1109/icdm58522.2023.00152",
+      "URL": "https://doi.org/10.1109/icdm58522.2023.00152"
+    }
+  },
+  {
+    "id": "P17",
+    "doi": "10.1016/j.physa.2021.126474",
+    "status": "unavailable",
+    "error": "HTTPSConnectionPool(host='api.crossref.org', port=443): Max retries exceeded with url: /works/10.1016/j.physa.2021.126474 (Caused by ProxyError('Cannot connect to proxy.', ConnectionResetError(104, 'Connection reset by peer')))"
+  },
+  {
+    "id": "P18",
+    "doi": "10.1016/j.trc.2022.103820",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "A novel reinforced dynamic graph convolutional network model with data imputation for network-wide traffic flow prediction"
+      ],
+      "author": [
+        {
+          "given": "Yong",
+          "family": "Chen",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Xiqun (Michael)",
+          "family": "Chen",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Transportation Research Part C: Emerging Technologies"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2022,
+            10
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2022,
+            10
+          ]
+        ]
+      },
+      "volume": "143",
+      "page": "103820",
+      "article-number": "103820",
+      "DOI": "10.1016/j.trc.2022.103820",
+      "URL": "https://doi.org/10.1016/j.trc.2022.103820"
+    }
+  },
+  {
+    "id": "P19",
+    "doi": "10.1049/itr2.12200",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Traffic forecasting with missing data via low rank dynamic mode decomposition of tensor"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0001-6400-9475",
+          "authenticated-orcid": false,
+          "given": "Xinyu",
+          "family": "Zhang",
+          "sequence": "first",
+          "affiliation": [
+            {
+              "name": "Beijing Key Laboratory of Multimedia and Intelligent Software Technology Faculty of Information Technology Beijing Institute of Artificial Intelligence Beijing University of Technology Chaoyang District Beijing China"
+            }
+          ],
+          "role": [
+            {
+              "role": "author",
+              "vocabulary": "crossref"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0001-6650-6790",
+          "authenticated-orcid": false,
+          "given": "Yong",
+          "family": "Zhang",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Beijing Key Laboratory of Multimedia and Intelligent Software Technology Faculty of Information Technology Beijing Institute of Artificial Intelligence Beijing University of Technology Chaoyang District Beijing China"
+            }
+          ],
+          "role": [
+            {
+              "role": "author",
+              "vocabulary": "crossref"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0001-9237-3944",
+          "authenticated-orcid": false,
+          "given": "Xiulan",
+          "family": "Wei",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Beijing Key Laboratory of Multimedia and Intelligent Software Technology College of Metropolitan Transportation Beijing Institute of Artificial Intelligence Beijing University of Technology Chaoyang District Beijing China"
+            }
+          ],
+          "role": [
+            {
+              "role": "author",
+              "vocabulary": "crossref"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0003-0440-438X",
+          "authenticated-orcid": false,
+          "given": "Yongli",
+          "family": "Hu",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Beijing Key Laboratory of Multimedia and Intelligent Software Technology Faculty of Information Technology Beijing Institute of Artificial Intelligence Beijing University of Technology Chaoyang District Beijing China"
+            }
+          ],
+          "role": [
+            {
+              "role": "author",
+              "vocabulary": "crossref"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-8125-4648",
+          "authenticated-orcid": false,
+          "given": "Baocai",
+          "family": "Yin",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Beijing Key Laboratory of Multimedia and Intelligent Software Technology Faculty of Information Technology Beijing Institute of Artificial Intelligence Beijing University of Technology Chaoyang District Beijing China"
+            }
+          ],
+          "role": [
+            {
+              "role": "author",
+              "vocabulary": "crossref"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "IET Intelligent Transport Systems"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2022,
+            5,
+            6
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2022,
+            9
+          ]
+        ]
+      },
+      "published-online": {
+        "date-parts": [
+          [
+            2022,
+            5,
+            6
+          ]
+        ]
+      },
+      "volume": "16",
+      "issue": "9",
+      "page": "1164-1176",
+      "DOI": "10.1049/itr2.12200",
+      "URL": "https://doi.org/10.1049/itr2.12200"
+    }
+  },
+  {
+    "id": "P20",
+    "doi": "10.23919/ICAC50006.2021.9594248",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "The Sequence-to-Sequence Architecture with An Embedded Module for Long-Term Traffic Speed Forecasting with Missing Data"
+      ],
+      "author": [
+        {
+          "given": "Ge",
+          "family": "Zheng",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "role": "author",
+              "vocabulary": "crossref"
+            }
+          ]
+        },
+        {
+          "given": "Wei Koong",
+          "family": "Chai",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "role": "author",
+              "vocabulary": "crossref"
+            }
+          ]
+        },
+        {
+          "given": "Vasilis",
+          "family": "Katos",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "role": "author",
+              "vocabulary": "crossref"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "2021 26th International Conference on Automation and Computing (ICAC)"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2021,
+            9,
+            2
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2021,
+            9,
+            2
+          ]
+        ]
+      },
+      "page": "1-6",
+      "DOI": "10.23919/icac50006.2021.9594248",
+      "URL": "https://doi.org/10.23919/icac50006.2021.9594248"
+    }
+  },
+  {
+    "id": "P21",
+    "doi": "10.1016/j.eswa.2026.132412",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Effective and efficient incomplete multivariate time series forecasting"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0009-0006-8765-6003",
+          "authenticated-orcid": false,
+          "given": "Han",
+          "family": "Shi",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0001-9531-0906",
+          "authenticated-orcid": false,
+          "given": "Yangyang",
+          "family": "Wu",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0009-0005-7605-7307",
+          "authenticated-orcid": false,
+          "given": "Daozhan",
+          "family": "Pan",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-3626-5815",
+          "authenticated-orcid": false,
+          "given": "Jing",
+          "family": "Li",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-7863-6223",
+          "authenticated-orcid": false,
+          "given": "Guoqiang",
+          "family": "Qi",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-8632-1539",
+          "authenticated-orcid": false,
+          "given": "Xiaoye",
+          "family": "Miao",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0003-4703-7348",
+          "authenticated-orcid": false,
+          "given": "Jianwei",
+          "family": "Yin",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0001-9935-9969",
+          "authenticated-orcid": false,
+          "given": "Gang",
+          "family": "Yu",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Expert Systems with Applications"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2026,
+            8
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2026,
+            8
+          ]
+        ]
+      },
+      "volume": "323",
+      "page": "132412",
+      "article-number": "132412",
+      "DOI": "10.1016/j.eswa.2026.132412",
+      "URL": "https://doi.org/10.1016/j.eswa.2026.132412"
+    }
+  },
+  {
+    "id": "P22",
+    "doi": "10.1016/j.neucom.2026.134695",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Incomplete multivariate time series forecasting with dynamic attention graph network"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0002-7311-0118",
+          "authenticated-orcid": false,
+          "given": "Zheng",
+          "family": "Zhang",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Xiaochen",
+          "family": "Lai",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Liyong",
+          "family": "Zhang",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Neurocomputing"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2026,
+            11
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2026,
+            11
+          ]
+        ]
+      },
+      "volume": "702",
+      "page": "134695",
+      "article-number": "134695",
+      "DOI": "10.1016/j.neucom.2026.134695",
+      "URL": "https://doi.org/10.1016/j.neucom.2026.134695"
+    }
+  },
+  {
+    "id": "P23",
+    "doi": "10.1016/j.ijforecast.2022.12.006",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Wind energy forecasting with missing values within a fully conditional specification framework"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0001-8263-1399",
+          "authenticated-orcid": false,
+          "given": "Honglin",
+          "family": "Wen",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Pierre",
+          "family": "Pinson",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Jie",
+          "family": "Gu",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Zhijian",
+          "family": "Jin",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "International Journal of Forecasting"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2024,
+            1
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2024,
+            1
+          ]
+        ]
+      },
+      "volume": "40",
+      "issue": "1",
+      "page": "77-95",
+      "DOI": "10.1016/j.ijforecast.2022.12.006",
+      "URL": "https://doi.org/10.1016/j.ijforecast.2022.12.006"
+    }
+  },
+  {
+    "id": "P24",
+    "doi": "10.1016/j.apenergy.2025.126771",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Robust photovoltaic forecasting under severe data missingness via multi-domain collaboration and covariate interaction"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0002-1611-6636",
+          "authenticated-orcid": false,
+          "given": "Ke",
+          "family": "Yan",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0003-0737-5959",
+          "authenticated-orcid": false,
+          "given": "Jian",
+          "family": "Liu",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Jiazhen",
+          "family": "Zhang",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0009-0002-1292-0894",
+          "authenticated-orcid": false,
+          "given": "Fan",
+          "family": "Yang",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-3526-5856",
+          "authenticated-orcid": false,
+          "given": "Yuan",
+          "family": "Gao",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Yang",
+          "family": "Du",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Applied Energy"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2025,
+            12
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2025,
+            12
+          ]
+        ]
+      },
+      "volume": "401",
+      "page": "126771",
+      "article-number": "126771",
+      "DOI": "10.1016/j.apenergy.2025.126771",
+      "URL": "https://doi.org/10.1016/j.apenergy.2025.126771"
+    }
+  },
+  {
+    "id": "P25",
+    "doi": "10.1109/TSTE.2025.3611370",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Probabilistic Wind Power Forecasting With Missing Data Tolerance: An End-to-End Nonparametric Approach"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0002-8007-9040",
+          "authenticated-orcid": false,
+          "given": "Zichao",
+          "family": "Meng",
+          "sequence": "first",
+          "affiliation": [
+            {
+              "name": "Tsinghua Shenzhen International Graduate School, Tsinghua University, Shenzhen, China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-5268-5289",
+          "authenticated-orcid": false,
+          "given": "Ye",
+          "family": "Guo",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Department of Building Environment and Energy Engineering, Hong Kong Polytechnic University, Hong Kong, China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Chenhao",
+          "family": "Zhao",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Tsinghua Shenzhen International Graduate School, Tsinghua University, Shenzhen, China"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "IEEE Transactions on Sustainable Energy"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2026,
+            4
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2026,
+            4
+          ]
+        ]
+      },
+      "volume": "17",
+      "issue": "2",
+      "page": "1202-1213",
+      "DOI": "10.1109/tste.2025.3611370",
+      "URL": "https://doi.org/10.1109/tste.2025.3611370"
+    }
+  },
+  {
+    "id": "P27",
+    "doi": "10.3390/jsan15040052",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Citywide Air Quality Forecasting over Sparse Sensor Networks: Cross-Location Generalization and Deep Learning Reliability Under Missing Data"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0002-3416-9547",
+          "authenticated-orcid": false,
+          "given": "Francisco-Jose",
+          "family": "Alvarado-Alcon",
+          "sequence": "first",
+          "affiliation": [
+            {
+              "name": "Department of Information and Communications Technologies, Universidad Politécnica de Cartagena, 30202 Cartagena, Spain"
+            },
+            {
+              "name": "People Oriented Smart Technologies Laboratory, European Research Group, European University of Technology, European Union"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0003-0722-4181",
+          "authenticated-orcid": false,
+          "given": "Rafael",
+          "family": "Asorey-Cacheda",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Department of Information and Communications Technologies, Universidad Politécnica de Cartagena, 30202 Cartagena, Spain"
+            },
+            {
+              "name": "People Oriented Smart Technologies Laboratory, European Research Group, European University of Technology, European Union"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0003-0741-7530",
+          "authenticated-orcid": false,
+          "given": "Joan",
+          "family": "Garcia-Haro",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Department of Information and Communications Technologies, Universidad Politécnica de Cartagena, 30202 Cartagena, Spain"
+            },
+            {
+              "name": "People Oriented Smart Technologies Laboratory, European Research Group, European University of Technology, European Union"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0003-2902-5757",
+          "authenticated-orcid": false,
+          "given": "Laura",
+          "family": "García",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Department of Information and Communications Technologies, Universidad Politécnica de Cartagena, 30202 Cartagena, Spain"
+            },
+            {
+              "name": "People Oriented Smart Technologies Laboratory, European Research Group, European University of Technology, European Union"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0001-5095-3035",
+          "authenticated-orcid": false,
+          "given": "Antonio-Javier",
+          "family": "Garcia-Sanchez",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Department of Information and Communications Technologies, Universidad Politécnica de Cartagena, 30202 Cartagena, Spain"
+            },
+            {
+              "name": "People Oriented Smart Technologies Laboratory, European Research Group, European University of Technology, European Union"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Journal of Sensor and Actuator Networks"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2026,
+            6,
+            29
+          ]
+        ]
+      },
+      "published-online": {
+        "date-parts": [
+          [
+            2026,
+            6,
+            29
+          ]
+        ]
+      },
+      "volume": "15",
+      "issue": "4",
+      "page": "52",
+      "DOI": "10.3390/jsan15040052",
+      "URL": "https://doi.org/10.3390/jsan15040052"
+    }
+  },
+  {
+    "id": "P28",
+    "doi": "10.1007/s44408-026-00145-y",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "DeepSIP: A Deep Learning Approach for Sensor Data Imputation and Time Series Forecasting"
+      ],
+      "author": [
+        {
+          "given": "Ola",
+          "family": "Surakhi",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Naser",
+          "family": "Hossein Motlagh",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Maitane",
+          "family": "Iturrate-Garcia",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Aseel",
+          "family": "Abu Tabbaneh",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Sayyed",
+          "family": "Saleh",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Ali",
+          "family": "Almashni",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Mohammad",
+          "family": "AL-Refaie",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Mario",
+          "family": "LovriĆ",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Kan",
+          "family": "Huang",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Yu",
+          "family": "Zhao",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Tianyi",
+          "family": "Zhao",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Lina",
+          "family": "Wang",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Yutaka",
+          "family": "Matsumi",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Tareq",
+          "family": "Hussein",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Aerosol and Air Quality Research"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2026,
+            7,
+            2
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2026,
+            8
+          ]
+        ]
+      },
+      "published-online": {
+        "date-parts": [
+          [
+            2026,
+            7,
+            2
+          ]
+        ]
+      },
+      "volume": "26",
+      "issue": "8",
+      "article-number": "62",
+      "DOI": "10.1007/s44408-026-00145-y",
+      "URL": "https://doi.org/10.1007/s44408-026-00145-y"
+    }
+  },
+  {
+    "id": "P34",
+    "doi": "10.1609/aaai.v38i15.29560",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "GraFITi: Graphs for Forecasting Irregularly Sampled Time Series"
+      ],
+      "author": [
+        {
+          "given": "Vijaya Krishna",
+          "family": "Yalavarthi",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Kiran",
+          "family": "Madhusudhanan",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Randolf",
+          "family": "Scholz",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Nourhan",
+          "family": "Ahmed",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Johannes",
+          "family": "Burchert",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Shayan",
+          "family": "Jawed",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Stefan",
+          "family": "Born",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Lars",
+          "family": "Schmidt-Thieme",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Proceedings of the AAAI Conference on Artificial Intelligence"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2024,
+            3,
+            24
+          ]
+        ]
+      },
+      "published-online": {
+        "date-parts": [
+          [
+            2024,
+            3,
+            24
+          ]
+        ]
+      },
+      "volume": "38",
+      "issue": "15",
+      "page": "16255-16263",
+      "DOI": "10.1609/aaai.v38i15.29560",
+      "URL": "https://doi.org/10.1609/aaai.v38i15.29560"
+    }
+  },
+  {
+    "id": "P40",
+    "doi": "10.1609/aaai.v39i20.35494",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Probabilistic Forecasting of Irregularly Sampled Time Series with Missing Values via Conditional Normalizing Flows"
+      ],
+      "author": [
+        {
+          "given": "Vijaya Krishna",
+          "family": "Yalavarthi",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Randolf",
+          "family": "Scholz",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Stefan",
+          "family": "Born",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Lars",
+          "family": "Schmidt-Thieme",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Proceedings of the AAAI Conference on Artificial Intelligence"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2025,
+            4,
+            11
+          ]
+        ]
+      },
+      "published-online": {
+        "date-parts": [
+          [
+            2025,
+            4,
+            11
+          ]
+        ]
+      },
+      "volume": "39",
+      "issue": "20",
+      "page": "21877-21885",
+      "DOI": "10.1609/aaai.v39i20.35494",
+      "URL": "https://doi.org/10.1609/aaai.v39i20.35494"
+    }
+  },
+  {
+    "id": "P48",
+    "doi": "10.1016/j.eswa.2023.119619",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "SAITS: Self-attention-based imputation for time series"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0003-3046-7835",
+          "authenticated-orcid": false,
+          "given": "Wenjie",
+          "family": "Du",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0001-7468-0430",
+          "authenticated-orcid": false,
+          "given": "David",
+          "family": "Côté",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-6747-8151",
+          "authenticated-orcid": false,
+          "given": "Yan",
+          "family": "Liu",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Expert Systems with Applications"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2023,
+            6
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2023,
+            6
+          ]
+        ]
+      },
+      "volume": "219",
+      "page": "119619",
+      "article-number": "119619",
+      "DOI": "10.1016/j.eswa.2023.119619",
+      "URL": "https://doi.org/10.1016/j.eswa.2023.119619"
+    }
+  },
+  {
+    "id": "P52",
+    "doi": "10.24963/ijcai.2025/320",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Filling the Missings: Spatiotemporal Data Imputation by Conditional Diffusion"
+      ],
+      "author": [
+        {
+          "given": "Wenying",
+          "family": "He",
+          "sequence": "first",
+          "affiliation": [
+            {
+              "name": "Hebei University of Technology"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Jieling",
+          "family": "Huang",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Hebei University of Technology"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Junhua",
+          "family": "Gu",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Hebei University of Technology"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Ji",
+          "family": "Zhang",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "University of Southern Queensland"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Yude",
+          "family": "Bai",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Tiangong university"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2025,
+            9
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2025,
+            9
+          ]
+        ]
+      },
+      "page": "2874-2882",
+      "DOI": "10.24963/ijcai.2025/320",
+      "URL": "https://doi.org/10.24963/ijcai.2025/320"
+    }
+  },
+  {
+    "id": "P57",
+    "doi": "10.1016/j.knosys.2022.110188",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Dynamic graph convolutional recurrent imputation network for spatiotemporal traffic missing data"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0003-2698-3319",
+          "authenticated-orcid": false,
+          "given": "Xiangjie",
+          "family": "Kong",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0003-2472-2676",
+          "authenticated-orcid": false,
+          "given": "Wenfeng",
+          "family": "Zhou",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Guojiang",
+          "family": "Shen",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Wenyi",
+          "family": "Zhang",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Nali",
+          "family": "Liu",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Yao",
+          "family": "Yang",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Knowledge-Based Systems"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2023,
+            2
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2023,
+            2
+          ]
+        ]
+      },
+      "volume": "261",
+      "page": "110188",
+      "article-number": "110188",
+      "DOI": "10.1016/j.knosys.2022.110188",
+      "URL": "https://doi.org/10.1016/j.knosys.2022.110188"
+    }
+  },
+  {
+    "id": "P58",
+    "doi": "10.1016/j.future.2024.03.015",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "A transferred spatio-temporal deep model based on multi-LSTM auto-encoder for air pollution time series missing value imputation"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0001-5744-7688",
+          "authenticated-orcid": false,
+          "given": "Xiaoxia",
+          "family": "Zhang",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Pengcheng",
+          "family": "Zhou",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Future Generation Computer Systems"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2024,
+            7
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2024,
+            7
+          ]
+        ]
+      },
+      "volume": "156",
+      "page": "325-338",
+      "DOI": "10.1016/j.future.2024.03.015",
+      "URL": "https://doi.org/10.1016/j.future.2024.03.015"
+    }
+  },
+  {
+    "id": "P59",
+    "doi": "10.1029/2025JH000656",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Imputing Missing Long‐Term Spatiotemporal Multivariate Atmospheric Data With CNN‐Transformer Machine Learning"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0003-1998-126X",
+          "authenticated-orcid": false,
+          "given": "Jiahui",
+          "family": "Hu",
+          "sequence": "first",
+          "affiliation": [
+            {
+              "name": "Department of Physical Sciences Center for Space and Atmospheric Research (CSAR) Embry‐Riddle Aeronautical University  Daytona Beach FL USA"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0003-0773-5862",
+          "authenticated-orcid": false,
+          "given": "Wenjun",
+          "family": "Dong",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Department of Physical Sciences Center for Space and Atmospheric Research (CSAR) Embry‐Riddle Aeronautical University  Daytona Beach FL USA"
+            },
+            {
+              "name": "Global Atmospheric Technologies and Sciences (GATS)  Boulder CO USA"
+            },
+            {
+              "name": "High Altitude Observatory NSF National Center for Atmospheric Research  Boulder CO USA"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-1834-7120",
+          "authenticated-orcid": false,
+          "given": "Alan Z.",
+          "family": "Liu",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Department of Physical Sciences Center for Space and Atmospheric Research (CSAR) Embry‐Riddle Aeronautical University  Daytona Beach FL USA"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Journal of Geophysical Research: Machine Learning and Computation"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2026,
+            3,
+            9
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2026,
+            4
+          ]
+        ]
+      },
+      "published-online": {
+        "date-parts": [
+          [
+            2026,
+            3,
+            9
+          ]
+        ]
+      },
+      "volume": "3",
+      "issue": "2",
+      "article-number": "e2025JH000656",
+      "DOI": "10.1029/2025jh000656",
+      "URL": "https://doi.org/10.1029/2025jh000656"
+    }
+  },
+  {
+    "id": "P60",
+    "doi": "10.24963/ijcai.2025/1187",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Deep Learning for Multivariate Time Series Imputation: A Survey"
+      ],
+      "author": [
+        {
+          "given": "Jun",
+          "family": "Wang",
+          "sequence": "first",
+          "affiliation": [
+            {
+              "name": "PyPOTS Research"
+            },
+            {
+              "name": "Hong Kong University of Science and Technology"
+            },
+            {
+              "name": "Hong Kong University of Science and Technology (Guangzhou)"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Wenjie",
+          "family": "Du",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "PyPOTS Research"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Yiyuan",
+          "family": "Yang",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "PyPOTS Research"
+            },
+            {
+              "name": "University of Oxford"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Linglong",
+          "family": "Qian",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "PyPOTS Research"
+            },
+            {
+              "name": "King's College London"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Wei",
+          "family": "Cao",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "PyPOTS Research"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Keli",
+          "family": "Zhang",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Huawei Noah’s Ark Lab"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Wenjia",
+          "family": "Wang",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Hong Kong University of Science and Technology"
+            },
+            {
+              "name": "Hong Kong University of Science and Technology (Guangzhou)"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Yuxuan",
+          "family": "Liang",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Hong Kong University of Science and Technology (Guangzhou)"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Qingsong",
+          "family": "Wen",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Squirrel Ai Learning"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2025,
+            9
+          ]
+        ]
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            2025,
+            9
+          ]
+        ]
+      },
+      "page": "10696-10704",
+      "DOI": "10.24963/ijcai.2025/1187",
+      "URL": "https://doi.org/10.24963/ijcai.2025/1187"
+    }
+  },
+  {
+    "id": "P64",
+    "doi": "10.1038/s41598-018-24271-9",
+    "status": "ok",
+    "metadata": {
+      "title": [
+        "Recurrent Neural Networks for Multivariate Time Series with Missing Values"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0001-6818-1125",
+          "authenticated-orcid": false,
+          "given": "Zhengping",
+          "family": "Che",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Sanjay",
+          "family": "Purushotham",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Kyunghyun",
+          "family": "Cho",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "David",
+          "family": "Sontag",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Yan",
+          "family": "Liu",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Scientific Reports"
+      ],
+      "published": {
+        "date-parts": [
+          [
+            2018,
+            4,
+            17
+          ]
+        ]
+      },
+      "published-online": {
+        "date-parts": [
+          [
+            2018,
+            4,
+            17
+          ]
+        ]
+      },
+      "volume": "8",
+      "issue": "1",
+      "article-number": "6085",
+      "DOI": "10.1038/s41598-018-24271-9",
+      "URL": "https://doi.org/10.1038/s41598-018-24271-9"
+    }
+  }
+]

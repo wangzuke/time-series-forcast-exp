@@ -1,0 +1,576 @@
+                                         TimeCHEAT: A Channel Harmony Strategy for Irregularly Sampled Multivariate
+                                                                 Time Series Analysis
+                                                                                  Jiexi Liu1,2 , Meng Cao1,2 , Songcan Chen1,2 *
+                                                       1
+                                                           College of Computer Science and Technology, Nanjing University of Aeronautics and Astronautics
+                                                                        2
+                                                                          MIIT Key Laboratory of Pattern Analysis and Machine Intelligence
+                                                                                     {liujiexi, meng.cao, s.chen}@nuaa.edu.cn
+arXiv:2412.12886v1 [cs.LG] 17 Dec 2024
+
+
+
+
+                                                                     Abstract
+                                           Irregularly sampled multivariate time series (ISMTS) are
+                                           prevalent in reality. Due to their non-uniform intervals be-
+                                           tween successive observations and varying sampling rates
+                                           among series, the channel-independent (CI) strategy, which
+                                           has been demonstrated more desirable for complete multi-
+                                           variate time series forecasting in recent studies, has failed.
+                                           This failure can be further attributed to the sampling spar-
+                                           sity, which provides insufficient information for effective CI
+                                           learning, thereby reducing its capacity. When we resort to the
+                                           channel-dependent (CD) strategy, even higher capacity can-
+                                           not mitigate the potential loss of diversity in learning similar
+                                           embedding patterns across different channels. We find that
+                                           existing work considers CI and CD strategies to be mutu-
+                                           ally exclusive, primarily because they apply these strategies
+                                           to the global channel. However, we hold the view that chan-
+                                           nel strategies do not necessarily have to be used globally.
+                                           Instead, by appropriately applying them locally and glob-
+                                           ally, we can create an opportunity to take full advantage of
+                                           both strategies. This leads us to introduce the Channel Har-
+                                           mony ISMTS Transformer (TimeCHEAT), which utilizes the
+                                           CD strategy locally and the CI strategy globally. Specifi-         Figure 1: The difference between the 3 kinds of channel
+                                           cally, we segment the ISMTS into sub-series level patches.         strategies.
+                                           Locally, the CD strategy aggregates information within each
+                                           patch for time embedding learning, maximizing the use of
+                                           relevant observations while reducing long-range irrelevant in-
+                                           terference. Here, we enhance generality by transforming em-        ISMTS are characterized by inconsistent intervals between
+                                           bedding learning into an edge weight prediction task using         consecutive data points within a channel, asynchronous sam-
+                                           bipartite graphs, eliminating the need for special prior knowl-    pling across multiple channels and sometimes sampling
+                                           edge. Globally, the CI strategy is applied across patches, al-     sparsity. Such characteristics, arising from irregularities and
+                                           lowing the Transformer to learn individualized attention pat-      multi-channels, pose a significant challenge to classical ma-
+                                           terns for each channel. Experimental results indicate our pro-
+                                           posed TimeCHEAT demonstrates competitive state-of-the-art
+                                                                                                              chine learning methods, which require the data to be defined
+                                           performance across three mainstream tasks including classi-        in a consistent, fixed-dimensional feature space with con-
+                                           fication, forecasting and interpolation.                           stant intervals between successive timestamps.
+                                                                                                                 Recent studies have sought to address this challenge us-
+                                                                                                              ing various approaches. One common method is a two-step
+                                                                  Introduction                                process that treats ISMTS as synchronized, regularly sam-
+                                         Irregularly sampled multivariate time series (ISMTS) are             pled Normal Multivariate Time Series (NMTS) data with
+                                         ubiquitous in real-world scenarios, such as healthcare (Gold-        missing values, focusing on imputation strategies (Che et al.
+                                         berger et al. 2000; Reyna et al. 2020), meteorology (Schulz          2018; Yoon, Jordon, and Schaar 2018; Camino, Hammer-
+                                         and Stattegger 1997; Cao et al. 2018) and transportation             schmidt, and State 2019; Tashiro et al. 2021; Le Morvan
+                                         (Chen et al. 2022; Tang et al. 2020). Due to sensor malfunc-         et al. 2021; Chen et al. 2022; Fan 2022; Du, Côté, and Liu
+                                         tions, transmission distortions, cost-reduction strategies, etc,     2023). However, accurate imputation is challenging, there-
+                                             * Corresponding Author                                           fore separating imputation from downstream tasks may dis-
+                                         Copyright © 2025, Association for the Advancement of Artificial      tort the underlying relationships and introduce substantial
+                                         Intelligence (www.aaai.org). All rights reserved.                    noise, leading to suboptimal results (Zhang et al. 2021a; Wu
+et al. 2021b; Agarwal et al. 2023; Sun et al. 2024). Since im-   ally, the model achieves an effective balance between cap-
+putation needs to fully utilize information under the ISMTS      turing detailed, context-specific information and preserving
+scenario, two-step methods often use the channel-dependent       broader, channel-specific patterns. This hybrid approach en-
+(CD) strategy, merging all input dimensions in the learning      ables more accurate and insightful analysis of ISMTS data,
+process. While end-to-end models, which have gained con-         addressing the complex interactions between channels with-
+siderable attention recently, have demonstrated superior per-    out sacrificing either detail or generality.
+formance over two-step approaches (Le Morvan et al. 2021).          Specifically, we begin by dividing the ISMTS into
+Some of these models treat ISMTS as discrete-time series,        subseries-level patches. Within each patch, we apply the CD
+aggregating sample points from individual or multiple chan-      strategy locally to effectively learn time embeddings. This
+nels to create unified features (Wu et al. 2021b; Agarwal        approach aggregates nearby observations and neighborhood
+et al. 2023), while others preserve the continuous temporal      channel information, leveraging local smoothness to high-
+dynamics of ISMTS data, often processing each channel in-        light their importance while avoiding interference from dis-
+dependently (De Brouwer et al. 2019; Kidger et al. 2020;         tant, irrelevant data. Traditional methods for time embed-
+Schirmer et al. 2022; Jhin et al. 2022; Chowdhury et al.         ding learning often assume that larger time intervals weaken
+2023). The end-to-end methods utilize CD and channel-            dependencies and relationships, leading to strong inductive
+independent (CI) strategies arbitrarily based on the existing    biases. This can cause key timestamps with independent po-
+models or experimental results. Therefore, despite the nu-       sitions to be overlooked, thus affecting the extraction of im-
+merous time series models proposed to tackle irregular sam-      portant patterns. To address this, we transform the embed-
+pling in ISMTS, the challenge of effectively managing chan-      ding learning process into an edge weight prediction task us-
+nel interactions still remains unresolved.                       ing bipartite graphs, which provides a more straightforward
+   Since the interactions between multiple channels in           and generalizable learning method without above assump-
+ISMTS data are complex, a deeper understanding of these          tion. Additionally, we apply the CI strategy globally across
+interactions lead to more accurate and insightful analysis.      patches, using the Transformer as the backbone encoder to
+Given the advantages of end-to-end methods above, this           capture individual attention patterns for each channel.
+paper focuses on these approaches. As shown in Fig.1,               Our main contributions can be summarized as follows:
+we divide the ISMTS analysis process into three main              • We are the first to explore channel strategies for ISMTS
+steps: ISMTS input, representation learning, and down-              analysis, proposing a novel and unified approach that
+stream tasks. Our primary focus is on representation learn-         better balances individual channel treatment with cross-
+ing, which includes both embedding learning and encoding.           channel modeling.
+We do not separate these in Fig.1 (a) and (b) for two existing
+primary channel strategies CI and CD because the strategy         • We design a special time embedding method that can di-
+remains consistent unchanged throughout the process. The            rectly learn fix-length time embedding for ISMTS data
+CI strategy as in Fig.1(a), which uses individual models for        without introducing special inductive bias.
+each channel, works well in NMTS forecasting (Nie et al.          • We are not limited to a specific forecasting task but
+2023). In ISMTS analysis, CI allows channels to be pro-             attempt to propose a task-general channel strategy for
+cessed according to their unique sampling patterns without          ISMTS data, including classification, forecasting and in-
+forcing synchronization, preserving data integrity. However,        terpolation.
+CI struggles with limited generalizability and robustness on
+unseen channels (Han, Ye, and Zhan 2024) and the varying                              Related Work
+sampling rates across channels can result in the loss of cru-
+cial context, and channels with sparse sampling may fail to      Irregularly Sampled Multivariate Time Series
+provide sufficient information for effective learning. On the    Analysis Models
+other hand, the CD strategy in Fig.1(b) models all chan-         An effective approach to analyzing ISMTS relies on un-
+nels together, capturing complex temporal patterns but risks     derstanding their unique properties. One natural idea is the
+oversmoothing and struggles to fit individual channels, par-     two-step method, which treats ISMTS as NMTS with miss-
+ticularly when channel similarity is low.                        ing values and imputes the missingness before perform-
+   To effectively manage channel interactions, this paper        ing downstream tasks (Che et al. 2018; Yoon, Jordon, and
+aims to balance necessary individual intra-channel treatment     Schaar 2018; Camino, Hammerschmidt, and State 2019;
+with inter-channel dependencies simultaneously. While ex-        Tashiro et al. 2021; Chen et al. 2022; Fan 2022; Du, Côté,
+isting work often treats CI and CD strategies as mutu-           and Liu 2023; Wang et al. 2024). However, most two-step
+ally exclusive, applying them only at a global level, we         methods may distort the underlying relationships, introduc-
+hold the view that these strategies can be more effective        ing unsuitable assumptions and substantial noise due to in-
+when used both locally and globally. This approach cre-          correct imputation (Zhang et al. 2021a; Wu et al. 2021b;
+ate an opportunity to fully leverage the advantages of both      Agarwal et al. 2023), ultimately compromising the accuracy
+strategies. Accordingly, we propose the Channel Harmony          of downstream tasks. Therefore, recent work has shifted to-
+IrrEgularly SAmpled Multivariate Time Series Transformer         wards using end-to-end methods, which have been shown
+(TimeCHEAT), which applies the CD strategy locally and           to outperform two-step methods both experimentally and
+the CI strategy globally, as illustrated in Fig.1(c). By ap-     theoretically (Le Morvan et al. 2021). One approach treats
+plying the CD strategy locally and the CI strategy glob-         ISMTS as time series with discrete timestamps, focusing on
+handling the irregularities by aggregating all sample points     problem, in which T ′ indicates the forecasting horizon. For
+of either a single channel or all channels to extract a uni-     each realization, (x, m, y), mc,t = 0 indicates there is no
+fied feature (Wu et al. 2021b; Agarwal et al. 2023). Others      observation at timestamp t in channel c, and mc,t = 1 means
+leverage the inherent continuity of time, thereby preserv-       it is observed. Here, for brevity, we omit the data case index
+ing the ongoing temporal dynamics present in ISMTS data          n for the n-th instance when the context is clear.
+(De Brouwer et al. 2019; Rubanova, Chen, and Duvenaud
+2019; Kidger et al. 2020; Schirmer et al. 2022; Jhin et al.      Channel Dependent (CD) and Channel Independent
+2022; Chowdhury et al. 2023).                                    (CI). We define multivariate time series in accordance
+   Due to these advancements, the issue of irregular sam-        with previous literature (Han, Ye, and Zhan 2024; Murtagh
+pling has been initially addressed. However, the relation-       and Heck 2012; Zhou et al. 2021), which consists of two
+ships between channels have yet to be discussed. Since the       or more real-valued channels that depend on time. Other
+channel strategies for most ISMTS analysis models simply         sequential data with extra dimensions like spatio-temporal
+merge all channels as input without considering the special      data (Tan et al. 2023) or discrete values like natural language
+inter-channel correlation nor treating different channels in-    (Kenton and Toutanova 2019) are not included in this paper.
+dividually.                                                         While different from existing work, our TimeCHEAT fo-
+                                                                 cuses on learning a set of nonlinear embedding functions F
+Channel Strategies for Time Series Analysis                      that can map the input ISMTS into best-described represen-
+                                                                 tations for further analysis. Under this scenario, the CI strat-
+Channel Strategies exist in all deep learning multivariate       egy models each channel separately and ignores the poten-
+time series learning models, but the discussion of this topic    tial channel interactions. This approach needs C individual
+mainly focuses on the complete multivariate time series          functions and each is typically denoted as f (c) : RT → RT ,
+forecasting task. The essential challenge of channel strate-
+                                                                 for c = 1, . . . , C, where f (c) gets access to the ISMTS
+gies for other downstream tasks as well as for ISMTS data
+                                                                 data specific to the c-th channel. On the contrary, the CD
+from the model design perspective has not been solved. Be-
+                                                                 strategy models all the channels as a whole, using a single
+fore the discovery in Montero-Manso and Hyndman (2021)
+                                                                 function f : RT ×C → RT ×C . The learned representations
+and the advent of PatchTST (Nie et al. 2023), the CD strat-
+                                                                 H ∈ RT ×C are utilized for further downstream tasks, in-
+egy was the mainstream approach in time series deep learn-
+                                                                 cluding classification and forecasting in our paper.
+ing models (Wu et al. 2021a; Liu et al. 2021; Zhou et al.
+2022) that tried to fully use information across channels.
+Conversely, the emergence of PatchTST breaks new ground                 Proposed TimeCHEAT Framework
+in CI strategy, followed by several inspiring work (Li et al.    In this paper, we propose an ISMTS analysis method that
+2023; Zeng et al. 2023; Chen et al. 2024; Han, Ye, and Zhan      employs a novel channel harmony strategy for enhanced
+2024) and conclude that CI has high capacity and low ro-         feature learning. As illustrated in Fig.2, the effectiveness
+bustness, whereas CD is the opposite. Since existing work        of TimeCHEAT is largely ensured by 1) CD strategy for
+holds the view that CI and CD strategies are mutually exclu-     ISMTS embedding ensures comprehensive integration of
+sive, existing works focus on improving one of the strate-       multivariate data within a patch. 2) Bipartite graph modeling
+gies. Han, Ye, and Zhan (2024) design Predict Residuals          facilitates effective embedding learning by capturing com-
+with Regularization to incorporate a regularization term in      plex relationships. 3) CI strategy for representation learning
+the objective to address the non-robustness of the CD strat-     allows for tailored attention to individual channel dynamics.
+egy and encourage smoothness in future forecasting. More-        We will then discuss the above key points in the following
+over, Chen et al. (2024) dynamically group channels charac-      subsections.
+terized by intrinsic similarities and leveraging cluster iden-
+tity instead of channel identity. A similar idea has been        Locally Independent for Embedding Learning
+proposed for ISMTS in LIFE (Zhang et al. 2021b) which
+collects credible and correlated channels to build individ-      Embedding learning is a crucial operation in end-to-end
+ual features. Therefore, it remains challenging to develop       ISMTS learning. Some existing methods assume that large
+a balanced channel strategy that contains advantages from        time intervals weaken dependencies (Che et al. 2018; Shukla
+both strategies. More importantly, the potential and effect of   and Marlin 2018, 2021, 2022). This assumption can lead to
+channel strategy for ISMTS remain under-explored.                unrelated points being perceived as highly related while key
+                                                                 points are overlooked, ultimately affecting the extraction of
+                                                                 important patterns. While others rely on Neural Ordinary
+                      Preliminaries                              Differential Equations (NeuralODEs) (Chen et al. 2018; Jin
+Notations. A set of ISMTS is a finite sequence of tuples         et al. 2022; Scholz et al. 2022) which are known to be slow
+                                         ′
+S = (X, M, Y ) ∈ Rd × {0, 1}d × Rd , where X is the              and often require additional features to handle irregularities.
+whole time series, M is a missingness indicator, and Y is           To address these challenges, we observe that predicting
+a response of interest. Here, d = N × C × T shows the            edge weights in bipartite graphs can facilitate learning val-
+dimensions of the input ISMTS, where N is the number of          ues based on query input, serving as an effective method for
+instances, C denotes the number of variates (i.e., channels)     continuous-time embedding learning by the power of graph
+and T is the length of the time series. While d′ = 1 for the     structures. It elegantly avoids the aforementioned assump-
+classification task and d′ = N × C × T ′ for the forecasting     tions and has been proven effective in ISMTS forecasting
+Figure 2: Overview of TimeCHEAT framework, shown in (a), containing 3 main steps, including ISMTS embedding learning,
+Transformer encoding and task learning. (b) is the patched ISMTS data with p patches. (c) is the initially established bipartite
+graph with known edges between channel and observation time step nodes and unknown edges between channel and reference
+point modes. (d) GNN module for unknown edges learning. (e) Learned edges between channel and reference point nodes. (f)
+Graph to embedding process to produce embedded ISMTS.
+
+
+(Yalavarthi et al. 2024) and imputing missing data (You et al.          We then introduce the Irregularity to Regularity Graph
+2020).                                                               (I2RGraph), as shown in Fig.2 (c) to (e), aiming to trans-
+                                                                     form irregularities into regularities by learning the edges
+Graph Learning. We begin by segmenting the ISMTS                     Eτ ⊆ VC × Vτ . This process can be formally expressed as
+into P equal-length, non-overlapping patches and construct-          follows:
+ing a bipartite graph for each patch p, as illustrated in Fig.2
+(b) and (c). For simplicity, we omit the patch index p in this                    Eτ := I2RGraph (VC , VT , ET , Vτ )            (2)
+subsection, as all calculations are performed within a sin-
+                                                                     Patch Embedding Learning. When applying the CD
+gle patch. To effectively learn the local representation of the
+                                                                     strategy, it is insufficient to rely solely on channel ID num-
+input ISMTS, each patch can be transferred into a bipartite
+                                                                     bers for learning. To address this, we encode the channel IDs
+graph G = (V, E), consisting of two disjoint node sets and
+                                                                     to capture the underlying correlations between channels:
+an edge set: the channel node set VC , the timestamp node set
+VT and the observation measurement set E ⊆ VC × VT . Our                           hnode,0
+                                                                                    c      = FFN (CM (c)) , c ∈ VC               (3)
+goal is to learn from these edges to generalize relationships
+across channels and arbitrary timestamps.                            Here, CM is a learnable matrix, initially set as an identity
+   To generate a fixed-dimensional embedding for each                matrix, and c represents the channel ID used for encoding.
+patch, making it suitable for subsequent neural network              FFN denotes a fully connected layer. Notably, if CM is not
+processing, we predefined a set of reference points τ =              learnable, hnode,0
+                                                                                  c     cannot capture these underlying correla-
+[τ1 , · · · , τK ]. These reference points are regular timestamps    tions due to the independence of one-hot encodings.
+without observations, serving as a special subset of query              According to (Shukla and Marlin 2021), the timestamps
+nodes Vτ . The initial connection between reference points           can be encoded as a learned sinusoidal encoding and the ini-
+nodes set Vτ and channels VC are all 0, while the observa-           tial edge embedding:
+tion timestamp nodes set VT and channels VC have real ob-                        hnode,0 = sin (FFN (t)) , t ∈ VT ∪Vτ
+                                                                                  t
+servation value xc,t . Here, we introduce an enhanced edge                                                                       (4)
+with an indicator i, denoted as                                                  heedge,0 = FFN (E(e, i)) , e ∈ E
+                                                                     where ∪ denotes the union of two sets.
+                             
+                                (xc,t , 1) , e ∈ ET
+                   E(e, i) =                                   (1)      With initial embedding (hnode,0 ) and (hedge,0 ) above, we
+                                (0, 0),      e ∈ Eτ
+                                                                     then utilize Graph Attention Network (GNN) (Veličković
+when an edge is observed, i is set to 1, otherwise, 0.               et al. 2017; Yalavarthi et al. 2024) for further graph learning,
+more details are in the supplementary. The proposed GNN              ISMTS Analysis Tasks.       Here, for classification, the loss
+architecture consists of L layers and the node features are          function is defined as:
+updated layer wise from layer l to l + 1 as follows:                                        N
+                                                                                        1 X
+                                                                                  L=          ℓCE (CLS (Rn ) , yn )           (10)
+       hnode ,l+1
+                  = MultiHead(l) hnode       ,l
+                                                          
+        u                                 u     , Hu , Hu                               N n=1
+                           ,l        ,l
+                                                            (5)
+       s.t. Hu = hnode        ∥hedge
+                                       
+                       v        e         v∈N (u)                    where CLS (·) denotes the projection head for classification,
+in which ∥ represents the concatenation operation between            and ℓCE (·) denotes the cross-entropy loss.
+two vectors or matrices, MultiHead is a multi-head atten-               While for interpolation and forecasting, the associated
+tion block (Vaswani et al. 2017), N (u) := {v|eu,v ∈ E, v ∈          loss function is defined as:
+V} indicates the neighborhood of u including all connected                          1 X
+                                                                                        N
+nodes of u though edges in E. Eq. (5) means to search for                     L=          ∥Mn′ ⊙ (PRE (Rn ) − yn )∥22         (11)
+the most relevant nodes among timestamp (channel) nodes                             N n=1
+to update the feature of a given channel (timestamp) node u.
+   The edge features are related to the corresponding chan-          where PRE (·) denotes the projection head for forecasting
+nels, timestamps and edges themselves. Therefore, we adopt           or imputation. As observations might be missing also in the
+the following formula to update the edge features:                   groundtruth data, to measure the accuracy we average an
+                                                                     element-wise loss function over only valid values using Mn′ .
+   hedge,l+1
+    e         =
+        
+               ,l        (l)
+                             h
+                                 node ,l  node ,l   edge ,l
+                                                            i                             Experiments
+      α hedge
+           e      + FFN         hc       ht       h e                In this section, we show the effectiveness of the
+                                                               (6)   TimeCHEAT framework across 3 mainstream time series
+in which, α is a non-linear activation, and a residual structure     analysis tasks, including classification, interpolation, and
+(He et al. 2016) has been adopted for stable learning.               forecasting. The results are reported as mean and standard
+   Finally, the output embedding of the p-th patch is                deviation values calculated over 5 independent runs. The
+                                                                     bold font highlights the top-performing method, while the
+              Hp = I2RGraph(hnode,L , hedge,L )               (7)    underlined text marks the runner-up. Additional experimen-
+                                                         P           tal setup details are provided in the Appendix due to space
+and we will use the overall embedding H = {Hp }p=1 for               constraints.
+further encoding.
+                                                                     Time Series Classification
+Globally Independent for Transformer Encoding                        Datasets and Experimental Settings. We use real-world
+After the embedding learning phase, we obtain several fixed-         datasets from healthcare to human activity domains for clas-
+length patch embeddings H for the ISMTS, which can be                sification tasks: (1) P19 (Reyna et al. 2020), with a missing
+directly fed into the encoder. In the case of symbol abuse,          ratio of 94.9%, includes 38, 803 patients monitored by 34
+we denote the dimension of H as P × C × TP . Subse-                  sensors. (2) P12 (Goldberger et al. 2000) contains tempo-
+quently, we apply a CI Transformer encoder to the patch              ral measurements from 36 sensors of 11, 988 patients during
+time series, which maps the embedding H into a represen-             the first 48 hours of ICU stay, with a missing ratio of 88.4%.
+tation R for various downstream tasks. In other words, the           (3) PAM (Reiss and Stricker 2012) consists of 5, 333 seg-
+subseries-level patches created during the embedding phase           ments from 8 daily activities, measured by 17 sensors, with
+act as input tokens for the Transformer. This CI process,            a missing ratio of 60.0%. P19 and P12 are imbalanced bi-
+within each channel, contains a univariate time series that          nary label datasets while PAM dataset contains 8 classes.
+shares the same Transformer weights across all channels. To             Following standard practice, we randomly split each
+describe the temporal relationship, we provide the position          dataset into training (80%), validation (10%), and test (10%)
+encoding supported by the patch ID p and the position i for          sets, using fixed indices across all methods. For the imbal-
+each channel as follows:                                             anced P12 and P19 datasets, we evaluate performance us-
+                                     p                            ing the area under the receiver operating characteristic curve
+              P Ep,2i = sin
+             
+                                        2i/TP                        (AUROC) and the area under the precision-recall curve
+                                10000p                 (8)         (AUPRC). For the nearly balanced PAM dataset, we use Ac-
+             P Ep,2i+1 = cos
+             
+                                                                     curacy, Precision, Recall, and F1 Score. For all of the above
+                                  100002i/TP
+                                                                     metrics, higher values indicate better performance.
+   To obtain the final representation R, we then feed the
+embedding H into a multi-head self-attention module with             Main Classification Results. We compare TimeCHEAT
+three learnable variable matrices, which are K, Q, and V .           with 10 state-of-the-art methods for irregularly sampled time
+                                                                     series classification, including Transformer (Vaswani et al.
+        Rc = MultiHead KHcP E , QHcP E , V HcP E
+                                                    
+                                                         (9)         2017), Trans-mean, GRU-D (Che et al. 2018), SeFT (Horn
+                                                                     et al. 2020), mTAND (Shukla and Marlin 2021), IP-Net
+where Rc is the c-th channel of R, HcP E = Hc + P E, and             (Shukla and Marlin 2018), DGM2 -O (Wu et al. 2021b), MT-
+Hc ∈ RP ×TP denotes c-th channel of H.                               GNN (Wu et al. 2020), Raindrop (Zhang et al. 2021a), and
+                                               P19                            P12                                           PAM
+                 Methods
+                                  AUROC          AUPRC           AUROC              AUPRC         Accuracy     Precision      Recall        F1 score
+
+                 Transformer      80.7 ± 3.8     42.7 ± 7.7      83.3 ± 0.7         47.9 ± 3.6    83.5 ± 1.5   84.8 ± 1.5     86.0 ± 1.2    85.0 ± 1.3
+                 Trans-mean       83.7 ± 1.8     45.8 ± 3.2      82.6 ± 2.0         46.3 ± 4.0    83.7 ± 2.3   84.9 ± 2.6     86.4 ± 2.1    85.1 ± 2.4
+                 GRU-D            83.9 ± 1.7     46.9 ± 2.1      81.9 ± 2.1         46.1 ± 4.7    83.3 ± 1.6   84.6 ± 1.2     85.2 ± 1.6    84.8 ± 1.2
+                 SeFT             81.2 ± 2.3     41.9 ± 3.1      73.9 ± 2.5         31.1 ± 4.1    67.1 ± 2.2   70.0 ± 2.4     68.2 ± 1.5    68.5 ± 1.8
+                 mTAND            84.4 ± 1.3     50.6 ± 2.0      84.2 ± 0.8         48.2 ± 3.4    74.6 ± 4.3   74.3 ± 4.0     79.5 ± 2.8    76.8 ± 3.4
+                 IP-Net           84.6 ± 1.3     38.1 ± 3.7      82.6 ± 1.4         47.6 ± 3.1    74.3 ± 3.8   75.6 ± 2.1     77.9 ± 2.2    76.6 ± 2.8
+                 DGM2 -O          86.7 ± 3.4     44.7 ± 11.7     84.4 ± 1.6         47.3 ± 3.6    82.4 ± 2.3   85.2 ± 1.2     83.9 ± 2.3    84.3 ± 1.8
+                 MTGNN            81.9 ± 6.2     39.9 ± 8.9      74.4 ± 6.7         35.5 ± 6.0    83.4 ± 1.9   85.2 ± 1.7     86.1 ± 1.9    85.9 ± 2.4
+                 Raindrop         87.0 ± 2.3     51.8 ± 5.5      82.8 ± 1.7         44.0 ± 3.0    88.5 ± 1.5   89.9 ± 1.5     89.9 ± 0.6    89.8 ± 1.0
+                 ViTST            89.2 ± 2.0     53.1 ± 3.4      85.1 ± 0.8         51.1 ± 4.1    95.8 ± 1.3   96.2 ± 1.3     96.1 ± 1.1    96.5 ± 1.2
+
+                 TimeCHEAT        89.5 ± 1.9     56.1 ± 4.6      84.5 ± 0.7         48.2 ± 1.9    96.5 ± 0.6   97.1 ± 0.5     96.9 ± 0.6    97.0 ± 0.5
+
+
+                               Table 1: Comparison with the baseline methods on ISMTS classification task.
+
+                     Model                                                      Mean Squared Error (×10−3 )
+
+                   Observed %                  50%                  60%                          70%                80%                    90%
+
+                   RNN-VAE            13.418 ± 0.008            12.594 ± 0.004            11.887 ± 0.005       11.133 ± 0.007          11.470 ± 0.006
+                  L-ODE-RNN            8.132 ± 0.020             8.140 ± 0.018            8.171 ± 0.030         8.143 ± 0.025          8.402 ± 0.022
+                  L-ODE-ODE            6.721 ± 0.109             6.816 ± 0.045            6.798 ± 0.143         6.850 ± 0.066          7.142 ± 0.066
+                  mTAND-Full          4.139 ± 0.029              4.018 ± 0.048            4.157 ± 0.053         4.410 ± 0.149          4.798 ± 0.036
+
+                  TimeCHEAT            4.185 ± 0.030            3.981 ± 0.016             3.657 ± 0.022        3.642 ± 0.036           3.686 ± 0.009
+
+
+                   Table 2: Comparison with the baseline methods on ISMTS interpolation task on PhysioNet.
+
+
+   Methods        USHCN          MIMIC-III           MIMIC-IV     Physionet12               tion tasks. In particular, for imbalanced binary classification,
+   DLinear+    0.347 ± 0.065 0.691 ± 0.016 0.557 ± 0.001 0.380 ± 0.001
+                                                                                            TimeCHEAT outperforms the leading baselines on the P19
+   NLinear+    0.452 ± 0.101 0.726 ± 0.019 0.620 ± 0.002 0.382 ± 0.001
+                                                                                            dataset and achieves competitive results on the P12 dataset,
+   Informer+   0.320 ± 0.047 0.512 ± 0.064 0.420 ± 0.007 0.347 ± 0.001                      trailing the top performer by only 0.5%. But it stands out
+  FedFormer+   2.990 ± 0.476 1.100 ± 0.059 2.135 ± 0.304 0.455 ± 0.004                      due to its lower time and space complexity compared to
+                                                                                            ViTST though achieves SOTA performance, converting 1D
+NeuralODE-VAE 0.960 ± 0.110 0.890 ± 0.010      −             −
+ GRU-Simple   0.750 ± 0.120 0.820 ± 0.050      −             −
+                                                                                            time series into 2D images potentially leading to signifi-
+    GRU-D     0.530 ± 0.060 0.790 ± 0.060      −             −
+                                                                                            cant space inefficiencies due to the introduction of extensive
+   T-LSTM     0.590 ± 0.110 0.620 ± 0.050      −             −                              blank areas, especially problematic in ISMTS. On the more
+   mTAND      0.300 ± 0.038 0.540 ± 0.036     ME        0.315 ± 0.002                       complex task of 8-class classification in the PAM dataset,
+GRU-ODE-Bayes 0.430 ± 0.070 0.480 ± 0.480 0.379 ± 0.005 0.329 ± 0.004                       TimeCHEAT surpasses existing methods, with a 0.7% im-
+  Neural Flow 0.414 ± 0.102 0.490 ± 0.004 0.364 ± 0.008 0.326 ± 0.004                       provement in accuracy and a 0.9% increase in precision.
+     CRU      0.290 ± 0.060 0.592 ± 0.049     ME        0.379 ± 0.003                          In almost all cases, our TimeCHEAT achieves consistent
+    GraFITi   0.272 ± 0.047 0.396 ± 0.030 0.225 ± 0.001 0.286 ± 0.001
+                                                                                            low standard deviation indicating it is a reliable model. Its
+ TimeCHEAT     0.266 ± 0.069 0.462 ± 0.034 0.273 ± 0.002 0.290 ± 0.001                      performance remains steady across varying data samples
+                                                                                            and initial conditions, suggesting a strong potential for gen-
+Table 3: Experimental results for forecasting next three                                    eralizing well to new, unseen data. This stability and pre-
+time steps. − indicates no published results. ME indicates                                  dictability in performance enhance the confidence in the
+a Memory Error.                                                                             model’s predictions, which is particularly crucial in sensi-
+                                                                                            tive areas such as medical diagnosis in clinical settings.
+
+ViTST (Li, Li, and Yan 2023). Since mTAND has demon-                                        Time Series Interpolation
+strated superiority over various recurrent models such as                                   Datasets and experimental settings. PhysioNet (Silva
+RNNImpute (Che et al. 2018), Phased-LSTM (Neil, Pfeiffer,                                   et al. 2012) contains 37 variables recorded during the first
+and Liu 2016), and ODE-based models like LATENT-ODE                                         48 hours of ICU admission. For interpolation experiments,
+and ODE-RNN (Chen et al. 2018), our comparisons result                                      we utilize all 8, 000 instances, with a missing ratio of 78.0%.
+contains mTAND, excluding results for the latter models.                                       The dataset is randomly split into 80% for training and
+   As shown in Table 1, TimeCHEAT demonstrates competi-                                     20% for testing, with 20% of the training data set aside
+tive performance across the above three benchmark datasets,                                 for validation. Performance is evaluated using MSE, where
+highlighting its effectiveness in typical time series classifica-                           lower values indicate better performance.
+                                  P19                             P12                2021), Fedformer (Zhou et al. 2022), DLinear, and NLinear
+ Methods
+                      AUROC              AUPRC        AUROC              AUPRC
+                                                                                     (Zeng et al. 2023), referred to as Informer+, Fedformer+,
+                                                                                     DLinear+, and NLinear+.
+ w/o correlation     88.0 ± 3.1         54.4 ± 5.0   83.5 ± 0.9         46.5 ± 2.3      Following the GraFITi setup, for the USHCN dataset, the
+ w/ iTransformer     87.6 ± 2.4         54.7 ± 4.6   79.9 ± 1.5         39.2 ± 3.2
+                                                                                     model observes the first 3 years and forecasts the next 3
+ w/o correlation
+                     86.8 ± 2.7         54.2 ± 4.3   80.1 ± 1.7         39.4 ± 3.1   time steps. For the other datasets, the model observes the
+ + w/ iTransformer
+ mTAND instead       87.4 ± 2.3         52.5 ± 3.4   84.3 ± 0.8         48.2 ± 1.0
+                                                                                     first 36 hours and predicts the next 3 time steps. As indi-
+                                                                                     cated in Table 3, TimeCHEAT consistently shows compet-
+ TimeCHEAT           89.5 ± 1.9         56.1 ± 4.6   84.5 ± 0.7         48.2 ± 1.9   itive performance across all datasets, consistently ranking
+                                                                                     within the top two among baseline models. While GraFITi
+Table 4: Ablation studies on different strategies of                                 excels in scenarios where explicitly modeling the relation-
+TimeCHEAT in classification.                                                         ship between observation and prediction points is advanta-
+                                                                                     geous, TimeCHEAT remains highly competitive without re-
+                                                                                     lying on task-specific priors.
+Main Interpolation Results. For the interpolation task,
+we compare TimeCHEAT with RNN-VAE, L-ODE-RNN                                         Ablation Study
+(Chen et al. 2018), L-ODE-ODE (Rubanova, Chen, and Du-                               We use two imbalance binary label datasets P12 and P19
+venaud 2019), and mTAND-full.                                                        in the classification task as an example to conduct the ab-
+   In this task, models are trained to predict or reconstruct                        lation study. We verify the necessity of three main de-
+values across the entire dataset based on a selected subset                          signs: 1) learnable correlation between multiple channels
+of observations. Experiments are conducted at varying ob-                            in the embedding procedure, 2) channel-dependent embed-
+servation levels, from 50% to 90% of observed points. Dur-                           ding learning without special assumptions, and 3) channel-
+ing testing, models use the observed points to infer values at                       independent Transformer encoder.
+all time points within each test instance. We strictly follow                           As shown in Table 4, the full TimeCHEAT framework,
+the mTAND interpolation setup, where each column cor-                                which includes all original components (line 7), delivers the
+responds to a different setting. In each setting, a specific                         best performance. When local correlations between channels
+percentage of data is used to condition the model, which                             are removed (line 3), by replacing the channel encoding with
+then predicts the remaining portion. Consequently, results                           a one-hot binary indicator vector (resulting in CI embedding
+across columns are not directly comparable, but each re-                             learning), sparse sampling channels lack sufficient informa-
+flects the performance of interpolation under its respective                         tion and fail to aggregate crucial data from related chan-
+conditions. As illustrated in Table 2, TimeCHEAT demon-                              nels for improved embedding. Discarding the CI encoder
+strates great yet stable performance, highlighting its effec-                        and switching to a vanilla Transformer (line 4) leads to a
+tiveness in ISMTS interpolation.                                                     significant drop in classification accuracy, underscoring the
+                                                                                     effectiveness of the CI strategy in the encoding phase. Com-
+Time Series Forecasting                                                              bining the above two changes results in a fully CI model
+                                                                                     (line 5), which yields nearly the worst accuracy among all
+Datasets and Experimental Settings. (1) USHCN
+                                                                                     tested conditions. Finally, replacing the local graph embed-
+(Menne, Williams Jr, and Vose 2015) is a preprocessed
+                                                                                     ding with CI mTAND (line 5), while partially mitigating is-
+dataset with measurements of 5 variables from 1, 280
+                                                                                     sues due to its assumptions about timestamp distances, still
+weather stations across the USA, featuring a missing ratio
+                                                                                     falls short of the best performance due to the limitations of
+of 78.0%. (2) MIMIC-III (Johnson et al. 2016) contains
+                                                                                     the CI strategy.
+recorded observations of 96 variables at 30-minute inter-
+vals, using data from the first 48 hours after ICU admis-
+sion, with a missing ratio of 94.2%. (3) MIMIC-IV (John-
+                                                                                                            Conclusion
+son et al. 2020) is built upon the MIMIC-III database with                           In this paper, we introduce TimeCHEAT, a novel framework
+a missing ratio up to 97.8%. It adopts a modular approach                            for ISMTS analysis. TimeCHEAT’s innovative channel har-
+to data organization, highlighting data provenance and facil-                        mony strategy effectively balances individual channel pro-
+itating both individual and combined use of disparate data                           cessing with inter-channel interactions, improving ISMTS
+sources. (4) Physionet12 (Silva et al. 2012) includes med-                           analysis performance. Our results show that combining the
+ical records from 12, 000 ICU patients, capturing 37 vital                           CD strategy locally with the CI strategy globally harnesses
+signs during the first 48 hours of admission, with a missing                         the strengths of both approaches, as well or better than a
+ratio of 80.4%. The performance is evaluated using MSE.                              range of baseline and SOTA models. A key contribution of
+                                                                                     this work is to design the bipartite graphs with CD strat-
+Main Forecasting Results. We compare TimeCHEAT                                       egy locally to transform embedding learning into an edge
+with various ISMTS forecasting models, including Grafiti                             weight prediction task, avoiding introducing inappropriate
+(Yalavarthi et al. 2024), GRU-ODE-Bayes (De Brouwer                                  prior assumptions and enabling fixed-length embeddings for
+et al. 2019), Neural Flows (Biloš et al. 2021), CRU                                 the encoder. Additionally, the CI strategy applied globally
+(Schirmer et al. 2022), NeuralODE-VAE (Chen et al.                                   across patches allows the Transformer to learn individual-
+2018), GRUSimple, GRU-D, TLSTM (Baytas et al. 2017),                                 ized attention patterns for each channel, leading to superior
+mTAND, and enhanced versions of Informer (Zhou et al.                                representations for downstream tasks.
+                 Acknowledgements                               Han, L.; Ye, H.-J.; and Zhan, D.-C. 2024. The Capacity and
+The authors wish to thank all the donors of the original        Robustness Trade-off: Revisiting the Channel Independent
+datasets, and everyone who provided feedback on this work.      Strategy for Multivariate Time Series Forecasting. IEEE
+This work is supported by the Key Program of NSFC un-           Transactions on Knowledge and Data Engineering, (01): 1–
+der Grant No.62376126, Postgraduate Research & Prac-            14.
+tice Innovation Program of Jiangsu Province under Grant         He, K.; Zhang, X.; Ren, S.; and Sun, J. 2016. Deep residual
+No.KYCX21 0225.                                                 learning for image recognition. In CVPR, 770–778.
+                                                                Horn, M.; Moor, M.; Bock, C.; Rieck, B.; and Borgwardt, K.
+                       References                               2020. Set functions for time series. In ICML, 4353–4363.
+Agarwal, R.; Sinha, A.; Prasad, D. K.; Clausel, M.; Horsch,     PMLR.
+A.; Constant, M.; and Coubez, X. 2023. Modelling Ir-            Jhin, S. Y.; Lee, J.; Jo, M.; Kook, S.; Jeon, J.; Hyeong,
+regularly Sampled Time Series Without Imputation. arXiv         J.; Kim, J.; and Park, N. 2022. Exit: Extrapolation and
+preprint arXiv:2309.08698.                                      interpolation-based neural controlled differential equations
+Baytas, I. M.; Xiao, C.; Zhang, X.; Wang, F.; Jain, A. K.;      for time-series classification and forecasting. In ACM Web
+and Zhou, J. 2017. Patient subtyping via time-aware LSTM        Conference, 3102–3112.
+networks. In ACM SIGKDD, 65–74.                                 Jin, M.; Zheng, Y.; Li, Y.-F.; Chen, S.; Yang, B.; and Pan,
+Biloš, M.; Sommer, J.; Rangapuram, S. S.; Januschowski, T.;    S. 2022. Multivariate time series forecasting with dynamic
+and Günnemann, S. 2021. Neural flows: Efficient alternative    graph neural odes. IEEE Transactions on Knowledge and
+to neural ODEs. NeurIPS, 34: 21325–21337.                       Data Engineering.
+Camino, R. D.; Hammerschmidt, C. A.; and State, R. 2019.        Johnson, A.; Bulgarelli, L.; Pollard, T.; Horng, S.; Celi,
+Improving missing data imputation with deep generative          L. A.; and Mark, R. 2020.             Mimic-iv.      PhysioNet.
+models. arXiv preprint arXiv:1902.10666.                        Available online at: https://physionet. org/content/mimi-
+Cao, W.; Wang, D.; Li, J.; Zhou, H.; Li, L.; and Li, Y.         civ/1.0/(accessed August 23, 2021), 49–55.
+2018. Brits: Bidirectional recurrent imputation for time se-    Johnson, A.; Pollard, T. J.; Shen, L.; Lehman, L.-w. H.;
+ries. NeurIPS, 31.                                              Feng, M.; Ghassemi, M.; Moody, B.; Szolovits, P.; Celi,
+Che, Z.; Purushotham, S.; Cho, K.; Sontag, D.; and Liu, Y.      L. A.; and Mark, R. G. 2016. MIMIC-III, a freely acces-
+2018. Recurrent neural networks for multivariate time series    sible critical care database Sci. Data, 3(1): 1.
+with missing values. Scientific reports, 8(1): 1–12.            Kenton, J. D. M.-W. C.; and Toutanova, L. K. 2019. BERT:
+Chen, J.; Lenssen, J. E.; Feng, A.; Hu, W.; Fey, M.; Tassi-     Pre-training of Deep Bidirectional Transformers for Lan-
+ulas, L.; Leskovec, J.; and Ying, R. 2024. From Similarity      guage Understanding. In Proceedings of NAACL-HLT,
+to Superiority: Channel Clustering for Time Series Forecast-    4171–4186.
+ing. arXiv preprint arXiv:2404.01340.                           Kidger, P.; Morrill, J.; Foster, J.; and Lyons, T. 2020. Neu-
+Chen, R. T.; Rubanova, Y.; Bettencourt, J.; and Duvenaud,       ral controlled differential equations for irregular time series.
+D. K. 2018. Neural ordinary differential equations. NeurIPS,    NeurIPS, 33: 6696–6707.
+31.                                                             Le Morvan, M.; Josse, J.; Scornet, E.; and Varoquaux, G.
+Chen, X.; Zhang, C.; Zhao, X.-L.; Saunier, N.; and Sun,         2021. What’s a good imputation to predict with missing
+L. 2022.      Nonstationary temporal matrix factorization       values? NeurIPS, 34: 11530–11540.
+for multivariate time series forecasting. arXiv preprint        Li, Z.; Li, S.; and Yan, X. 2023. Time Series as Images:
+arXiv:2203.10651.                                               Vision Transformer for Irregularly Sampled Time Series. In
+Chowdhury, R. R.; Li, J.; Zhang, X.; Hong, D.; Gupta, R. K.;    NeurIPS.
+and Shang, J. 2023. Primenet: Pre-training for irregular mul-   Li, Z.; Qi, S.; Li, Y.; and Xu, Z. 2023. Revisiting long-term
+tivariate time series. In AAAI, volume 37, 7184–7192.           time series forecasting: An investigation on linear mapping.
+De Brouwer, E.; Simm, J.; Arany, A.; and Moreau, Y. 2019.       arXiv preprint arXiv:2305.10721.
+GRU-ODE-Bayes: Continuous modeling of sporadically-             Liu, S.; Yu, H.; Liao, C.; Li, J.; Lin, W.; Liu, A. X.; and
+observed time series. NeurIPS, 32.                              Dustdar, S. 2021. Pyraformer: Low-complexity pyramidal
+Du, W.; Côté, D.; and Liu, Y. 2023. Saits: Self-attention-    attention for long-range time series modeling and forecast-
+based imputation for time series. Expert Systems with Ap-       ing. In ICLR.
+plications, 219: 119619.                                        Menne, M. J.; Williams Jr, C.; and Vose, R. S. 2015.
+Fan, J. 2022. Dynamic Nonlinear Matrix Completion for           United States historical climatology network daily tempera-
+Time-Varying Data Imputation. In AAAI.                          ture, precipitation, and snow data. Carbon Dioxide Informa-
+Goldberger, A. L.; Amaral, L. A.; Glass, L.; Hausdorff,         tion Analysis Center, Oak Ridge National Laboratory, Oak
+J. M.; Ivanov, P. C.; Mark, R. G.; Mietus, J. E.; Moody,        Ridge, Tennessee.
+G. B.; Peng, C.-K.; and Stanley, H. E. 2000. PhysioBank,        Montero-Manso, P.; and Hyndman, R. J. 2021. Principles
+PhysioToolkit, and PhysioNet: components of a new re-           and algorithms for forecasting groups of time series: Lo-
+search resource for complex physiologic signals. circula-       cality and globality. International Journal of Forecasting,
+tion, 101(23): e215–e220.                                       37(4): 1632–1653.
+Murtagh, F.; and Heck, A. 2012. Multivariate data analysis,      Vaswani, A.; Shazeer, N.; Parmar, N.; Uszkoreit, J.; Jones,
+volume 131. Springer Science & Business Media.                   L.; Gomez, A. N.; Kaiser, Ł.; and Polosukhin, I. 2017. At-
+Neil, D.; Pfeiffer, M.; and Liu, S.-C. 2016. Phased lstm:        tention is all you need. NeurIPS, 30.
+Accelerating recurrent network training for long or event-       Veličković, P.; Cucurull, G.; Casanova, A.; Romero, A.; Lio,
+based sequences. NeurIPS, 29.                                    P.; and Bengio, Y. 2017. Graph attention networks. arXiv
+Nie, Y.; Nguyen, N. H.; Sinthong, P.; and Kalagnanam, J.         preprint arXiv:1710.10903.
+2023. A Time Series is Worth 64 Words: Long-term Fore-           Wang, J.; Du, W.; Cao, W.; Zhang, K.; Wang, W.; Liang,
+casting with Transformers. In ICLR.                              Y.; and Wen, Q. 2024. Deep Learning for Multivari-
+Reiss, A.; and Stricker, D. 2012. Introducing a new bench-       ate Time Series Imputation: A Survey. arXiv preprint
+marked dataset for activity monitoring. In 16th international    arXiv:2402.04059.
+symposium on wearable computers, 108–109. IEEE.                  Wu, H.; Xu, J.; Wang, J.; and Long, M. 2021a. Autoformer:
+Reyna, M. A.; Josef, C. S.; Jeter, R.; Shashikumar, S. P.;       Decomposition transformers with auto-correlation for long-
+Westover, M. B.; Nemati, S.; Clifford, G. D.; and Sharma,        term series forecasting. NeurIPS, 34: 22419–22430.
+A. 2020. Early prediction of sepsis from clinical data: the      Wu, Y.; Ni, J.; Cheng, W.; Zong, B.; Song, D.; Chen, Z.; Liu,
+PhysioNet/Computing in Cardiology Challenge 2019. Crit-          Y.; Zhang, X.; Chen, H.; and Davidson, S. B. 2021b. Dy-
+ical care medicine, 48(2): 210–217.                              namic gaussian mixture based deep generative model for ro-
+Rubanova, Y.; Chen, R. T.; and Duvenaud, D. K. 2019. La-         bust forecasting on sparse multivariate time series. In AAAI,
+tent ordinary differential equations for irregularly-sampled     volume 35, 651–659.
+time series. NeurIPS, 32.                                        Wu, Z.; Pan, S.; Long, G.; Jiang, J.; Chang, X.; and Zhang,
+Schirmer, M.; Eltayeb, M.; Lessmann, S.; and Rudolph, M.         C. 2020. Connecting the dots: Multivariate time series fore-
+2022. Modeling irregular time series with continuous recur-      casting with graph neural networks. In ACM SIGKDD, 753–
+rent units. In ICML, 19388–19405. PMLR.                          763.
+                                                                 Yalavarthi, V. K.; Madhusudhanan, K.; Scholz, R.; Ahmed,
+Scholz, R.; Born, S.; Duong-Trung, N.; Cruz-Bournazou,
+                                                                 N.; Burchert, J.; Jawed, S.; Born, S.; and Schmidt-Thieme,
+M. N.; and Schmidt-Thieme, L. 2022. Latent Linear ODEs
+                                                                 L. 2024. GraFITi: Graphs for Forecasting Irregularly Sam-
+with Neural Kalman Filtering for Irregular Time Series
+                                                                 pled Time Series. In AAAI, 16255–16263.
+Forecasting. NeurIPS.
+                                                                 Yoon, J.; Jordon, J.; and Schaar, M. 2018. Gain: Missing
+Schulz, M.; and Stattegger, K. 1997. SPECTRUM: Spec-
+                                                                 data imputation using generative adversarial nets. In ICML,
+tral analysis of unevenly spaced paleoclimatic time series.
+                                                                 5689–5698. PMLR.
+Computers & Geosciences, 23(9): 929–945.
+                                                                 You, J.; Ma, X.; Ding, Y.; Kochenderfer, M. J.; and
+Shukla, S. N.; and Marlin, B. 2018. Interpolation-Prediction     Leskovec, J. 2020. Handling missing data with graph repre-
+Networks for Irregularly Sampled Time Series. In ICLR.           sentation learning. NeurIPS, 33: 19075–19087.
+Shukla, S. N.; and Marlin, B. 2021. Multi-Time Attention         Zeng, A.; Chen, M.; Zhang, L.; and Xu, Q. 2023. Are trans-
+Networks for Irregularly Sampled Time Series. In ICLR.           formers effective for time series forecasting? In AAAI, vol-
+Shukla, S. N.; and Marlin, B. 2022. Heteroscedastic Tempo-       ume 37, 11121–11128.
+ral Variational Autoencoder For Irregularly Sampled Time         Zhang, X.; Zeman, M.; Tsiligkaridis, T.; and Zitnik, M.
+Series. In ICLR.                                                 2021a. Graph-Guided Network for Irregularly Sampled
+Silva, I.; Moody, G.; Scott, D. J.; Celi, L. A.; and Mark,       Multivariate Time Series. In ICLR.
+R. G. 2012. Predicting in-hospital mortality of icu patients:    Zhang, Z.-Y.; Zhang, S.-Q.; Jiang, Y.; and Zhou, Z.-H.
+The physionet/computing in cardiology challenge 2012. In         2021b. LIFE: Learning individual features for multivariate
+2012 Computing in Cardiology, 245–248. IEEE.                     time series prediction with missing values. In ICDM, 1511–
+Sun, C.; Li, H.; Song, M.; Cai, D.; Zhang, B.; and Hong,         1516. IEEE.
+S. 2024. Time pattern reconstruction for classification of       Zhou, H.; Zhang, S.; Peng, J.; Zhang, S.; Li, J.; Xiong, H.;
+irregularly sampled time series. Pattern Recognition, 147:       and Zhang, W. 2021. Informer: Beyond efficient transformer
+110075.                                                          for long sequence time-series forecasting. In AAAI, vol-
+Tan, C.; Li, S.; Gao, Z.; Guan, W.; Wang, Z.; Liu, Z.; Wu, L.;   ume 35, 11106–11115.
+and Li, S. Z. 2023. Openstl: A comprehensive benchmark           Zhou, T.; Ma, Z.; Wen, Q.; Wang, X.; Sun, L.; and Jin, R.
+of spatio-temporal predictive learning. NeurIPS, 36: 69819–      2022. Fedformer: Frequency enhanced decomposed trans-
+69831.                                                           former for long-term series forecasting. In ICML, 27268–
+Tang, X.; Yao, H.; Sun, Y.; Aggarwal, C.; Mitra, P.; and         27286. PMLR.
+Wang, S. 2020. Joint modeling of local and global temporal
+dynamics for multivariate time series forecasting with miss-
+ing values. In AAAI, volume 34, 5956–5963.
+Tashiro, Y.; Song, J.; Song, Y.; and Ermon, S. 2021. CSDI:
+Conditional Score-based Diffusion Models for Probabilistic
+Time Series Imputation. NeurIPS, 34.
+

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="600" viewBox="0 0 1160 600"><rect width="100%" height="100%" fill="#fbfcfe"/>
+<text x="580.0" y="42" font-family="Noto Sans CJK SC,Arial" font-size="25" font-weight="bold" fill="#17202a" text-anchor="middle">文献覆盖概览：多标签计数，不代表可直接横向比较</text>
+<text x="215" y="100" font-family="Noto Sans CJK SC,Arial" font-size="17" font-weight="bold" fill="#17202a" text-anchor="middle">缺失模式（可多选）</text>
+<line x1="70" y1="470" x2="360" y2="470" stroke="#637282"/>
+<rect x="90.0" y="170.0" width="28.7" height="300.0" rx="4" fill="#3b82c4"/>
+<text x="104.33333333333333" y="160.0" font-family="Noto Sans CJK SC,Arial" font-size="15" font-weight="bold" fill="#17202a" text-anchor="middle">30</text>
+<text x="104.33333333333333" y="495" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#17202a" text-anchor="middle">散点</text>
+<rect x="136.7" y="200.0" width="28.7" height="270.0" rx="4" fill="#e59b38"/>
+<text x="151.0" y="190.0" font-family="Noto Sans CJK SC,Arial" font-size="15" font-weight="bold" fill="#17202a" text-anchor="middle">27</text>
+<text x="151.0" y="495" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#17202a" text-anchor="middle">块</text>
+<rect x="183.3" y="250.0" width="28.7" height="220.0" rx="4" fill="#8b5bb8"/>
+<text x="197.66666666666666" y="240.0" font-family="Noto Sans CJK SC,Arial" font-size="15" font-weight="bold" fill="#17202a" text-anchor="middle">22</text>
+<text x="197.66666666666666" y="495" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#17202a" text-anchor="middle">不规则</text>
+<rect x="230.0" y="350.0" width="28.7" height="120.0" rx="4" fill="#3ea47a"/>
+<text x="244.33333333333334" y="340.0" font-family="Noto Sans CJK SC,Arial" font-size="15" font-weight="bold" fill="#17202a" text-anchor="middle">12</text>
+<text x="244.33333333333334" y="495" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#17202a" text-anchor="middle">未核实</text>
+<rect x="276.7" y="370.0" width="28.7" height="100.0" rx="4" fill="#cf5b6b"/>
+<text x="290.99999999999994" y="360.0" font-family="Noto Sans CJK SC,Arial" font-size="15" font-weight="bold" fill="#17202a" text-anchor="middle">10</text>
+<text x="290.99999999999994" y="495" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#17202a" text-anchor="middle">变量</text>
+<rect x="323.3" y="430.0" width="28.7" height="40.0" rx="4" fill="#778899"/>
+<text x="337.66666666666663" y="420.0" font-family="Noto Sans CJK SC,Arial" font-size="15" font-weight="bold" fill="#17202a" text-anchor="middle">4</text>
+<text x="337.66666666666663" y="495" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#17202a" text-anchor="middle">自然缺失</text>
+<text x="550" y="100" font-family="Noto Sans CJK SC,Arial" font-size="17" font-weight="bold" fill="#17202a" text-anchor="middle">维度标签（可多选）</text>
+<line x1="405" y1="470" x2="695" y2="470" stroke="#637282"/>
+<rect x="425.0" y="170.0" width="52.0" height="300.0" rx="4" fill="#3b82c4"/>
+<text x="451.0" y="160.0" font-family="Noto Sans CJK SC,Arial" font-size="15" font-weight="bold" fill="#17202a" text-anchor="middle">28</text>
+<text x="451.0" y="495" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#17202a" text-anchor="middle">中维</text>
+<rect x="495.0" y="170.0" width="52.0" height="300.0" rx="4" fill="#e59b38"/>
+<text x="521.0" y="160.0" font-family="Noto Sans CJK SC,Arial" font-size="15" font-weight="bold" fill="#17202a" text-anchor="middle">28</text>
+<text x="521.0" y="495" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#17202a" text-anchor="middle">待核实</text>
+<rect x="565.0" y="180.7" width="52.0" height="289.3" rx="4" fill="#8b5bb8"/>
+<text x="591.0" y="170.71428571428572" font-family="Noto Sans CJK SC,Arial" font-size="15" font-weight="bold" fill="#17202a" text-anchor="middle">27</text>
+<text x="591.0" y="495" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#17202a" text-anchor="middle">高维</text>
+<rect x="635.0" y="223.6" width="52.0" height="246.4" rx="4" fill="#3ea47a"/>
+<text x="661.0" y="213.57142857142858" font-family="Noto Sans CJK SC,Arial" font-size="15" font-weight="bold" fill="#17202a" text-anchor="middle">23</text>
+<text x="661.0" y="495" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#17202a" text-anchor="middle">低维</text>
+<text x="900" y="100" font-family="Noto Sans CJK SC,Arial" font-size="17" font-weight="bold" fill="#17202a" text-anchor="middle">发表状态（单选）</text>
+<line x1="755" y1="470" x2="1045" y2="470" stroke="#637282"/>
+<rect x="775.0" y="170.0" width="75.3" height="300.0" rx="4" fill="#3b82c4"/>
+<text x="812.6666666666666" y="160.0" font-family="Noto Sans CJK SC,Arial" font-size="15" font-weight="bold" fill="#17202a" text-anchor="middle">58</text>
+<text x="812.6666666666666" y="495" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#17202a" text-anchor="middle">已发表</text>
+<rect x="868.3" y="423.4" width="75.3" height="46.6" rx="4" fill="#e59b38"/>
+<text x="906.0" y="413.44827586206895" font-family="Noto Sans CJK SC,Arial" font-size="15" font-weight="bold" fill="#17202a" text-anchor="middle">9</text>
+<text x="906.0" y="495" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#17202a" text-anchor="middle">预印本</text>
+<rect x="961.7" y="464.8" width="75.3" height="5.2" rx="4" fill="#8b5bb8"/>
+<text x="999.3333333333333" y="454.82758620689657" font-family="Noto Sans CJK SC,Arial" font-size="15" font-weight="bold" fill="#17202a" text-anchor="middle">1</text>
+<text x="999.3333333333333" y="495" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#17202a" text-anchor="middle">学生论坛/稿件</text>
+<text x="580.0" y="555" font-family="Noto Sans CJK SC,Arial" font-size="16" font-weight="normal" fill="#17202a" text-anchor="middle">68篇记录；43篇已核对全文关键位置（A级），25篇为官方摘要/网页等B级证据。</text>
+</svg>

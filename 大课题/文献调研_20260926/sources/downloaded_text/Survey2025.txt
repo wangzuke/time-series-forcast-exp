@@ -1,0 +1,659 @@
+                            Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+                                                                       Survey Track
+
+
+
+
+                Deep Learning for Multivariate Time Series Imputation: A Survey
+                Jun Wang1,2,6† , Wenjie Du1† , Yiyuan Yang1,3 , Linglong Qian1,4 ,
+           Wei Cao1 , Keli Zhang5 , Wenjia Wang2,6 , Yuxuan Liang6 , Qingsong Wen7∗
+                                          1
+                                            PyPOTS Research
+                         2
+                           Hong Kong University of Science and Technology
+                                        3
+                                          University of Oxford
+                                      4
+                                        King’s College London
+                                     5
+                                       Huawei Noah’s Ark Lab
+                  6
+                    Hong Kong University of Science and Technology (Guangzhou)
+                                        7
+                                          Squirrel Ai Learning
+    jwangfx@connect.ust.hk, wdu@time-series.ai, yiyuan.yang@cs.ox.ac.uk, linglong.qian@kcl.ac.uk,
+     weicaomsra@gmail.com, zhangkeli1@huawei.com, wenjiawang@ust.hk, yuxliang@outlook.com,
+                                     qingsongedu@gmail.com
+
+                                Abstract
+        Missing values are ubiquitous in multivariate time
+        series (MTS) data, posing significant challenges
+        for accurate analysis and downstream applications.
+        In recent years, deep learning-based methods have
+        successfully handled missing data by leveraging
+        complex temporal dependencies and learned
+        data distributions. In this survey, we provide a
+        comprehensive summary of deep learning ap-
+        proaches for multivariate time series imputation
+        (MTSI) tasks. We propose a novel taxonomy that
+        categorizes existing methods based on two key
+        perspectives: imputation uncertainty and neural
+        network architecture. Furthermore, we summarize
+        existing MTSI toolkits with a particular emphasis
+        on the PyPOTS Ecosystem, which provides an
+        integrated and standardized foundation for MTSI
+        research. Finally, we discuss key challenges and
+        future research directions, which give insight
+                                                                                                  Figure 1: The framework of our survey.
+        for further MTSI research. This survey aims to
+        serve as a valuable resource for researchers and
+        practitioners in the field of time series analysis
+        and missing data imputation tasks.        A well-                        missing values can significantly affect the accuracy and re-
+        maintained MTSI paper and tool list is available at                      liability of downstream analysis and decision-making. In
+        https://github.com/WenjieDu/Awesome Imputation.                          real-world datasets like PhysioNet2012 [Silva et al., 2012],
+                                                                                 missing rates can exceed 80%. Consequently, exploring how
+                                                                                 to reasonably and effectively impute missing components in
+1       Introduction                                                             multivariate time series is attractive and essential.
+The data collection process of multivariate time series in
+                                                                                    The earlier statistical imputation methods have historically
+various fields is often fraught with difficulties and uncer-
+                                                                                 been widely used for handling missing data. Those meth-
+tainty. In IoT systems, sensor failures and unstable environ-
+                                                                                 ods substitute the missing values with the statistics (e.g.,
+ments lead to missing measurements [Li et al., 2023]. Clini-
+                                                                                 zero value, mean value, and last observed value [Amiri
+cal studies face challenges from irregular sampling and pri-
+                                                                                 and Jensen, 2016]) or simple statistical models, includ-
+vacy concerns [Ibrahim et al., 2012; Esteban et al., 2017;
+                                                                                 ing ARIMA [Bartholomew, 1971], ARFIMA [Hamzaçebi,
+Qian et al., 2025]. Financial and transportation systems en-
+                                                                                 2008], and SARIMA [Hamzaçebi, 2008]. Furthermore, ma-
+counter data gaps due to system downtime and communica-
+                                                                                 chine learning techniques like regression, K-nearest neigh-
+tion issues [Bai and Ng, 2008; Gong et al., 2021]. These
+                                                                                 bor, matrix factorization, etc., have gained prominence in
+    ∗
+        Corresponding author.                                                    the literature for addressing missing values in multivariate
+
+
+
+                                                                          10696
+                        Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+                                                                   Survey Track
+
+
+time series. Key implementations of these approaches in-                         2. We provide a comprehensive overview of existing MTSI
+clude KNNI [Altman, 1992], TIDER [Liu et al., 2022],                                toolkits. In particular, we highlight the PyPOTS Ecosys-
+MICE [Van Buuren and Groothuis-Oudshoorn, 2011], etc.                               tem, which integrates diverse imputation algorithms,
+While statistical and machine learning imputation methods                           standardized pipelines, and benchmarking resources, fa-
+are simple and efficient, they fall short in capturing the in-                      cilitating accessible and reproducible MTSI research.
+tricate temporal relationships and complex variation patterns                    3. We identify future directions, including missingness pat-
+inherent in time series data, resulting in limited performance.                     terns, downstream task integration, and model scalabil-
+   More recently, deep learning-based imputation methods                            ity, offering insights to guide further advancements.
+have demonstrated strong modelling capabilities for han-
+dling missing data. These approaches leverage advanced ar-                   2     Preliminary and Taxonomy
+chitectures such as Transformers, Variational Autoencoders
+(VAEs), Generative Adversarial Networks (GANs), diffusion                    2.1     Background of MTSI
+models, Pre-trained Foundation Models (PFMs), and Large                      Problem Definition A complete time-series dataset on
+Language Models (LLMs) to capture the underlying struc-                      [0, T ] typically can be denoted as D = {Xi , ti }N
+                                                                                                                               i=1 . Hereby,
+tures and complex temporal dynamics of time series data. By                  Xi = {x1:K,1:L } ∈ RK×L and ti = (t1 , · · · , tL ) ∈ [0, T ]L ,
+learning the true data distribution from observed values, deep               where K is the number of features and L is the length of time
+learning imputation methods can generate more reliable and                   series. In the missing data context, each complete time series
+contextually appropriate estimates for missing components.                   can be split into an observed and a missing part, i.e., Xi =
+While several surveys exist on imputation techniques [Khay-                  {Xoi , Xm i }. For encoding the missingness, we also denote an
+ati et al., 2020; Fang and Wang, 2020], they primarily focus                 observation matrix as Mi = {m1:K,1:L }, where mk,l = 0 if
+on statistical and traditional machine learning approaches, of-              xk,l is missing at timestamp tl , otherwise mk,l = 1. Further-
+fering limited discussion on deep learning-based methods.                    more, we can also calculate a time-lag matrix δ i = {δ1:K,1:L }
+Given that multivariate time series imputation is a critical                 by the following rule:
+data preprocessing step for downstream time series analy-
+                                                                                            0,                   if l = 1
+                                                                                        (
+sis, a comprehensive and systematic survey on deep learning-
+driven imputation methods would provide valuable insights                      δk,l =       tl − tl−1 ,          if mk,l−1 = 1 and l > 1
+and contribute significantly to the research community.                                     δk,l−1 + tl − tl−1 , if mk,l−1 = 0 and l > 1
+   In this survey paper, we endeavor to bridge the existing                    Hence, each incomplete time series is expressed as
+knowledge gap by providing a comprehensive summary of                        {Xoi , Mi , δ i }. The objective of MTSI is to construct an im-
+the latest developments in deep learning methods for multi-                  putation model Mθ , parameterized by θ, to accurately esti-
+variate time series imputation (MTSI). The framework of this                 mate missingness in Xo . The imputed matrix is defined as:
+survey is illustrated in Figure 1. In detail, we first present
+a succinct introduction to the topic, followed by the pro-                                      X̂ = M ⊙ Xo + (1 − M) ⊙ X̄,               (1)
+posal of a novel taxonomy, categorizing approaches based                     where ⊙ denotes element-wise multiplication, and X̄ =
+on two perspectives: imputation uncertainty and neural net-                  Mθ (Xo ) is the reconstructed matrix. The aim of Mθ is
+work architecture. Imputation uncertainty quantifies the con-                twofold: (i) to make X̂ approximate the true complete data X
+fidence in estimated values for missing data. To capture                     as closely as possible, or (ii) to enhance the downstream task
+this, multiple stochastic samples are generated, and imputa-
+                                                                             performance using X̂ compared to using the original Xo .
+tions are performed across these variations [Little and Ru-
+bin, 2019]. Accordingly, we categorize imputation meth-                      Missing Mechanism The missing mechanisms, i.e., the
+ods into predictive ones, offering fixed estimates, and gen-                 cause of missing data, define the statistical relationship
+erative ones, which provide a distribution of possible val-                  between observations and the probability of missing val-
+ues to account for imputation uncertainty. For neural net-                   ues [Nakagawa, 2015]. In real-world scenarios, missing
+work architecture, we explore a range of deep learning mod-                  mechanisms are inherently complex, and imputation model
+els tailored for MTSI, including RNN-based ones, GNN-                        performance heavily depends on how well our assumptions
+based ones, CNN-based ones, attention-based ones, VAE-                       align with the actual missing data patterns. According to
+based ones, GAN-based ones, diffusion-based ones, PFM-                       Rubin’s theory [Rubin, 1976], missing mechanisms fall into
+based ones, and LLM-based ones.                                              three categories: Missing Completely At Random (MCAR),
+   To the best of our knowledge, this is the first compre-                   Missing At Random (MAR), and Missing Not At Random
+hensive and systematic review of deep learning algorithms                    (MNAR). MCAR implies that missingness is independent of
+in the realm of MTSI, aiming to stimulate further research                   both observed and missing data. Conversely, MAR indicates
+in this field. A corresponding resource that has been con-                   that missingness depends solely on observed data. MNAR
+tinuously updated can be found in our GitHub repository                      suggests that missingness is related to the missing data itself
+https://github.com/WenjieDu/Awesome Imputation. In sum-                      and may also be influenced by observed data. These mecha-
+mary, the contributions of this survey include:                              nisms can be formally defined as follows:
+                                                                                • MCAR: p(M|X) = p(M),
+ 1. We introduce a novel taxonomy for deep multivariate
+    time series imputation, and categorize them based on im-                    • MAR: p(M|X) = p(M|Xo ),
+    putation uncertainty and neural network architecture.                       • MNAR: p(M|X) = p(M|Xo , Xm ).
+
+
+
+                                                                      10697
+                          Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+                                                                     Survey Track
+
+
+MCAR and MAR are stronger assumptions compared to                              where ℓe is an absolute or squared error function.
+MNAR and are considered “ignorable” [Little and Rubin,
+2019]. This means that the missing mechanism can be dis-                       3.2     RNN-based Models
+regarded during imputation, focusing solely on learning the
+data distribution, i.e., p(Xo ). In contrast, MNAR, often more                 As a natural way to model sequential data, Recurrent Neu-
+reflective of real-life scenarios, is “non-ignorable”, overlook-               ral Networks (RNNs) were developed early on the topic of
+ing its missing mechanism can lead to biased parameter esti-                   advanced time-series analysis, and imputation is not an ex-
+mates. The objective here shifts to learning the joint distribu-               ception. GRU-D [Che et al., 2018], a variant of GRU, is de-
+tion of the data and its missing mechanism, i.e., p(Xo , M).                   signed to process time series containing missing values. It
+                                                                               is regulated by a temporal decay mechanism, which takes the
+2.2    Taxonomy of Deep Learning-based MTSI                                    time-lag matrix δi as input and models the temporal irregular-
+                                                                               ity caused by missing values. Temporal belief memory [Kim
+                                                                               and Chi, 2018], inspired by a biological neural model called
+                                                                               the Hodgkin–Huxley model, is proposed to handle missing
+                                                                               data by computing a belief of each feature’s last observation
+                                                                               with a bidirectional RNN and imputing a missing value based
+                                                                               on its corresponding belief. M-RNN [Yoon et al., 2019] is
+                                                                               an RNN variant that works in a multi-directional way. This
+                                                                               model interpolates within data streams with a bidirectional
+                                                                               RNN model and imputes across data streams with a fully con-
+                                                                               nected network. BRITS [Cao et al., 2018] models incomplete
+Figure 2: The taxonomy of deep learning methods for multivariate               time series with a bidirectional RNN. It takes missing val-
+time series imputation from the view of imputation uncertainty and             ues as variables of the RNN graph and fills in missing data
+neural network architecture.                                                   with the hidden states from the RNN. In addition to imputa-
+                                                                               tion, BRITS is capable of working on the time series classi-
+   To summarize the existing deep multivariate time series                     fication task simultaneously. Both M-RNN and BRITS adopt
+imputation methods, we propose a taxonomy from the per-                        the temporal decay function from GRU-D to capture the in-
+spectives of imputation uncertainty and neural network ar-                     formative missingness for performance improvement. Sub-
+chitecture as illustrated in Figure 2, and provide a more de-                  sequent works, such as [Luo et al., 2018; Luo et al., 2019;
+tailed summary of these methods in Table 1. Regarding large                    Liu et al., 2019; Miao et al., 2021], combine RNNs with the
+model-based methods, we separate them as a category consid-                    GAN structure to output imputation with higher accuracy.
+ering their application strategies are quite different from gen-
+eral neural network algorithms. For imputation uncertainty,
+we categorize imputation methods into predictive and gener-                    3.3     CNN-based Models
+ative types, based on their ability to yield varied imputations                Convolutional Neural Networks (CNNs) represent a founda-
+that reflect the inherent uncertainty in the imputation pro-                   tional deep learning architecture, extensively employed in so-
+cess. In the context of the neural network architecture, we ex-                phisticated time series analysis. TimesNet [Wu et al., 2023a]
+amine prominent deep learning models specifically designed                     innovatively incorporates Fast Fourier Transform to restruc-
+for multivariate time series imputation. The discussed mod-                    ture 1D time series into a 2D format, facilitating the utiliza-
+els encompass RNN-based ones, CNN-based ones, GNN-                             tion of CNNs for data processing. Also in GP-VAE [Fortuin
+based ones, attention-based ones, VAE-based ones, GAN-                         et al., 2020], CNNs play the role of the backbone in both the
+based ones, and diffusion-based ones. In the following sec-                    encoder and decoder. Furthermore, CNNs serve as pivotal
+tions, we will delve into and discuss the existing deep time                   feature extractors within attention-based models like Deep-
+series imputation methods from these two perspectives.                         MVI [Bansal et al., 2021], as well as in diffusion-based mod-
+                                                                               els such as CSDI [Tashiro et al., 2021], by mapping input data
+3     Predictive Methods                                                       into an embedding space for subsequent processing.
+This section delves into predictive imputation methods, and
+our discussion primarily focuses on four types: RNN-based,                     3.4     GNN-based Models
+CNN-based, GNN-based, and attention-based models.
+                                                                               GNN-based models treat time series as graph sequences, re-
+3.1    Learning Objective                                                      constructing missing values via learned node representations.
+Predictive imputation methods consistently predict determin-                   [Cini et al., 2022] introduces GRIN, the first graph-based
+istic values for the same missing components, thereby not ac-                  recurrent architecture for MTSI, leveraging a bidirectional
+counting for the uncertainty in the imputed values. Typically,                 graph recurrent neural network to capture temporal dynam-
+these methods employ a reconstruction-based learning man-                      ics and spatial similarities, significantly improving imputa-
+ner with the learning objective being,                                         tion accuracy. SPIN [Marisca et al., 2022] further integrates
+                        N                                                      a sparse spatiotemporal attention mechanism into the GNN
+                                                                               framework, mitigating GRIN’s error propagation and enhanc-
+                        X
+           Ldet (θ) =         ℓe (Mi ⊙ X̄i , Mi ⊙ Xoi ),              (2)
+                        i=1
+                                                                               ing robustness against data sparsity.
+
+
+
+                                                                        10698
+                                    Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+                                                                               Survey Track
+
+
+                                              Imputation Uncertainty   Neural Network Architecture   Missing Mechanism
+      GRU-D [Che et al., 2018]                Scientific Reports       predictive                            é           RNN                              MCAR
+      M-RNN [Yoon et al., 2019]               TBME                     predictive                            é           RNN                              MCAR
+      BRITS [Cao et al., 2018]                NeurIPS                  predictive                            é           RNN                              MCAR
+      TimesNet [Wu et al., 2023a]             ICLR                     predictive                            é           CNN                              MCAR
+      GRIN [Cini et al., 2022]                ICLR                     predictive                            é           GNN                              MCAR / MAR
+      SPIN [Marisca et al., 2022]             NeurIPS                  predictive                            é           GNN, Attention                   MCAR / MAR
+      Transformer [Vaswani et al., 2017]      NeurIPS                  predictive                            é           Attention                        MCAR
+      SAITS [Du et al., 2023]                 ESWA                     predictive                            é           Attention                        MCAR
+      DeepMVI [Bansal et al., 2021]           VLDB                     predictive                            é           Attention, CNN                   MCAR
+      ImputeFormer [Nie et al., 2024]         KDD                      predictive                            é           Attention                        MCAR
+      Casper [Jing et al., 2024]              CIKM                     predictive                            é           GNN, Attention                   MCAR
+      HSPGNN [Liang et al., 2024a]            CIKM                     predictive                            é           GNN                              MCAR
+      GP-VAE [Fortuin et al., 2020]           AISTATS                  generative                            ○           VAE, CNN                         MCAR / MAR
+      V-RIN [Mulyadi et al., 2021]            Trans. Cybern.           generative                            Ë           VAE, RNN                         MCAR / MAR
+      supnotMIWAE [Kim et al., 2023]          ICML                     generative                            ○           VAE                              MNAR
+      GRUI-GAN [Luo et al., 2018]             NeurIPS                  generative                            ○           GAN, RNN                         MCAR
+      E2 GAN [Luo et al., 2019]               IJCAI                    generative                            ○           GAN, RNN                         MCAR
+      NAOMI [Liu et al., 2019]                NeurIPS                  generative                            ○           GAN, RNN                         MCAR
+      SSGAN [Miao et al., 2021]               AAAI                     generative                            ○           GAN, RNN                         MCAR
+      CSDI [Tashiro et al., 2021]             NeurIPS                  generative                            ○           Diffusion, Attention, CNN        MCAR
+      SSSD [Alcaraz and Strodthoff, 2023]     TMLR                     generative                            ○           Diffusion, Attention             MCAR
+      CSBI [Chen et al., 2023]                ICML                     generative                            ○           Diffusion, Attention             MCAR
+      MIDM [Wang et al., 2023]                KDD                      generative                            ○           Diffusion, Attention             MCAR
+      PriSTI [Liu et al., 2023]               ICDE                     generative                            ○           Diffusion, Attention, GNN, CNN   MCAR
+      SPD [Biloš et al., 2023]               ICML                     generative                            ○           Diffusion, Attention             MCAR
+      SADI [Dai et al., 2024]                 AISTATS                  generative                            Ë           Diffusion, Attention             MCAR / MAR / MNAR
+      FGTI [Yang et al., 2024a]               NeurIPS                  generative                            Ë           Diffusion, Attention             MCAR / MAR / MNAR
+      MTSCI [Zhou et al., 2024]               CIKM                     generative                            Ë           Diffusion, Attention             MCAR
+      MOMENT [Goswami et al., 2024]           ICML                     large model                           Ë           Foundation model                 MCAR
+      Timer [Liu et al., 2024]                ICML                     large model                           Ë           Foundation model                 MCAR
+      Timemixer++ [Wang et al., 2024]         ICLR                     large model                           Ë           Foundation model                 MCAR
+      GPT4TS [Zhou et al., 2023]              NeurIPS                  large model                           Ë           Large language model             MCAR
+      LLM-TS Integrator [Chen et al., 2024]   NeurIPS workshop         large model                           Ë           Large language model             MCAR
+
+
+Table 1: Summary of deep learning methods for multivariate time series imputation. Ë and ○ indicate methods capable of accounting for
+imputation uncertainty, whereas é denotes methods that do not. Furthermore, Ë denotes that the methods also define the fidelity score to
+explicitly measure the imputation uncertainty.
+
+
+3.5      Attention-based Models                                                               inherently limited by their sequential processing nature and
+Since Transformer is proposed in [Vaswani et al., 2017], the                                  memory constraints, which may lead to scalability issues
+self-attention mechanism has been widely used to model se-                                    with long sequences [Khayati et al., 2020]. Although CNNs
+quence data including time series [Wen et al., 2023]. Deep-                                   have decades of development and are useful feature extractors
+MVI [Bansal et al., 2021] integrates transformers with con-                                   to capture neighborhood information and local connectivity,
+volutional techniques, tailoring key-query designs to effec-                                  their kernel size and working mechanism intrinsically limit
+tively address missing value imputation. For each time se-                                    their performance on time-series data as the backbone. Due
+ries, DeepMVI harnesses attention mechanisms to concur-                                       to the attention mechanism, attention-based models generally
+rently distill long-term seasonal, granular local, and cross-                                 outperform RNN-based and CNN-based methods in imputa-
+dimensional embeddings, which are concatenated to predict                                     tion tasks due to their superior ability to handle long-range
+the final output. SAITS [Du et al., 2023] employs a self-                                     dependencies and parallel processing capabilities. GNN-
+supervised training scheme to deal with missing data, which                                   based methods provide a deeper understanding of spatio-
+integrates dual joint learning tasks: a masked imputation task                                temporal dynamics, yet they often come with increased com-
+and an observed reconstruction task. This method, featuring                                   putational complexity, posing challenges for large-scale or
+two diagonal-masked self-attention blocks and a weighted-                                     high-dimensional data.
+combination block, leverages attention weights and missing-
+ness indicators to enhance imputation precision. Besides, Im-                                 4      Generative Methods
+puteFormer [Nie et al., 2024] introduces a novel Transformer-
+based framework that leverages self-attention and temporal                                    In this section, we examine generative imputation methods,
+context modeling to accurately recover missing values. In                                     including three primary types: VAE-based, GAN-based, and
+addition to the above models, the attention mechanism is also                                 diffusion-based models.
+widely adapted to build the denoising network in diffusion
+models like CSDI [Tashiro et al., 2021], MIDM [Wang et
+                                                                                              4.1      Learning Objective
+al., 2023], PriSTI [Liu et al., 2023], Diffusion-TS [Yuan and                                 Generative methods are essentially built upon generative
+Qiao, 2024] and in GNN-based models like Casper [Jing et                                      models like VAEs, GANs, and diffusion models. They are
+al., 2024] and HSPGNN [Liang et al., 2024a].                                                  characterized by their ability to generate varied outputs for
+                                                                                              missing observations, enabling the quantification of imputa-
+3.6      Pros and Cons                                                                        tion uncertainty. Typically, these methods learn probability
+This subsection synthesizes the strengths and challenges of                                   distributions from the observed data and subsequently gen-
+the predictive imputation methods discussed. RNN-based                                        erate slightly different values aligned with these learned dis-
+models, while adept at capturing sequential information, are                                  tributions for the missing observation. The primary learning
+
+
+
+                                                                                       10699
+                         Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+                                                                    Survey Track
+
+
+objective of generative methods is thus defined as,                           by the multiresolution decoder in a non-autoregressive man-
+                              N
+                                                                              ner, which mitigates error accumulation in scenarios involv-
+                              X                                               ing high-missing and long sequence time series. On the other
+                 Lpro (θ) =         log pθ (Xoi ).                   (3)      hand, in [Miao et al., 2021], authors propose USGAN, which
+                              i=1
+                                                                              generates high-quality imputed data by integrating a discrim-
+where θ is the model parameters of the imputation model M.                    inator with a temporal reminder matrix. This matrix intro-
+                                                                              duces added complexity to the training of the discriminator
+4.2   VAE-based Models                                                        and subsequently leads to improvements in the generator’s
+VAEs employ an encoder-decoder structure to approximate                       performance. Furthermore, they extend USGAN to a semi-
+the true data distribution by maximizing the Evidence Lower                   supervised model SSGAN, by introducing an extra classifier.
+Bound (ELBO) on the marginal likelihood. This ELBO en-                        In this way, SSGAN leverages label information, allowing
+forces a Gaussian-distributed latent space from which the de-                 the generator to estimate missing values while conditioning
+coder reconstructs diverse data points.                                       on observed components and labels simultaneously.
+   The authors in [Fortuin et al., 2020] propose the first VAE-
+based imputation method GP-VAE, where they utilized a                         4.4     Diffusion-based Models
+Gaussian process prior in the latent space to capture temporal                As an emerging and potent category of generative models,
+dynamics. Moreover, the ELBO in GP-VAE is only evaluated                      diffusion models are adept at capturing complex data dis-
+on the observed features of the data. Authors in [Mulyadi et                  tributions by progressively adding and then reversing noise
+al., 2021] design V-RIN to mitigate the risk of biased esti-                  through a Markov chain of diffusion steps. Distinct from
+mates in missing value imputation. V-RIN captures uncer-                      VAE, these models utilize a fixed training procedure and op-
+tainty by accommodating a Gaussian distribution over the                      erate with high-dimensional latent variables that retain the di-
+model output, specifically interpreting the variance of the re-               mensionality of the input data [Yang et al., 2024b].
+constructed data from a VAE model as an uncertainty mea-                         CSDI, introduced in [Tashiro et al., 2021], stands out as the
+sure. It then models temporal dynamics and seamlessly in-                     pioneering diffusion model specifically designed for MTSI.
+tegrates this uncertainty into the imputed data through an                    Different from conventional diffusion models, CSDI adopts
+uncertainty-aware GRU. More recently, authors in [Kim et                      a conditioned training approach, where a subset of observed
+al., 2023] propose supnotMIWAE and introduce an extra                         data is utilized as conditional information to facilitate the gen-
+classifier, where they extend the ELBO in GP-VAE to model                     eration of the remaining segment of observed data. However,
+the joint distribution of the observed data, its mask matrix,                 the denoising network in CSDI relies on two transformers,
+and its label. In this way, their ELBO effectively models the                 exhibiting quadratic complexity concerning the number of
+imputation uncertainty, and the additional classifier encour-                 variables and the time series length. This design limitation
+ages the VAE model to produce missing values that are more                    raises concerns about memory constraints, particularly when
+advantageous for the downstream classification task.                          modeling extensive multivariate time series. In response to
+                                                                              this challenge, a subsequent work by [Alcaraz and Strodthoff,
+4.3   GAN-based Models                                                        2023] introduces SSSD, which addresses the quadratic com-
+GANs facilitate adversarial training through a minimax game                   plexity issue by replacing transformers with structured state
+between two components: a generator aiming to mimic the                       space models [Gu et al., 2022]. This modification proves
+real data distribution, and a discriminator tasked with distin-               advantageous, especially when handling lengthy multivariate
+guishing between the generated and real data. This dynamic                    time series, as it mitigates the risk of memory overflow. An-
+fosters a progressive refinement of synthetic data that increas-              other approach CSBI, introduced in [Chen et al., 2023], im-
+ingly resembles real samples.                                                 proves the efficiency by modeling the diffusion process as a
+   In [Luo et al., 2018], authors propose a two-stage GAN im-                 Schrodinger bridge problem, which could be transformed into
+putation method (GRUI-GAN), which is the first GAN-based                      computation-friendly stochastic differential equations. Also,
+method for imputing time-series data. GRUI-GAN first learns                   SADI [Dai et al., 2024] is a similarity-aware diffusion model
+the distribution of the observed multivariate time-series data                that leverages a self-attention mechanism to capture inter-
+by a standard adversarial training manner and then optimizes                  patient similarities for effective imputation of missing val-
+the input noise of the generator to further maximize the sim-                 ues. MTSCI [Zhou et al., 2024] leverages cross-channel cor-
+ilarity of the generated and observed multivariate time series.               relations and multi-scale temporal dynamics features to effec-
+However, the second stage in GRUI-GAN needs a lot of time                     tively recover missing values.
+to find the best matched input vector, and this vector is not al-                Moreover, the efficacy of diffusion models is notably in-
+ways the best especially when the initial value of the “noise”                fluenced by the construction and utilization of conditional in-
+is not properly set. Then, an end-to-end GAN imputation                       formation. MIDM [Wang et al., 2023] proposes to sample
+model E 2 GAN [Luo et al., 2019] is further proposed, where                   noise from a distribution conditional on observed data’s rep-
+the generator takes a denoising autoencoder module to avoid                   resentations in the denoising process, In this way, it can ex-
+the “noise” optimization stage in GRUI-GAN. Meanwhile,                        plicitly preserve the intrinsic correlations between observed
+authors in [Liu et al., 2019] propose a non-autoregressive                    and missing data. PriSTI [Liu et al., 2023] introduces the
+multi-resolution GAN model (NAOMI), where the generator                       spatiotemporal dependencies as conditional information, i.e.,
+is assembled by a forward-backward encoder and a multires-                    provides the denoising network with spatiotemporal attention
+olution decoder. The imputed data are recursively generated                   weights calculated by the conditional feature for spatiotem-
+
+
+
+                                                                       10700
+                         Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+                                                                    Survey Track
+
+
+poral imputation. Besides, FGTI [Yang et al., 2024a] is a                     Timemixer++ [Wang et al., 2024] explores an alternative to
+frequency-guided framework that leverages spectral analysis                   Transformer-based architectures by adopting token-mixing
+to effectively capture both global periodic patterns and local                techniques. By mixing temporal and feature-wise representa-
+temporal dynamics, thereby enhancing missing data recovery.                   tions, Timemixer++ effectively captures both short- and long-
+   Contrasting with the above diffusion-based methods that                    term dependencies while reducing computational overhead.
+treat time series as discrete time steps, SPD [Biloš et al.,                 These PFMs represent a significant step forward in MTSI,
+2023] views time series as discrete realizations of an under-                 offering scalable, generalizable, and high-performance solu-
+lying continuous function and generates data for imputation                   tions that adapt to various missing patterns across domains.
+using stochastic process diffusion. In this way, SPD posits the
+continuous noise process as an inductive bias for the irregular               5.2     Large Language Models
+time series, so as to better capture the true generative process,             LLMs have shown good capabilities in sequential modeling
+especially with the inherent stochasticity of the data.                       due to their autoregressive nature, which enables them to cap-
+                                                                              ture sequence dependencies through next-token prediction.
+4.5    Pros and Cons                                                          Their extensive model parameters equip them with a strong
+This subsection delineates the advantages and limitations of                  learning capacity, making them suitable for handling MTSI
+the aforementioned generative imputation models. VAE-                         tasks [Jin et al., 2023]. For example, GPT4TS [Zhou et al.,
+based models are adept at modeling probabilities explicitly                   2023] optimizes GPT-2 for MTSI by introducing a key ar-
+and offering a theoretical foundation for understanding data                  chitectural adjustment—the freezing of the attention mod-
+distributions. However, they are often constrained by their                   ule. This design allows the model to focus on fine-tuning
+generative capacity, which can limit their performance in cap-                positional embeddings and layer normalization layers using
+turing complex data variability. GAN-based models, on the                     a small number of samples. Such targeted fine-tuning sig-
+other hand, excel in data generation, providing high-quality                  nificantly improves the model’s ability to reconstruct missing
+imputations with impressive fidelity to the original data distri-             values with minimal data availability. Furthermore, LLM-TS
+butions. Yet, they are notoriously challenging to train due to                Integrator [Chen et al., 2024] enhances LLM-based MTSI
+issues like vanishing gradients [Wu et al., 2023b], which can                 tasks by integrating statistical and deep learning methods
+hamper model stability and convergence. Diffusion-based                       within a hybrid framework. It introduces an adaptive re-
+models emerge as powerful generative tools with a strong                      trieval mechanism to select relevant historical patterns and
+capacity for capturing intricate data patterns. Nevertheless,                 a self-correction module for iterative refinement. By lever-
+their computational complexity is considerable, and they also                 aging retrieval-augmented generation, the model effectively
+suffer from issues related to boundary coherence between                      handles irregular and sparse time-series data.
+missing and observed parts [Lugmayr et al., 2022].                               These large model approaches represent a fundamental
+                                                                              shift in time series imputation: from treating missing values
+                                                                              as isolated points to understanding them within a rich tem-
+5     Large Model-based Methods                                               poral and cross-variable context. While showing promising
+Large models aim to tackle three critical challenges in MTSI                  results, particularly in scenarios with complex missingness
+tasks: complex temporal dependencies across multiple scales,                  patterns, their adoption requires careful consideration of com-
+diverse missingness patterns, and the need for robust gener-                  putational resources and domain-specific constraints.
+alization with limited domain data. In this section, we ex-
+amine how pre-trained foundation models (PFMs) and large                      6     Time Series Imputation Toolkits
+language models (LLMs) approach these challenges through                      On the MTSI task, there are existing libraries providing naive
+distinct but complementary paths.                                             processing ways, statistical methods, machine learning impu-
+                                                                              tation algorithms, and deep learning imputation neural net-
+5.1    Pre-Trained Foundation Models                                          works for convenient usage.
+PFMs leverage large-scale pretraining on diverse datasets to                     imputeTS [Moritz and Bartz-Beielstein, 2017], a library
+enhance generalization and adaptability [Liang et al., 2024b].                in R provides several naive approaches (e.g., mean values,
+For example, by pretraining on a vast collection of multi-                    last observation carried forward, etc.) and commonly-used
+variate time series, Timer [Liu et al., 2024] learns a rich set               imputation algorithms (e.g., linear interpolation, Kalman
+of temporal representations, enabling it to generalize across                 smoothing, and weighted moving average) but only for
+different domains. It employs a self-supervised contrastive                   univariate time series. Another well-known R package,
+learning framework that refines its ability to reconstruct miss-              mice [Van Buuren and Groothuis-Oudshoorn, 2011], imple-
+ing values while maintaining consistency in long-range de-                    ments the method called multivariate imputation by chained
+pendencies. Building on the idea of large-scale pretraining,                  equations to tackle missingness in data. Although it is not
+MOMENT [Goswami et al., 2024] introduces the Time Se-                         for time series specifically, it is widely used in practice for
+ries Pile and facilitates pretraining of high-capacity Trans-                 multivariate time-series imputation, especially in the field of
+former models using masked time series prediction tasks.                      statistics. Impyute (https://github.com/eltonlaw/impyute)
+On the other hand, NuwaTS [Cheng et al., ] repurposes pre-                    and Autoimpute (https://github.com/kearnz/autoimpute)
+trained language models for time series imputation, utilizing                 both offer naive imputation methods for cross-sectional
+specialized embeddings and contrastive learning to handle                     data and time-series data. Impyute is only with sim-
+various missing data patterns across domains. Meanwhile,                      ple approaches like the moving average window, and
+
+
+
+                                                                       10701
+                         Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+                                                                    Survey Track
+
+
+Autoimpute integrates parametric methods, for example,                        Scalability While deep learning imputation algorithms
+polynomial interpolation and spline interpolation. More re-                   have shown impressive performance, their computational cost
+cently, GluonTS [Alexandrov et al., 2020], a generative                       often exceeds that of statistical and machine learning-based
+machine-learning package for time series, provides some                       counterparts. In the era of burgeoning digital data, spurred
+naive ways, such as dummy value imputation and casual                         by advancements in communication and IoT devices, we are
+mean value imputation, to handle missing values. In addition                  witnessing an exponential increase in data generation. This
+to simple and non-parametric methods, Sktime [Löning et                      surge, accompanied by the prevalence of incomplete datasets,
+al., 2019] implements one more option that allows users to                    poses significant challenges in training deep models effec-
+leverage integrated machine learning imputation algorithms                    tively [Wu et al., 2023b]. Specifically, the high computational
+to predict missing values in the given data, though this works                demands of existing deep imputation algorithms render them
+in a univariate way. ImputeBench [Khayati et al., 2020]                       less feasible for large-scale datasets. Consequently, there is
+offers a collection of machine learning and deep learning-                    a growing need for scalable deep imputation solutions, lever-
+based imputation but lacks uniform programming languages.                     aging parallel and distributed computing techniques, to effec-
+   When it comes to deep-learning imputation, PyPOTS [Du,                     tively address the challenges of large-scale missing data.
+2023] is a toolbox focusing on modeling partially-observed                    Large Language Models for MTSI While large models
+time series end-to-end, which contains dozens of neural net-                  have shown promising results in time series imputation, sev-
+works for tasks on incomplete time series, including 43                       eral critical research directions remain unexplored. First, be-
+imputation models so far. Leveraging the kits from Py-                        yond current architectural innovations, the explicit incorpora-
+POTS Ecosystem (https://pypots.com/ecosystem) that we de-                     tion of domain-specific temporal constraints and prior knowl-
+veloped, TSI-Bench Suite [Du et al., 2024] provides a set of                  edge about missingness mechanisms into the pretraining pro-
+standard pipelines processing 172 public time-series datasets                 cess offers significant potential. Second, while the latest mod-
+for benchmarking imputation algorithms. The comprehensive                     els have advanced temporal modeling, there remains room
+benchmark results from 34,804 experiments, including 28 al-                   for fundamental innovations in processing irregular temporal
+gorithms, 8 typical datasets from different domains, and di-                  patterns, particularly through more efficient and interpretable
+verse missingness patterns are presented in [Du et al., 2024].                architectures. Third, the potential of multimodal learning
+                                                                              deserves further investigation, where large models’ ability
+7   Future Direction                                                          to process different data modalities could incorporate auxil-
+                                                                              iary information (such as textual descriptions or metadata)
+Missingness Patterns Existing imputation algorithms pre-                      to achieve more accurate and contextually appropriate im-
+dominantly operate under the MCAR or MAR assumptions.                         putations. These directions, coupled with robust evaluation
+However, real-world missing data mechanisms are often more                    frameworks assessing uncertainty quantification and tempo-
+complex, with MNAR being prevalent across various do-                         ral consistency, could significantly advance time series impu-
+mains. The non-ignorable nature of MNAR indicates a fun-                      tation in critical applications.
+damental distributional shift between observed and true data.
+For example, in airflow signal analysis, the absence of high-
+value observations leads to saturated peaks, visibly skewing
+                                                                              8     Conclusion
+the observed data distribution compared to the true underly-                  This survey presents a systematic review of deep learning-
+ing one. This scenario illustrates how imputation methods                     based methods for multivariate time series imputation with a
+may incur inductive bias in model parameter estimation and                    novel taxonomy to categorize predictive and generative meth-
+underperform in the presence of MNAR. Addressing missing                      ods and also discusses the large model for MTSI tasks. We
+data in MNAR contexts, distinct from MCAR and MAR, calls                      provide a comprehensive architecture overview, highlighting
+for innovative methodologies to achieve better performance.                   their strengths, limitations, and applications. To advance this
+                                                                              field, we identify key challenges, including handling MNAR
+Downstream Performance The primary objective of im-                           missingness, integrating imputation with downstream tasks,
+puting missing values lies in enhancing downstream data an-                   and improving scalability. Future research should explore
+alytics, particularly in scenarios with incomplete informa-                   large-scale pre-trained models and multimodal learning to en-
+tion. The prevalent approach is the “impute and predict” two-                 hance robustness and real-world applicability.
+stage paradigm, where missing value imputation is a part of
+data preprocessing and followed by task-specific downstream
+models (e.g. a classifier), either in tandem or sequentially. An              Contribution Statement
+alternative method is the “encode and predict” end-to-end                     Jun Wang and Wenjie Du contribute equally and are co-first
+paradigm, encoding the incomplete data into a proper rep-                     authors.
+resentation for multitask learning, including imputation and
+other tasks (e.g. classification and forecasting, etc.). Despite
+the optimal paradigm for partially-observed time series still                 References
+remains an open area for future investigation, the latter end-                [Alcaraz and Strodthoff, 2023] Juan Lopez Alcaraz and Nils
+to-end way turns out to be more promising especially when                        Strodthoff. Diffusion-based time series imputation and forecast-
+information embedded in the missing patterns is helpful to                       ing with structured state space models. Transactions on Machine
+the downstream tasks [Miyaguchi et al., 2021].                                   Learning Research, 2023.
+
+
+
+
+                                                                       10702
+                           Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+                                                                      Survey Track
+
+
+[Alexandrov et al., 2020] Alexander Alexandrov, Konstantinos                    [Esteban et al., 2017] Cristóbal Esteban, Stephanie L Hyland, and
+   Benidis, Michael Bohlke-Schneider, Valentin Flunkert, Jan                       Gunnar Rätsch.       Real-valued (medical) time series gen-
+   Gasthaus, et al. GluonTS: Probabilistic and Neural Time Series                  eration with recurrent conditional gans.          ArXiv Preprint
+   Modeling in Python. Journal of Machine Learning Research,                       ArXiv:1706.02633, 2017.
+   21(116):1–6, 2020.                                                           [Fang and Wang, 2020] Chenguang Fang and Chen Wang. Time
+[Altman, 1992] Naomi S Altman. An introduction to kernel and                       series data imputation: A survey on deep learning approaches.
+   nearest-neighbor nonparametric regression. The American Statis-                 arXiv preprint arXiv:2011.11347, 2020.
+   tician, 46(3):175–185, 1992.                                                 [Fortuin et al., 2020] Vincent Fortuin, Dmitry Baranchuk, Gunnar
+[Amiri and Jensen, 2016] Mehran Amiri and Richard Jensen. Miss-                    Raetsch, and Stephan Mandt. GP-VAE: Deep probabilistic time
+   ing data imputation using fuzzy-rough methods. Neurocomput-                     series imputation. In AISTATS, 2020.
+   ing, 205(1):152–164, 2016.                                                   [Gong et al., 2021] Yongshun Gong, Zhibin Li, Jian Zhang, Wei
+[Bai and Ng, 2008] Jushan Bai and Serena Ng. Forecasting eco-                      Liu, Yilong Yin, and Yu Zheng. Missing value imputation for
+   nomic time series using targeted predictors. Journal of Econo-                  multi-view urban statistical data via spatial correlation learning.
+   metrics, 146(2):304–317, 2008.                                                  IEEE Transactions on Knowledge and Data Engineering, 2021.
+[Bansal et al., 2021] Parikshit Bansal, Prathamesh Deshpande, and               [Goswami et al., 2024] Mononito Goswami, Konrad Szafer, Arjun
+   Sunita Sarawagi. Missing value imputation on multidimensional                   Choudhry, Yifu Cai, Shuo Li, and Artur Dubrawski. Moment: A
+   time series. In VLDB, 2021.                                                     family of open time-series foundation models. In ICML, 2024.
+[Bartholomew, 1971] David J Bartholomew. Time series analysis                   [Gu et al., 2022] Albert Gu, Karan Goel, and Christopher Re. Effi-
+   forecasting and control. Journal of the Operational Research So-                ciently modeling long sequences with structured state spaces. In
+   ciety, 22(2):199–201, 1971.                                                     ICLR, 2022.
+[Biloš et al., 2023] Marin Biloš, Kashif Rasul, Anderson Schnei-              [Hamzaçebi, 2008] Coşkun Hamzaçebi. Improving artificial neural
+   der, Yuriy Nevmyvaka, and Stephan Günnemann. Modeling tem-                     networks’ performance in seasonal time series forecasting. Infor-
+   poral data as continuous functions with stochastic process diffu-               mation Sciences, 178(23):4550–4559, 2008.
+   sion. In ICML, 2023.                                                         [Ibrahim et al., 2012] Joseph G Ibrahim, Haitao Chu, and Ming-
+[Cao et al., 2018] Wei Cao, Dong Wang, Jian Li, Hao Zhou, Lei Li,                  Hui Chen. Missing data in clinical studies: issues and methods.
+   and Yitan Li. Brits: Bidirectional recurrent imputation for time                Journal of clinical oncology, 2012.
+   series. NeurIPS, 2018.                                                       [Jin et al., 2023] Ming Jin, Qingsong Wen, Yuxuan Liang, Chaoli
+[Che et al., 2018] Zhengping       Che,     Sanjay     Purushotham,                Zhang, Siqiao Xue, Xue Wang, James Zhang, Yi Wang, Haifeng
+   Kyunghyun Cho, David Sontag, and Yan Liu. Recurrent                             Chen, Xiaoli Li, et al. Large models for time series and
+   neural networks for multivariate time series with missing values.               spatio-temporal data: A survey and outlook. arXiv preprint
+   Scientific Reports, 8(1), Apr 2018.                                             arXiv:2310.10196, 2023.
+[Chen et al., 2023] Yu Chen, Wei Deng, Shikai Fang, Fengpei Li,                 [Jing et al., 2024] Baoyu Jing, Dawei Zhou, Kan Ren, and Carl
+   Nicole Tianjiao Yang, Yikai Zhang, et al. Provably convergent                   Yang. Causality-aware spatiotemporal graph neural networks for
+   schrödinger bridge with applications to probabilistic time series              spatiotemporal time series imputation. In CIKM, 2024.
+   imputation. In ICML, 2023.                                                   [Khayati et al., 2020] Mourad Khayati, Alberto Lerner, Zakhar
+[Chen et al., 2024] Can Chen, Gabriel L Oliveira, Hossein Sharifi-                 Tymchenko, and Philippe Cudré-Mauroux. Mind the gap: an ex-
+   Noghabi, and Tristan Sylvain. Enhance time series modeling by                   perimental evaluation of imputation of missing values techniques
+   integrating llm. In NeurIPS Workshop on Time Series in the Age                  in time series. In VLDB, 2020.
+   of Large Models, 2024.                                                       [Kim and Chi, 2018] Yeo Jin Kim and Min Chi. Temporal Belief
+[Cheng et al., ] Jinguo Cheng, Chunwei Yang, Wanlin Cai, Yuxuan                    Memory: Imputing missing data during rnn training. In IJCAI,
+   Liang, Qingsong Wen, and Yuankai Wu. Nuwats: a foundation                       2018.
+   model mending every incomplete time series.                                  [Kim et al., 2023] Seunghyun Kim, Hyunsu Kim, Eunggu Yun,
+[Cini et al., 2022] Andrea Cini, Ivan Marisca, and Cesare Alippi.                  Hwangrae Lee, Jaehun Lee, and Juho Lee. Probabilistic impu-
+   Filling the g ap s: Multivariate time series imputation by graph                tation for time-series classification with missing data. In ICML,
+   neural networks. In ICLR, 2022.                                                 2023.
+[Dai et al., 2024] Zongyu Dai, Emily Getzen, and Qi Long. Sadi:                 [Li et al., 2023] Xiao Li, Huan Li, Harry Kai-Ho Chan, Hua Lu,
+   Similarity-aware diffusion model-based imputation for incom-                    and Christian S Jensen. Data imputation for sparse radio maps in
+   plete temporal ehr data. In International Conference on Artificial              indoor positioning. In ICDE, 2023.
+   Intelligence and Statistics, pages 4195–4203. PMLR, 2024.                    [Liang et al., 2024a] Guojun Liang, Prayag Tiwari, Sławomir
+[Du et al., 2023] Wenjie Du, David Cote, and Yan Liu. SAITS:                       Nowaczyk, and Stefan Byttner. Higher-order spatio-temporal
+   Self-Attention-based Imputation for Time Series. Expert Systems                 physics-incorporated graph neural network for multivariate time
+   with Applications, 219:119619, 2023.                                            series imputation. In CIKM, 2024.
+[Du et al., 2024] Wenjie Du, Jun Wang, Linglong Qian, Yiyuan                    [Liang et al., 2024b] Yuxuan Liang, Haomin Wen, Yuqi Nie,
+   Yang, Zina Ibrahim, Fanxing Liu, Zepu Wang, Haoxin Liu,                         Yushan Jiang, Ming Jin, Dongjin Song, Shirui Pan, and Qing-
+   Zhiyuan Zhao, Yingjie Zhou, et al. Tsi-bench: Benchmarking                      song Wen. Foundation models for time series analysis: A tutorial
+   time series imputation. arXiv preprint arXiv:2406.12747, 2024.                  and survey. In KDD, 2024.
+[Du, 2023] Wenjie Du. PyPOTS: a Python toolbox for data mining                  [Little and Rubin, 2019] Roderick JA Little and Donald B Rubin.
+   on Partially-Observed Time Series. In SIGKDD workshop on                        Statistical analysis with missing data, volume 793. John Wiley
+   Mining and Learning from Time Series, 2023.                                     & Sons, 2019.
+
+
+
+
+                                                                         10703
+                          Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI-25)
+                                                                     Survey Track
+
+
+[Liu et al., 2019] Yukai Liu, Rose Yu, Stephan Zheng, Eric Zhan,               [Silva et al., 2012] Ikaro Silva, George Moody, Daniel J Scott,
+   and Yisong Yue. Naomi: Non-autoregressive multiresolution se-                  Leo A Celi, and Roger G Mark. Predicting in-hospital mortality
+   quence imputation. In NeurIPS, 2019.                                           of icu patients: The physionet/computing in cardiology challenge
+[Liu et al., 2022] Shuai Liu, Xiucheng Li, Gao Cong, Yile Chen,                   2012. Computing in cardiology, 39:245, 2012.
+   and Yue Jiang. Multivariate time-series imputation with disen-              [Tashiro et al., 2021] Yusuke Tashiro, Jiaming Song, Yang Song,
+   tangled temporal representations. 2022.                                        and Stefano Ermon. CSDI: Conditional score-based diffusion
+                                                                                  models for probabilistic time series imputation. In NeurIPS,
+[Liu et al., 2023] Mingzhe Liu, Han Huang, Hao Feng, Leilei
+                                                                                  2021.
+   Sun, Bowen Du, and Yanjie Fu. Pristi: A conditional diffu-
+   sion framework for spatiotemporal imputation. arXiv preprint                [Van Buuren and Groothuis-Oudshoorn, 2011] Stef Van Buuren
+   arXiv:2302.09746, 2023.                                                        and Karin Groothuis-Oudshoorn. mice: Multivariate imputation
+                                                                                  by chained equations in r. Journal of statistical software, 45:1–
+[Liu et al., 2024] Yong Liu, Haoran Zhang, Chenyu Li, Xiangdong                   67, 2011.
+   Huang, Jianmin Wang, and Mingsheng Long. Timer: Generative
+   pre-trained transformers are large time series models. In Forty-            [Vaswani et al., 2017] Ashish Vaswani, Noam Shazeer, Niki Par-
+   first International Conference on Machine Learning, 2024.                      mar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, et al. At-
+                                                                                  tention is all you need. In NeurIPS, 2017.
+[Löning et al., 2019] Markus Löning, Anthony Bagnall, Sajaysurya
+                                                                               [Wang et al., 2023] Xu Wang, Hongbo Zhang, Pengkun Wang,
+   Ganesh, Viktor Kazakov, Jason Lines, et al. sktime: A unified
+   interface for machine learning with time series. arXiv preprint                Yudong Zhang, Binwu Wang, Zhengyang Zhou, and Yang Wang.
+   arXiv:1909.07872, 2019.                                                        An observed value consistent diffusion model for imputing miss-
+                                                                                  ing values in multivariate time series. In SIGKDD, 2023.
+[Lugmayr et al., 2022] Andreas Lugmayr, Martin Danelljan, An-
+                                                                               [Wang et al., 2024] Shiyu Wang, Jiawei Li, Xiaoming Shi, Zhou
+   dres Romero, Fisher Yu, Radu Timofte, and Luc Van Gool. Re-
+                                                                                  Ye, Baichuan Mo, Wenze Lin, Shengtong Ju, Zhixuan Chu,
+   paint: Inpainting using denoising diffusion probabilistic models.
+                                                                                  and Ming Jin. Timemixer++: A general time series pat-
+   In CVPR, 2022.
+                                                                                  tern machine for universal predictive analysis. arXiv preprint
+[Luo et al., 2018] Yonghong Luo, Xiangrui Cai, Ying ZHANG, Jun                    arXiv:2410.16032, 2024.
+   Xu, and Yuan xiaojie. Multivariate time series imputation with              [Wen et al., 2023] Qingsong Wen, Tian Zhou, Chaoli Zhang, Weiqi
+   generative adversarial networks. In NeurIPS, 2018.                             Chen, Ziqing Ma, Junchi Yan, and Liang Sun. Transformers in
+[Luo et al., 2019] Yonghong Luo, Ying Zhang, Xiangrui Cai, and                    time series: A survey. In International Joint Conference on Arti-
+   Xiaojie Yuan. E2 GAN: End-to-end generative adversarial net-                   ficial Intelligence(IJCAI), 2023.
+   work for multivariate time series imputation. In IJCAI, 2019.               [Wu et al., 2023a] Haixu Wu, Tengge Hu, Yong Liu, Hang Zhou,
+[Marisca et al., 2022] Ivan Marisca, Andrea Cini, and Cesare                      Jianmin Wang, and Mingsheng Long. TimesNet: Temporal 2D-
+  Alippi. Learning to reconstruct missing data from spatiotemporal                Variation Modeling for General Time Series Analysis. In ICLR,
+  graphs with sparse observations. NeurIPS, 2022.                                 2023.
+[Miao et al., 2021] Xiaoye Miao, Yangyang Wu, Jun Wang, Yunjun                 [Wu et al., 2023b] Yangyang Wu, Jun Wang, Xiaoye Miao, Wenjia
+  Gao, Xudong Mao, and Jianwei Yin. Generative semi-supervised                    Wang, and Jianwei Yin. Differentiable and scalable generative
+  learning for multivariate time series imputation. In AAAI, 2021.                adversarial models for data imputation. IEEE Transactions on
+                                                                                  Knowledge and Data Engineering, 2023.
+[Miyaguchi et al., 2021] Kohei Miyaguchi, Takayuki Katsuki,
+                                                                               [Yang et al., 2024a] Xinyu Yang, Yu Sun, Xiaojie Yuan, and
+  Akira Koseki, and Toshiya Iwamori. Variational inference for
+  discriminative learning with generative modeling of feature in-                 Xinyang Chen. Frequency-aware generative models for multi-
+  completion. In ICLR, 2021.                                                      variate time series imputation. In The Thirty-eighth Annual Con-
+                                                                                  ference on Neural Information Processing Systems, 2024.
+[Moritz and Bartz-Beielstein, 2017] Steffen Moritz and Thomas
+                                                                               [Yang et al., 2024b] Yiyuan Yang, Ming Jin, Haomin Wen, Chaoli
+  Bartz-Beielstein. imputeTS: Time Series Missing Value Impu-
+                                                                                  Zhang, Yuxuan Liang, Lintao Ma, Yi Wang, Chenghao Liu,
+  tation in R. The R Journal, 2017.
+                                                                                  Bin Yang, Zenglin Xu, et al. A survey on diffusion mod-
+[Mulyadi et al., 2021] Ahmad Wisnu Mulyadi, Eunji Jun, and                        els for time series and spatio-temporal data. arXiv preprint
+  Heung-Il Suk. Uncertainty-aware variational-recurrent imputa-                   arXiv:2404.18886, 2024.
+  tion network for clinical time series. IEEE Transactions on Cy-              [Yoon et al., 2019] Jinsung Yoon, William R. Zame, and Mihaela
+  bernetics, 52(9):9684–9694, 2021.                                               van der Schaar. Estimating missing data in temporal data streams
+[Nakagawa, 2015] Shinichi Nakagawa. Missing data: mechanisms,                     using multi-directional recurrent neural networks. IEEE Trans.
+  methods and messages. pages 81–105. Oxford University Press                     on Biomedical Engineering, 2019.
+  Oxford, UK, 2015.                                                            [Yuan and Qiao, 2024] Xinyu Yuan and Yan Qiao. Diffusion-ts: In-
+[Nie et al., 2024] Tong Nie, Guoyang Qin, Wei Ma, Yuewen Mei,                     terpretable diffusion for general time series generation. arXiv
+   and Jian Sun. Imputeformer: Low rankness-induced transformers                  preprint arXiv:2403.01742, 2024.
+   for generalizable spatiotemporal imputation. In KDD, 2024.                  [Zhou et al., 2023] Tian Zhou, Peisong Niu, Liang Sun, Rong Jin,
+[Qian et al., 2025] Linglong Qian, Hugh Logan Ellis, Tao Wang,                    et al. One fits all: Power general time series analysis by pre-
+   Jun Wang, Robin Mitra, Richard Dobson, and Zina Ibrahim. How                   trained lm. Advances in neural information processing systems,
+   deep is your guess? a fresh perspective on deep learning for                   36:43322–43355, 2023.
+   medical time-series imputation. IEEE Journal of Biomedical and              [Zhou et al., 2024] Jianping Zhou, Junhao Li, Guanjie Zheng, Xin-
+   Health Informatics, 2025.                                                      bing Wang, and Chenghu Zhou. Mtsci: A conditional diffu-
+[Rubin, 1976] Donald B. Rubin. Inference and missing data.                        sion model for multivariate time series consistent imputation. In
+  Biometrika, 63(3):581–592, 12 1976.                                             CIKM, pages 3474–3483, 2024.
+
+
+
+
+                                                                        10704
+

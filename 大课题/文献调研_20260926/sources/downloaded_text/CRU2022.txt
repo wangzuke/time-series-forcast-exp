@@ -1,0 +1,1143 @@
+          Modeling Irregular Time Series with Continuous Recurrent Units
+
+
+                       Mona Schirmer 1 Mazin Eltayeb 2 Stefan Lessmann 3 Maja Rudolph 4
+
+
+                        Abstract                               and a gating mechanism to balance the importance of new
+                                                               information with history already encoded in the latent state.
+     Recurrent neural networks (RNNs) are a popu-
+     lar choice for modeling sequential data. Modern           Although continuous formulations were frequently consid-
+     RNN architectures assume constant time-intervals          ered in early work on recurrent neural networks (RNNs)
+     between observations. However, in many datasets           (Pineda, 1987; Pearlmutter, 1989; 1995), modern RNNs typ-
+     (e.g. medical records) observation times are ir-          ically assume regular sampling rates (Hochreiter & Schmid-
+     regular and can carry important information. To           huber, 1997; Chung et al., 2014). Many real world data
+     address this challenge, we propose continuous             sets, such as electronic health records or climate data, are
+     recurrent units (CRUs) – a neural architecture            irregularly sampled. Measurements of a patient’s health
+     that can naturally handle irregular intervals be-         status, for example, are only available when the patient sees
+     tween observations. The CRU assumes a hid-                a doctor. Hence, the time between observations also carries
+     den state, which evolves according to a linear            information about the underlying time series. A lab test not
+     stochastic differential equation and is integrated        administered for many months could imply that the patient
+     into an encoder-decoder framework. The recur-             was doing well in the meantime, while frequent visits might
+     sive computations of the CRU can be derived               indicate that the patient’s health is deteriorating. Discrete
+     using the continuous-discrete Kalman filter and           RNNs face difficulties modeling such data as they do not
+     are in closed form. The resulting recurrent archi-        reflect the continuity of the underlying temporal processes.
+     tecture has temporal continuity between hidden
+                                                               Recently, the work on neural ordinary differential equations
+     states and a gating mechanism that can optimally
+                                                               (neural ODEs) (Chen et al., 2018) has established an ele-
+     integrate noisy observations. We derive an effi-
+                                                               gant and practical way of modeling irregularly sampled time
+     cient parameterization scheme for the CRU that
+                                                               series. Recurrent architectures based on neural ODEs deter-
+     leads to a fast implementation f-CRU. We empiri-
+                                                               mine the hidden state between observations by an ordinary
+     cally study the CRU on a number of challenging
+                                                               differential equation (ODE) and update its hidden state at
+     datasets and find that it can interpolate irregular
+                                                               observation times using standard RNN gating mechanisms
+     time series better than methods based on neural
+                                                               (Rubanova et al. 2019; Brouwer et al. 2019; Lechner &
+     ordinary differential equations.
+                                                               Hasani 2020). These methods typically rely on some form
+                                                               of numerical ODE-solver, a network component that can
+                                                               prolong training time significantly (Rubanova et al. 2019;
+1. Introduction                                                Shukla & Marlin 2020).
+Recurrent architectures, such as the long short-term mem-      We propose continuous recurrent unit (CRU), a probabilis-
+ory network (LSTM) (Hochreiter & Schmidhuber, 1997)            tic recurrent architecture for modelling irregularly sampled
+or gated recurrent unit (GRU) (Chung et al., 2014) have        time series. An encoder maps observations into a latent
+become a principal machine learning tool for modeling time     space, which is governed by a linear stochastic differential
+series. Their modeling power comes from a hidden state,        equation (SDE). The analytic solution for propagating the la-
+which is recursively updated to integrate new observations,    tent state between observations and the update equations for
+    1
+      Humboldt-Universität zu Berlin, Germany. Work done      integrating new observations are given by the continuous-
+during an internship at Bosch Center for AI 2 Bosch Cen-       discrete formulation of the Kalman filter. Employing the
+ter for AI, Germany 3 Humboldt-Universität zu Berlin, Ger-    linear SDE state space model and the Kalman filter has
+many 4 Bosch Center for AI, USA. Correspondence to:            three advantages. First, a probabilistic state space provides
+Mona Schirmer <mona.schirmer@ensae.fr>, Maja Rudolph           an explicit notion of uncertainty for an uncertainty-driven
+<maja.rudolph@us.bosch.com>.
+                                                               gating mechanism and for confidence evaluation of predic-
+Proceedings of the 39 th International Conference on Machine   tions. Second, as the Kalman filter is the optimal solution
+Learning, Baltimore, Maryland, USA, PMLR 162, 2022. Copy-      for the linear filtering problem (Kalman, 1960), the gating
+right 2022 by the author(s).
+                              Modeling Irregular Time Series with Continuous Recurrent Units
+
+mechanism is optimal in a locally linear state space. Third,     et al. (2018) and Mozer et al. (2017) propose to augment
+the latent state at any point in time can be resolved analyti-   observations with timestamps. Lipton et al. (2016) sug-
+cally, therefore bypassing the need for numerical integration    gest observation masks. However, such approaches have no
+techniques or variational approximations. In summary, our        notion of dynamics between observations. An alternative
+contributions are as follows:                                    approach is to decay the hidden state exponentially between
+                                                                 observations according to a trainable decay parameter (Che
+• In Sec. 3, we develop the CRU, a model that combines           et al., 2018; Cao et al., 2018). These methods are limited to
+  the power of neural networks for feature extraction with       decaying dynamics, whereas the CRU is more expressive.
+  the advantages of probabilistic state-space models, specif-
+  ically the continuous-discrete Kalman filter. As a result,
+  the CRU is a powerful neural architecture that can nat-        Continuous-Time RNNs Continuous-time RNNs have
+  urally model data with irregular observation times. A          a long history, dating back to some of the original work
+  PyTorch implementation is available on github.1                on recurrent networks in the field. They are recurrent ar-
+                                                                 chitectures whose internal units are governed by a system
+• In Sec. 3.4, we derive a novel parameterization of the
+                                                                 of ODEs with trainable weights (Pearlmutter, 1995). The
+  latent state transition matrices via their eigendecomposi-
+                                                                 theory for different gradient-based optimization schemes
+  tion leading to a faster implementation we call fast CRU
+                                                                 for their parameters have been developed by Pineda (1987),
+  (f-CRU).
+                                                                 Pearlmutter (1989), and Sato (1990). Notably, LeCun et al.
+• In Sec. 4, we study the CRU on electronic health records,      (1988)’s derivation using the adjoint method provides the
+  climate data and images. We find that (i) our method           theoretical foundation for modern implementations of neural
+  can better interpolate irregular time series than neural       ODEs (Chen et al., 2018).
+  ODE-based methods, (ii) the CRU can handle uncertainty
+  arising from both noisy and partially observed inputs, (iii)
+  CRU outperforms both discrete RNN counterparts and             Neural ODEs Neural ODEs model the continuous dy-
+  neural ODE-based models on image data.                         namics of a hidden state by an ODE specified by a neural
+                                                                 network layer. Chen et al. (2018) propose latent ODE, a
+                                                                 generative model whose latent state evolves according to
+2. Related Work                                                  a neural ODE. However, it has no update mechanism to
+Stochastic RNNs RNNs, such as LSTMs or GRUs, are                 incorporate incoming observations into the latent trajectory.
+powerful sequence models (Hochreiter & Schmidhuber,              Kidger et al. (2020) and Morrill et al. (2021) extend neural
+1997; Chung et al., 2014), but due to the lack of stochas-       ODEs with concepts from rough analysis, which allow for
+ticity in their internal transitions, they may fail to capture   online learning. ODE-RNN (Rubanova et al., 2019) and
+the variability inherent in certain data (Chung et al. 2015).    ODE-LSTM (Lechner & Hasani, 2020) use standard RNN
+While there are various stochastic RNNs (e.g. Bayer & Os-        gates to sequentially update the hidden state at observation
+endorfer, 2014; Fraccaro et al., 2016; Goyal et al., 2017;       times. GRU-ODE-B (Brouwer et al., 2019) and Neural
+Schmidt & Hofmann, 2018), our work is most closely re-           Jump ODE (Herrera et al., 2021) couple ODE dynamics
+lated to deep probabilistic approaches based on Kalman           with an Bayesian update step. Neural ODE approaches typ-
+filters (Kalman, 1960). Variations on deep Kalman filters        ically rely on a numerical ODE solver, whereas the state
+(Krishnan et al. 2015; Karl et al. 2017; Fraccaro et al. 2017)   evolution of a CRU is in closed form.
+typically require approximate inference, but Becker et al.
+(2019) employ a locally linear model in a high-dimensional
+factorized latent state for which the Kalman updates can be      Neural SDEs As the stochastic analogue of neural ODEs,
+obtained in closed form. By extending this approach with a       neural SDEs define a latent temporal process with a SDE
+continuous latent state, the CRU can model sequences with        parameterized by neural networks. Li et al. (2020) use the
+irregular observation times.                                     stochastic adjoint sensitive method to compute efficient gra-
+                                                                 dients of their SDE-induced generative model. Jia & Benson
+                                                                 (2019) allow for discontinuities in the latent state to mimic
+RNNs for Irregular Time Series Applying discrete
+                                                                 stochastic events. Deng et al. (2020) and Deng et al. (2021)
+RNNs to irregularly sampled time series requires the dis-
+                                                                 use dynamic normalizing flows to map the latent state to a
+cretization of the time line into uniform bins. This often
+                                                                 continuous-path observation sequence. Kidger et al. (2021)
+reduces the number of observations, may result in a loss
+                                                                 fit neural SDEs in a generator-discriminator framework.
+of information, and evokes the need for imputation and
+                                                                 Like CRU, these methods accommodate noise in the latent
+aggregation strategies. To avoid such preprocessing, Choi
+                                                                 process, but generally rely on variational approximations
+  1
+    https://github.com/boschresearch/                            and numerical solvers. In contrast, CRU propagates the
+Continuous-Recurrent-Units                                       latent state in closed form and can be trained end-to-end.
+                                  Modeling Irregular Time Series with Continuous Recurrent Units
+
+                ot0 σ out
+                      t0
+                                                                                       otN σ out
+                                                                                             tN       output oT
+                            dec
+                                                                                 dec
+                     −
+                µ−
+                 t0 Σt0                                                                     −
+                                                dec                                    µ−
+                                                                                        tN ΣtN
+                     +
+                                                                                                      inferred latent state
+                µ+
+                 t0 Σt0                                                                     +
+                                                                                       µ+
+                                                                                        tN ΣtN          zt ∼ N (µt , Σt )
+
+                yt0 σ obs                             Kalman filter
+                      t0
+                                                                                       ytN σ obs
+                                                                                             tN
+                            enc                                                                       latent observations yT
+                                                                                 enc
+                                                enc
+                            xt0
+                                                                                                      data xT
+                                                                                 xtN
+                                                xt1
+                                                                                                      observation times T
+                            t0                  t1      t2            ...        tN
+
+Figure 1. CRU: An encoder maps the observation xt to a latent observation yt and elementwise uncertainties σ obs  t . Both are combined
+                                     −
+with the latent state prior N (µ−                                     +    +
+                                t , Σt ) to produce the posterior N (µt , Σt ) (red arrows). A decoder yields the output ot .
+
+
+
+
+Transformers for Irregular Time Series Besides recur-                   3.1. Overview of Proposed Approach
+rent and differential equation-based architectures, recent
+                                                                        The CRU addresses the challenge of modeling a time series
+work proposed attention-based methods (Vaswani et al.,
+                                                                        xT = [xt |t ∈ T = {t0 , t1 , · · · tN }] whose observation
+2017) to model sequences with arbitrary timestamps. Zhang
+                                                                        times T = {t0 , t1 , · · · tN } can occur at irregular intervals.
+et al. (2019) combines time gap decay with attention mecha-
+nisms to weight for elapsed time. Horn et al. (2020) use set
+functions to compress irregular sequences to fixed-length               Modeling Assumptions for the Latent State Unlike the
+representations. Multi-time attention network (mTAND)                   discrete hidden state formulation of standard RNNs, the
+(Shukla & Marlin, 2021) feeds time embeddings to an at-                 latent state z ∈ RM of a CRU has continuous dynamics,
+tention mechanism. These models are typically quite large,              which are governed by a linear SDE
+whereas the CRU achieves high performance despite its                                              dz = Azdt + Gdβ,                     (1)
+small model size.
+                                                                        with time-invariant transition matrix A ∈ RM ×M and dif-
+3. Method                                                               fusion coefficient G ∈ RM ×B . The integration variable
+                                                                        β ∈ RB is a Brownian motion process with diffusion ma-
+The CRU is a RNN for processing sequential data with irreg-             trix Q ∈ RB×B . The CRU assumes a Gaussian observation
+ular observation times. It employs a nonlinear mapping (a               model H ∈ RD×M that generates noisy latent observations
+neural network encoder and decoder) to relate individual ob-
+servations with a latent state space. In this latent state space,                            yt ∼ N (Hzt , (σ obs 2
+                                                                                                              t ) I),                   (2)
+it assumes a continuous latent state whose dynamics evolve
+according to a linear SDE. The recursive computations of the            with observation noise σ obs
+                                                                                                 t .
+CRU can be derived using the continuous-discrete Kalman
+filter (Jazwinski, 1970) and are in closed form. As a re-               Sequential Processing At each time point t ∈ T , the
+sult, the CRU has temporal continuity between hidden states             latent observation yt and its elementwise latent observation
+and a gating mechanism that can optimally integrate noisy               noise σ obs
+                                                                                t   are produced by a neural network encoder fθ ,
+observations at arbitrary observation times.
+                                                                                        encoder:        [yt , σ obs
+                                                                                                                t ] = fθ (xt ),         (3)
+We first specify the modeling assumptions for the continu-
+ous latent state of the CRU as well as the role of the encoder          applied to the observation xt . At each observation time, we
+and the decoder in Sec. 3.1. In Sec. 3.2, we derive the re-             distinguish between a prior and a posterior distribution on
+cursive internal computations of the CRU with the resulting             zt . 2
+recurrent architecture summarized in Sec. 3.3. We then de-
+velop an efficient CRU parameterization scheme that affects                             prior:        p(zt |y<t ) = N (µ−    −
+                                                                                                                        t , Σt )        (4)
+modeling flexibility and run time (Sec. 3.4). Finally, in                         posterior:          p(zt |y≤t ) = N (µ+    +
+                                                                                                                        t , Σt ).       (5)
+Sec. 3.5, we describe how to train a CRU.
+                                                                            2
+                                                                             We use the notation y<t := {yt′ for t′ ∈ T s.t. t′ < t} for
+                                                                        the set of all latent observations before t and y≤t := {yt′ for t′ ∈
+                                                                        T s.t. t′ ≤ t} for this set including yt .
+                                        Modeling Irregular Time Series with Continuous Recurrent Units
+
+                                                 ot , σ out
+                                                        t                Algorithm 1 The CRU
+                       ′            ′
+     τ (t) := max{t ∈ T s.t. t < t}                                        Input: Datapoints and their timestamps {(xt , t)}t∈T
+                                                                           Initialize: µ+            +
+                                                                                         t0 = 0, Σt0 = 10 · I
+                                                 decode                    for observation times t > t0 ∈ T do
+                                                                             yt , σ obs
+                                                                                    t   = fθ (xt )
+      µ+                       µ−                       µt +                 µ−       −                +     +
+       τ (t)                    t                                               t , Σt = predict(µτ (t) , Στ (t) , t − τ (t))
+                    predict             update                                  +     +                −   −
+      Σ+                       Σ−
+                                t                       Σt +                 µt , Σt = update(µt , Σt , yt , σ obs   t )
+       τ (t)                                                                                    +      +
+                                                                             ot , σ out
+                                                                                    t   =  gϕ (µt  , Σ t )
+         encode                                                            end for
+                           yt , σ obs
+                                  t
+                                                                           Return: {ot , σ out
+                                                                                             t }t∈T
+
+
+               xt
+                                                                         last observation time,
+Figure 2. The internal hidden states of a CRU cell are the posterior                    τ (t) := max{t′ ∈ T s.t. t′ < t},             (7)
+mean and variance µ+          +
+                     t and Σt of the continuous state variable z.
+They are computed recursively according to Algorithm 1.                  have already been computed. The SDE solution at time t is
+                                                                                                      Z t
+                                                                                                                         
+                                                                         zt = exp A(t−τ (t)) zτ (t) +      exp A(t−s) Gdβ s ,
+                                                                                                             τ (t)
+The parameters of the prior, µ−            −
+                                  t and Σt , are computed
+by propagating the latent state according to Eqn. (1) (we                which results in a prior mean and covariance of
+call this the “prediction step”) while the parameters of the               µ−
+                                                                                                      +
+                                                                            t = exp A(t − τ (t)) µτ (t)                      (8)
+posterior, µ+        +
+             t and Σt , are computed with a Bayesian update                                                               T
+                                                                            −
+                                                                                                      +
+(which we call the “update step”). The optimal prediction                 Σt = exp A(t − τ (t)) Στ (t) exp A(t − τ (t))
+and update step will be derived in closed form in Sec. 3.2.                   Z t
+                                                                                                                         T
+                                                                                    exp A(t − s) GQGT exp A(t − s) ds,
+                                                                                                    
+                                                                            +
+Fig. 1 gives an overview of the CRU from a Kalman filtering                     τ (t)
+perspective: observations (green) are mapped by the encoder
+                                                                         where exp(·) denotes the matrix exponential. The integral
+into a latent observation space (orange). The mean and
+                                                                         can be resolved analytically using matrix fraction decom-
+variance of the latent state is inferred using the predict and
+                                                                         position and the computation is detailed in Appendix A.2.1.
+update step of the continuous-discrete Kalman filter (red).
+                                                                         We summarize the prediction step (Eqn. (8)) for the parame-
+Finally, a decoder maps the posterior parameters to the
+                                                                         ters of the prior with
+desired output space along with elementwise uncertainties.
+                                                                                [µ−    −              +        +
+                                                                                  t , Σt ] = predict(µτ (t) , Στ (t) , t − τ (t)).    (9)
+                                                 +    +
+          decoder:            [ot , σ out
+                                      t ] = gϕ (µt , Σt ).       (6)
+                                                                         3.2.2. U PDATE S TEP
+3.2. Continuous-Discrete Kalman Filter                                   At the time of a new observation yt , the prior is updated
+The continuous-discrete Kalman filter (Jazwinski, 1970)                  using Bayes’ theorem,
+is the optimal state estimator for a continuous state space                             p(zt |y≤t ) ∝ p(yt |zt )p(zt |y<t ).         (10)
+model (Eqn. (1)) with a discrete-time Gaussian observation
+process (Eqn. (2)). This version of the Kalman filter allows             Due to the Gaussian assumption, the posterior is again Gaus-
+modelling observations of a continuous process at poten-                 sian, and its mean and covariance are given by
+                                                                                               −              −
+tially arbitrary but discrete observation times. Given the                               µ+
+                                                                                          t = µt + Kt (yt − Hµt )                    (11)
+latent observations, the posterior distribution of the latent                                            −
+                                                                                         Σ+
+                                                                                          t = (I − Kt H)Σt .                         (12)
+state (Eqn. (5)) is computed recursively, alternating between
+a predict and an update step. These steps are derived next.              The updates can be seen as weighted averages, where the
+                                                                         Kalman gain Kt acts as a gate between prior and observa-
+3.2.1. P REDICTION S TEP                                                 tion. It contrasts observation noise with prior uncertainty
+                                                                         and is high when observations have a low noise level,
+Between observation times, the prior density describes the
+evolution of zt . It is governed by the SDE in Eqn. (1),                            Kt = Σ−  T   − T    obs −1
+                                                                                          t H (HΣt H + Σt )    .                     (13)
+which has an analytical solution for linear, time-invariant
+                                                                         We summarize the update step as
+systems as considered here. To compute the prior at time t,
+                                                                                                       −    −
+we assume that the posterior parameters µ+         +
+                                          τ (t) , Στ (t) at the                   [µ+    +                             obs
+                                                                                    t , Σt ] = update(µt , Σt , yt , σ t ).          (14)
+                              Modeling Irregular Time Series with Continuous Recurrent Units
+
+3.3. Continuous Recurrent Units                                 parameterization strategy of Becker et al. (2019) and design
+                                                                the transition matrix At at time t as a weighted average of
+A CRU is a recurrent neural architecture that uses the pre-
+                                                                K parameterized basis matrices. The weighting coefficients
+dict and update step of a continuous-discrete Kalman fil-         (k)
+                                                                αt for k ∈ {1...K} are obtained from the current posterior
+ter (Eqns. (9) and (14)) in an encoder-decoder framework
+                                                                mean µ+ t by a neural network wψ with softmax output,
+(Eqns. (3) and (6)) to sequentially process irregularly sam-
+pled time series. An overview of a CRU cell is given in                    K
+                                                                                  (k)
+                                                                           X
+Fig. 2. Algorithm 1 summarizes the recursion, which is              At =         αt A(k) ,      with αt = wψ (µ+
+                                                                                                               t ).        (15)
+used by the CRU cell to update its internal parameters based               k=1
+on sequential inputs and to produce the output sequence.
+                                                                To reduce the number of parameters, each basis matrix con-
+Even though the derivation assumes a probabilistic latent       sists of four banded matrices with bandwidth b. In addition,
+state z, the internal computations in the CRU cell are deter-   we assume a diagonal diffusion matrix Q whose vector of
+ministic, in closed form, and amenable to back-propagation.     diagonal entries q is a time-invariant learnable parameter.
+This means that the CRU can be used (and trained end-to-        The diffusion coefficient G of the SDE in Eqn. (1) is fixed
+end) like other recurrent architectures, such as LSTMs or       at the identity matrix, i.e. G = I. This is not restrictive as
+GRUs on various sequence modeling tasks. Its advantage          G only occurs in combination with the learnable parameter
+compared to these architectures is that the CRU handles         vector q (Eqn. (8)), which is unconstrained.
+irregular observation times in a principled manner.
+We next describe parameterization choices for CRU which         3.4.2. E FFICIENT I MPLEMENTATION
+lead to more expressive modeling capacity (Sec. 3.4.1) and      The runtime of the CRU is dominated by two operations:
+faster computation (Sec. 3.4.2) of the state equations. Fi-     the matrix inversion in the computation of the Kalman gain
+nally, we present in Sec. 3.5 how to train a CRU.               (Eqn. (13)) and the matrix exponential in the prediction step
+                                                                (Eqn. (8)). As in Becker et al. (2019), there is a trade-off be-
+3.4. Flexible and Efficient Parameterization of the CRU         tween modeling flexibility and runtime when choosing how
+The linearity assumption of the continuous-discrete Kalman      to parametrize the model. Becker et al. (2019) use certain
+filter is advantageous, as it leads to optimal closed-form      factorization assumptions on the state covariance Σt and
+computations. However, it also limits the expressiveness of     the observation model H that increase speed and stability
+the model. The idea of CRU is that the modelling flexibility    by simplifying the matrix inversion. CRU also benefits from
+of the encoder and decoder mitigates this limitation and        these assumptions, which are detailed in Appendix B. How-
+that the dimensionality of the state space is large enough      ever, the CRU has an additional computational bottleneck,
+for a linearly evolving latent state to lead to expressive      namely the matrix exponential in Eqn. (8).
+relationships between input and output sequences.               In this section, we develop fast CRU (f-CRU), a model
+On the other hand, the dimensionality of the latent state       variant that benefits from an efficient implementation of
+cannot be too large in practice as it affects the runtime of    the prediction step. f-CRU bypasses the computation of
+the matrix inversion in Eqn. (13) and the matrix exponen-       the matrix exponential by allowing only commutative and
+tial in Eqn. (8). To address this trade-off between modeling    symmetric base matrices A(k) with related eigenspaces.
+flexibility and efficient computation, we make certain param-   While this limits the modeling flexibility, it reduces the
+eterization choices for the CRU. In Sec. 3.4.1, we describe a   runtime of the matrix exponential from complexity O(n3 )
+locally linear transition model, which maintains the closed     to matrix multiplication and elementwise operations.
+form updates of Sec. 3.2 while making the model more flex-      To avoid having to compute an eigenvalue decomposition,
+ible. In Sec. 3.4.2, we develop f-CRU, a version of the CRU     we directly parameterize the basis matrices A(k) in terms of
+with a novel parameterization of the transition matrices via    their eigenvalues and eigenvectors, which enable a change
+their eigendecompositions. The resulting model has less         of basis. In the projected space, the state transitions are di-
+modeling flexibility than the CRU but is significantly faster   agonal and the matrix exponential simplifies to the element-
+to train and amenable to larger state spaces.                   wise exponential function. By allowing only commutative,
+                                                                symmetric basis matrices, we can ensure that the matrix
+3.4.1. L OCALLY L INEAR S TATE T RANSITIONS                     exponential in the projected space is invariant to the order
+A locally linear transition model increases the modeling        in which the A(k) are summed (Eqn. (15)).
+flexibility of CRU while maintaining the closed form com-       In detail, we assume diagonalizable basis matrices
+putation of the predict and update steps in Sec. 3.2. Similar   {A(k) }k=1...K that share the same orthogonal eigenvec-
+approaches have been used in deep Kalman architectures          tors. That is to say, for all k ∈ {1...K} we have A(k) =
+(Karl et al., 2017; Fraccaro et al., 2017). We employ the       ED(k) ET where D(k) is a diagonal matrix whose i-th di-
+                                Modeling Irregular Time Series with Continuous Recurrent Units
+
+                                                                   model is trained on the Bernoulli negative log-likelihood
+
+                                                                                        D 0
+                                                                                1 XX         (i)    (i)        (i)        (i)
+                                                                   L(sT ) = −               st log(ot )+(1−st )log(1−ot ).
+                                                                               N
+                                                                                  t∈T i=1
+                                                                                                                          (19)
+                                                                   We also use this loss for imputing gray scale images, where
+                                                                   the outputs st are D0 pixel values in the range [0, 1]. To
+                                                                   maintain the orthogonality constraint on E during training
+                                                                   of f-CRU, we use the tools by Lezcano-Casado (2019).
+Figure 3. The parameterization of the f-CRU makes it faster than
+the CRU, especially as the latent dimensionality M increases.      4. Empirical Study
+                                                                   We study the CRU on three different tasks (interpolation,
+agonal entry is the eigenvalue of A(k) corresponding to the
+                                                                   regression, and extrapolation) on challenging datasets from
+eigenvector in the i-th column of E. When using E to per-
+                                                                   meteorology and health care. In sequence interpolation
+form a change of basis on the latent state zt , the SDE of the
+                                                                   (Sec. 4.3), the task is to learn the underlying dynamics of
+transformed state vector w has diagonal transitions D. The
+                                                                   the data based on a subset of the observations. In Sec. 4.4,
+prior mean at time t simplifies to,
+                                                                   we study a regression task consisting of predicting the angle
+                        K
+                         X                                        of a pendulum from noisy images of the system. Finally,
+  µ−
+   t = E exp (t − τ (t))   α(k) D(k) ET µ+
+                                         τ (t) , (16)              in Sec. 4.5, models learn the dynamics of a sequence from
+                               k=1                                 the first half of the observations to predict the remaining
+where exp(·) denotes the elementwise exponential function.         sequence. This extrapolation is challenging because the
+We follow Rome (1969) to efficiently compute the covari-           models need to capture long-term temporal interactions.
+ance of the projected state space Σw
+                                   t at time t, which is           We study CRU in comparison to other sequence models in
+mapped back to the original basis of z to yield the prior          terms of both accuracy and runtime. We find that (i) CRU
+covariance at time t                                               trains consistently faster than neural ODE-based models, (ii)
+                      Σ−     w T                                   our methods outperforms most baselines on interpolation
+                       t = EΣt E .                         (17)
+                                                                   and regression, (iii) the uncertainty driven gating mecha-
+We provide the thorough definitions and computations of            nisms handles noisy and partially observed inputs systemat-
+the f-CRU prior computation in Appendix A.1.2. Fig. 3              ically by attributing less weight to them in the latent state
+illustrates the computational gain realized by the parame-         update.
+terization scheme of f-CRU. In Sec. 4, we further study the
+speed and accuracy trade-off between CRU and f-CRU.                4.1. Datasets
+
+3.5. Training                                                      Pendulum Images We used the pendulum simulation of
+                                                                   Becker et al. (2019) to generate 4 000 synthetic image se-
+The trainable parameters of the CRU are the neural network         quences. The 24x24 pixel images show a pendulum at 50
+parameters of the encoder and decoder (θ and ϕ), and pa-           irregular time steps T . For the interpolation task, half of the
+rameters associated with the locally linear SDE, namely the        frames of each sequence are removed at random, resulting in
+diagonal q of the diffusion matrix, the network parameters         an input sequence xS with a reduced set of indices S ⊂ T .
+ψ for producing the weighting coefficients of the locally          The target output is the full image sequence sT = xT .
+linear model, and the transition matrices ({A(k) }i=1...K for
+the CRU and E, {D(k) }i=1...K for the f-CRU).                      We also use the pendulum image sequences to study CRU
+                                                                   on a regression task. Each frame xt is associated with a
+To train these parameters, we assume a dataset of sequences        target label st = (sin(st ), cos(st )), which is the angle of the
+where each input sequence xT is associated with a target           pendulum. As in Becker et al. (2019), we corrupt the images
+output sequence sT . For real valued outputs, the objec-           with a correlated noise process. We used 2 000 sequences
+tive function is the Gaussian negative log-likelihood of the       for training and 1 000 for validation and testing each.
+ground truth sT and is given for a single sample by
+                      1 X                                          Climate Data (USHCN) The United States Historical Cli-
+          L(sT ) = −        logN (st |ot , (σ out 2
+                                              t ) ),   (18)
+                      N                                            matology Network (USHCN) dataset (Menne et al., 2015)
+                         t∈T
+                                                                   contains daily measurements from 1 218 weather stations
+where oT and the elementwise uncertainty estimate σ out
+                                                    T is           across the US for five variables: precipitation, snowfall,
+the output computed by the CRU. For binary outputs, the            snow depth, minimum and maximum temperature. We used
+                                Modeling Irregular Time Series with Continuous Recurrent Units
+
+the cleaning procedure by Brouwer et al. (2019) to select a          Attention-based Model We also compare CRU against a
+subset of 1168 meteorological stations over a range of four          transformer network: mTAND (Shukla & Marlin, 2021) is a
+years (1990 - 1993). Though collected in regular time inter-         generative model that employs multi-time attention modules
+vals, climatic data is often sparse due to, e.g., sensor failures.   in the encoder and decoder.
+To further increase the sporadicity of the data across time
+and dimensions, we first subsample 50% of the time points            Implementation Details For a fair comparison, we use
+and then randomly remove 20% of the measurements. We                 the same latent state dimension for all approaches (M = 30
+test models on a 20% hold-out set and trained on 80% of              for pendulum, M = 20 for Physionet and M = 10 for
+which we used 25% for validation.                                    USHCN), except for GRU, where we increase the latent
+                                                                     state size such that the number of parameters is comparable
+Electronic Health Records (Physionet) Finally, we also               to CRU. For the Physionet and USHCN experiments, the
+benchmark the models on the data set of the Physionet Com-           encoder and decoder architecture of the CRU mimic that of
+puting in Cardiology Challenge 2012 (Silva et al., 2012).            the latent ODE in Rubanova et al. (2019)’s Physionet set-up.
+The data reports 41 measurements of the first 48 hours               (Details can be found in Appendix D.)
+of 8000 ICU patients. We follow the preprocessing of                 For processing pendulum images, the CRU encoder and de-
+Rubanova et al. (2019) and round observation times to 6              coder are a convolutional architecture (see Appendix D.8).
+minutes steps resulting in 72 different time points per patient      To ensure a fair comparison, we follow the set-up of Becker
+on average. At a single time point, an observation contains          et al. (2019) and use the same encoder and decoder ar-
+on average only 16% of the features with measurements en-            chitecture as for RKN, CRU and f-CRU to give the same
+tirely missing for some patients. We split the data into 20%         feature extraction capabilities to the other baseline models:
+test and 80% train set of which we used 25% for validation.          the baseline models are applied to the latent observations
+                                                                     that the encoder produces from the inputs and the decoder
+4.2. Baselines                                                       maps the baseline outputs to the target output. In this aug-
+                                                                     mented framework, the encoder, the baseline model, and
+We study the CRU and f-CRU in comparison to various
+                                                                     the decoder are trained jointly. More information and other
+baselines including RNN architectures known to be power-
+                                                                     implementation details can be found in Appendix D.
+ful sequence models (but for regular observation times) as
+well as ODE and attention-based models, which have been
+                                                                     4.3. Results on Sequence Interpolation
+developed specifically for observations from continuous
+processes.                                                           We first examine the efficacy of CRU in sequence interpola-
+                                                                     tion on pendulum images, USHCN and Physionet. The task
+                                                                     consists of inferring the entire sequence sT = xT based on
+Recurrent Neural Networks We compare our method
+                                                                     a subset of observations xS where S ⊆ T . In the pendulum
+against two RNN architectures with discrete hidden state as-
+                                                                     interpolation task, S contains half of the total time points
+sumption: GRUs (Chung et al., 2014) and recurrent Kalman
+                                                                     sampled at random. For USHCN and Physionet, we fol-
+networks (RKNs) (Becker et al., 2019). To aid these models
+                                                                     low the Physionet set-up in Rubanova et al. (2019), where
+with irregular time intervals, we run a version where we
+                                                                     reconstruction is based on the entire time series, i.e. S = T .
+feed the time gap ∆t = t − τ (t) as an additional input to
+the model (denoted as RKN-∆t and GRU-∆t ). Another                   Tab. 1 reports mean squared error (MSE) on full test se-
+baseline is GRU-D (Che et al., 2018), which uses trainable           quences and average runtime per epoch for USHCN and
+hidden state decay between observations to handle irregular          Physionet. Tab. 2 summarizes results on the pendulum im-
+inputs on a continuous time scale.                                   age imputation task. All reported results are averages over
+                                                                     5 runs. The runtime measures a training pass through the
+                                                                     entire dataset while keeping settings such as batch size and
+ODE-based Models We also test CRU against three ODE-
+                                                                     number of parallel threads comparable across architectures.
+based models that can naturally deal with irregularly sam-
+                                                                     Both CRU and f-CRU outperform baseline models on the
+pled time series: (1) ODE-RNN (Rubanova et al., 2019)
+                                                                     interpolation task on most datasets. The efficient imple-
+alternates between continuous hidden state dynamics de-
+                                                                     mentation variant, f-CRU, is consistently faster than neural
+fined by an ODE and classical RNN updates at observation
+                                                                     ODE-based architectures. f-CRU produces results compa-
+times. (2) Latent ODE (Chen et al. (2018), Rubanova et al.
+                                                                     rable to the CRU baseline, while reducing training time by
+(2019)) is a generative model that uses ODE-RNN as recog-
+                                                                     up to 50% even in low-dimensional state spaces. Though
+nition network to infer the initial value of its latent state and
+                                                                     discrete RNNs are still faster, f-CRU takes only a fraction
+models the state evolution with an ODE. (3) GRU-ODE-B
+                                                                     of time to train as neural ODE-based methods.
+(Brouwer et al., 2019) combines a continuous-time version
+of GRUs with a discrete update network.                              Three noteworthy factors influence training and inference
+                                 Modeling Irregular Time Series with Continuous Recurrent Units
+
+
+Table 1. Test MSE (mean ± std) and runtime (average seconds/epoch) for interpolation and extrapolation on USHCN and Physionet.
+                              Interpolation MSE (×10−2 )             Extrapolation MSE (×10−2 )          Runtime (sec./epoch)
+    Model                   USHCN           Physionet               USHCN           Physionet           USHCN      Physionet
+    mTAND                1.766 ± 0.009     0.208 ± 0.025         2.360 ± 0.038     0.340 ± 0.020           7            10
+    RKN                  0.021 ± 0.015     0.188 ± 0.088         1.478 ± 0.283     0.704 ± 0.038           94            39
+    RKN-∆t               0.009 ± 0.002     0.186 ± 0.030         1.491 ± 0.272     0.703 ± 0.050           94            39
+    GRU                  0.184 ± 0.183     0.364 ± 0.088         2.071 ± 0.015     0.880 ± 0.140            3             5
+    GRU-∆t               0.090 ± 0.059     0.271 ± 0.057         2.081 ± 0.054     0.870 ± 0.077            3             5
+    GRU-D                0.944 ± 0.011     0.338∗ ± 0.027        1.718 ± 0.015     0.873 ± 0.071          292          5736
+    Latent ODE           1.798 ± 0.009     0.212∗ ± 0.027        2.034 ± 0.005     0.725 ± 0.072          110           791
+    ODE-RNN              0.831 ± 0.008     0.236∗ ± 0.009        1.955 ± 0.466     0.467 ± 0.006           81           299
+    GRU-ODE-B            0.841 ± 0.142     0.521 ± 0.038         5.437 ± 1.020     0.798 ± 0.071          389            90
+    f-CRU (ours)         0.013 ± 0.004     0.194 ± 0.007         1.569 ± 0.321     0.714 ± 0.036           61            62
+    CRU (ours)           0.016 ± 0.006     0.182 ± 0.091         1.273 ± 0.066     0.629 ± 0.093          122           114
+∗
+    Results from Rubanova et al. (2019).
+
+
+time: (1) Unlike ODE-based methods, CRU has closed-from
+computation, whereas ODE-based methods still need to call         Table 2. Test MSE ×10−3 (mean ± std) and runtime (average
+                                                                  sec/epoch) on pendulum interpolation and regression.
+an ODE solver during inference. (2) Our method can make
+efficient use of batching and unlike neural ODE-based archi-        Model            Interpolation     R.time      Regression
+tectures, CRU does not require solving the state propagation
+                                                                    mTAND      15.400 ± 0.071             3      65.640 ± 4.050
+in sync for the union of all timestamps in a minibatch. Thus,
+                                                                    RKN         5.200 ± 0.051            20      8.433 ± 0.610
+the complexity of CRU does not scale with the heterogeneity
+                                                                    RKN-∆t      1.903 ± 0.137            20      5.092 ± 0.395
+of timestamps in a minibatch. On data where timestamps
+                                                                    GRU         5.086 ± 0.028            12      9.435 ± 0.998
+vary widely across sequences (e.g. Physionet), the number
+                                                                    GRU-∆t      2.073 ± 0.185            12      5.439 ± 0.988
+of required update steps can be up to B-times more for re-
+                                                                    Latent ODE 15.060 ± 0.138            52      15.700 ± 2.848
+current neural ODE-architectures than for CRU, where B
+                                                                    ODE-RNN     2.830 ± 0.137            37      7.256 ± 0.406
+denotes batch size. A batch size of 1 foregoes this advantage
+                                                                    GRU-ODE-B 9.144 ± 0.020              60      9.783 ± 3.403
+of CRU. (3) The operations of the encoder and decoder can
+                                                                    f-CRU       1.386 ± 0.162            29      6.155 ± 0.881
+counteract the speedup gained from closed-form latent state
+                                                                    CRU         0.996 ± 0.052            36      4.626 ± 1.072
+propagation. We found the speedup to be less significant on
+the pendulum data, where the encoder and decoder have a
+stronger influence on runtime (Tab. 2).                           can help explain the success of CRU in pendulum angle
+                                                                  prediction. Results in terms of MSE are shown in Tab. 2.
+                                                                  CRU outperforms existing baselines. In Appendix C, we
+4.4. Results on Pendulum Angle Prediction from Images
+                                                                  also report log-likelihood results for this task. CRU and
+Next, we consider a regression task on irregularly sampled        f-CRU yield the best performance.
+pendulum image sequences. Here, each observed image xt
+is mapped to a continuous target variable st representing the     4.5. Results on Sequence Extrapolation
+pendulum angle at each time step. To assess the noise ro-
+bustness of the methods, the image sequences are corrupted        Finally, we study the performance of CRU on extrapolating
+by a correlated noise process as in Becker et al. (2019).         sequences far beyond the observable time frame. We split
+                                                                  the timeline into two halves T1 = {t0 , ...tk } and T2 =
+Figure 4 shows how the gating mechanism of CRUs works             {tk+1 , ...tN }. Models are tasked to predict all time points
+under varying degrees of observation noise. The norm of           of the sequence T = T1 ∪ T2 based on time points in T1
+the Kalman gain mirrors the noise process of the sample           only. In the Physionet experiment, the input consists of the
+sequence. At times of high observation noise, the norm of         first 24 hours and the target output of the first 48 hours of
+the Kalman gain is small and consequently the state update        patient measurements. For USHCN we split the timeline
+is dominated by the history encoded in the latent state prior.    into two parts of equal length tk = N/2. During training,
+In contrast, when the pendulum is clearly observed, the           the entire observation sequence is used as target to guide
+Kalman gain attributes high weight to the new observation.        the training process, except for GRU-ODE-B, where we
+This principled handling of noise is one of the factors that      used the training strategy proposed by the authors. During
+                                                                  evaluation, performance is assessed only on the extrapolated
+                                 Modeling Irregular Time Series with Continuous Recurrent Units
+
+
+
+
+Figure 4. Pendulum angle prediction: The figures show noise corrupted observations and the corresponding Kalman gain norm for a
+pendulum trajectory sampled at irregular time intervals. The Kalman gain reflects the underlying noise process of the data.
+
+                                                                     finds that the gating mechanism of the CRU weights noisy
+                                                                     and partially observed input data accurately. Our method
+                                                                     outperforms established recurrent sequence models such
+                                                                     as GRU on irregularly sampled data and achieves better
+                                                                     interpolation accuracy than neural ODE-based models on
+                                                                     challenging datasets from various domains.
+
+                                                                     Acknowledgements
+                                                                     We thank Philipp Becker for providing the RKN code, Klaus
+Figure 5. USHCN extrapolation: Distribution of the Kalman gain       Obermayer for helpful discussion, and Stefan Kurz for valu-
+norm for different percentages of sparseness. For highly sparse      able feedback on the draft. The Bosch Group is carbon
+observation vectors (e.g. 80% sparse), the distribution is shifted   neutral. Administration, manufacturing and research ac-
+towards low norm values.                                             tivities do no longer leave a carbon footprint. This also
+part of the test sequences.                                          includes GPU clusters on which the experiments have been
+                                                                     performed.
+Tab. 1 reports test errors on the extrapolated test sequences,
+sT2 . On the Physionet data, mTAND achieves the lowest
+errors. On climate data, CRU reaches the highest perfor-
+                                                                     References
+mance.                                                               Axelsson, P. and Gustafsson, F. Discrete-time solutions to
+                                                                       the continuous-time differential lyapunov equation with
+Partial Observability To study the CRU gating mecha-                   applications to kalman filtering. IEEE Transactions on
+nism in the presence of partially observed inputs, we also            Automatic Control, 60(3):632–643, 2014.
+run the extrapolation task on the five-dimensional USHCN             Bayer, J. and Osendorfer, C. Learning stochastic recurrent
+data while, this time, explicitly controlling the degree of            networks. arXiv preprint arXiv:1411.7610, 2014.
+partial observability. For each time point, we sample one to
+four features each with probability 0.1. The remaining 60%           Becker, P., Pandya, H., Gebhardt, G., Zhao, C., Taylor, C. J.,
+of observations are fully observed to ensure stable learning.          and Neumann, G. Recurrent kalman networks: Factorized
+Fig. 5 shows how the Kalman gain reacts to the sparseness              inference in high-dimensional deep feature spaces. In
+of an observation. The distribution of fully observed feature          International Conference on Machine Learning, pp. 544–
+vectors (0% sparseness) is centered around comparably high             552. PMLR, 2019.
+values of the Kalman gain norm, whereas sparse observa-
+tions are associated with lower Kalman gain norm values.             Brouwer, E. D., Simm, J., Arany, A., and Moreau, Y.
+Thus, sparse observations are given less weight in the latent          Gru-ode-bayes: continuous modeling of sporadically-
+state update than fully observed feature vectors.                      observed time series. In Advances in Neural Information
+                                                                       Processing Systems, pp. 7379–7390, 2019.
+
+5. Conclusion                                                        Cao, W., Wang, D., Li, J., Zhou, H., Li, L., and Li, Y. Brits:
+                                                                       Bidirectional recurrent imputation for time series. In
+We have developed CRU, a RNN that models temporal                      Advances in Neural Information Processing Systems, pp.
+data with non-uniform time intervals in a principled man-              6775–6785, 2018.
+ner. It incorporates a continuous-discrete Kalman filter into
+an encoder-decoder structure thereby introducing temporal            Che, Z., Purushotham, S., Cho, K., Sontag, D., and Liu, Y.
+continuity into the hidden state and a notion of uncertainty           Recurrent neural networks for multivariate time series
+into the network’s gating mechanism. Our empirical study               with missing values. Scientific reports, 8(1):1–12, 2018.
+                              Modeling Irregular Time Series with Continuous Recurrent Units
+
+Chen, R. T., Rubanova, Y., Bettencourt, J., and Duvenaud,       Jia, J. and Benson, A. R. Neural jump stochastic differential
+  D. Neural ordinary differential equations. In Advances in        equations. In Advances in Neural Information Processing
+  Neural Information Processing Systems, pp. 6572–6583,            Systems, pp. 9843–9854, 2019.
+  2018.
+                                                                Kalman, R. E. A new approach to linear filtering and pre-
+Choi, E., Xiao, C., Stewart, W. F., and Sun, J. Mime: Multi-      diction problems. 1960.
+  level medical embedding of electronic health records for
+                                                                Karl, M., Soelch, M., Bayer, J., and van der Smagt, P. Deep
+  predictive healthcare. arXiv preprint arXiv:1810.09593,
+                                                                  variational bayes filters: Unsupervised learning of state
+  2018.
+                                                                  space models from raw data. In International Conference
+Chung, J., Gulcehre, C., Cho, K., and Bengio, Y. Empirical        on Learning Representations, 2017.
+  evaluation of gated recurrent neural networks on sequence     Kidger, P., Morrill, J., Foster, J., and Lyons, T. J. Neural
+  modeling. arXiv preprint arXiv:1412.3555, 2014.                 controlled differential equations for irregular time series.
+Chung, J., Kastner, K., Dinh, L., Goel, K., Courville, A. C.,     In Advances in Neural Information Processing Systems,
+  and Bengio, Y. A recurrent latent variable model for            2020.
+  sequential data. In Advances in Neural Information Pro-       Kidger, P., Foster, J., Li, X., and Lyons, T. J. Neural sdes as
+  cessing Systems, pp. 2980–2988, 2015.                           infinite-dimensional gans. In International Conference
+                                                                  on Machine Learning, pp. 5453–5463. PMLR, 2021.
+Deng, R., Chang, B., Brubaker, M. A., Mori, G., and
+  Lehrmann, A. Modeling continuous stochastic processes         Kingma, D. P. and Ba, J. Adam: A method for stochastic
+  with dynamic normalizing flows. In Advances in Neural           optimization. In International Conference on Learning
+  Information Processing Systems, pp. 7805–7815, 2020.            Representations, 2015.
+
+Deng, R., Brubaker, M. A., Mori, G., and Lehrmann, A. M.        Krishnan, R. G., Shalit, U., and Sontag, D. Deep kalman
+  Continuous latent process flows. In Advances in Neural          filters. arXiv preprint arXiv:1511.05121, 2015.
+  Information Processing Systems, pp. 5162–5173, 2021.
+                                                                Lechner, M. and Hasani, R. Learning long-term dependen-
+Fraccaro, M., Sønderby, S. K., Paquet, U., and Winther,           cies in irregularly-sampled time series. arXiv preprint
+  O. Sequential neural models with stochastic layers. In          arXiv:2006.04418, 2020.
+  Advances in Neural Information Processing Systems, pp.
+                                                                LeCun, Y., Touresky, D., Hinton, G., and Sejnowski, T. A
+  2199–2207, 2016.
+                                                                  theoretical framework for back-propagation. In Proceed-
+Fraccaro, M., Kamronn, S. D., Paquet, U., and Winther,            ings of the 1988 Connectionist Models Summer School,
+  O. A disentangled recognition and nonlinear dynamics            pp. 21–28, 1988.
+  model for unsupervised learning. In Advances in Neural        Lezcano-Casado, M. Trivializations for gradient-based opti-
+  Information Processing Systems, pp. 3601–3610, 2017.            mization on manifolds. In Advances in Neural Informa-
+                                                                  tion Processing Systems, pp. 9154–9164, 2019.
+Goyal, A., Sordoni, A., Côté, M., Ke, N. R., and Bengio,
+ Y. Z-forcing: Training stochastic recurrent networks. In       Li, X., Wong, T.-K. L., Chen, R. T., and Duvenaud, D.
+ Advances in Neural Information Processing Systems, pp.           Scalable gradients for stochastic differential equations.
+  6713–6723, 2017.                                                In International Conference on Artificial Intelligence and
+                                                                  Statistics, pp. 3870–3882. PMLR, 2020.
+Herrera, C., Krach, F., and Teichmann, J. Neural jump ordi-
+  nary differential equations: Consistent continuous-time       Lipton, Z. C., Kale, D., and Wetzel, R. Directly modeling
+  prediction and filtering. In 9th International Conference       missing data in sequences with rnns: Improved classifi-
+  on Learning Representations, 2021.                              cation of clinical time series. In Machine Learning for
+                                                                  Healthcare Conference, pp. 253–270. PMLR, 2016.
+Hochreiter, S. and Schmidhuber, J. Long short-term memory.
+  Neural computation, 9(8):1735–1780, 1997.                     Menne, M., Williams Jr, C., and Vose, R. Long-term daily
+                                                                 climate records from stations across the contiguous united
+Horn, M., Moor, M., Bock, C., Rieck, B., and Borgwardt, K.       states, 2015.
+  Set functions for time series. In International Conference
+  on Machine Learning, pp. 4353–4363. PMLR, 2020.               Morrill, J., Salvi, C., Kidger, P., and Foster, J. Neural rough
+                                                                 differential equations for long time series. In Interna-
+Jazwinski, A. H. Stochastic Processes and Filtering Theory.      tional Conference on Machine Learning, pp. 7829–7838.
+  Academic Press, 1970.                                          PMLR, 2021.
+                              Modeling Irregular Time Series with Continuous Recurrent Units
+
+Mozer, M. C., Kazakov, D., and Lindsey, R. V. Dis-
+ crete event, continuous time rnns. arXiv preprint
+ arXiv:1710.04110, 2017.
+Pearlmutter, B. A. Learning state space trajectories in recur-
+  rent neural networks. Neural Computation, 1(2):263–269,
+  1989.
+
+Pearlmutter, B. A. Gradient calculations for dynamic recur-
+  rent neural networks: A survey. IEEE Transactions on
+  Neural networks, 6(5):1212–1228, 1995.
+Pineda, F. Generalization of back propagation to recurrent
+  and higher order neural networks. In Advances in Neural
+  Information Processing Systems, pp. 602–611, 1987.
+Rome, H. A direct solution to the linear variance equation
+  of a time-invariant linear system. IEEE Transactions on
+  Automatic Control, 14(5):592–593, 1969.
+Rubanova, Y., Chen, R. T., and Duvenaud, D. Latent odes
+  for irregularly-sampled time series. In Advances in Neural
+  Information Processing Systems, pp. 5320–5330, 2019.
+Sato, M.-a. A learning algorithm to teach spatiotemporal
+  patterns to recurrent neural networks. Biological Cyber-
+  netics, 62(3):259–263, 1990.
+
+Schmidt, F. and Hofmann, T. Deep state space models for
+  unconditional word generation. In Advances in Neural
+  Information Processing Systems, pp. 6161–6171, 2018.
+Shukla, S. N. and Marlin, B. M. A survey on principles,
+  models and methods for learning from irregularly sam-
+  pled time series. arXiv preprint arXiv:2012.00168, 2020.
+Shukla, S. N. and Marlin, B. M. Multi-time attention net-
+  works for irregularly sampled time series. In International
+  Conference on Learning Representations, 2021.
+
+Silva, I., Moody, G., Scott, D. J., Celi, L. A., and Mark,
+   R. G. Predicting in-hospital mortality of icu patients: The
+   physionet/computing in cardiology challenge 2012. In
+  Computing in Cardiology, pp. 245–248. IEEE, 2012.
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones,
+  L., Gomez, A. N., Kaiser, L., and Polosukhin, I. Atten-
+  tion is all you need. In Advances in Neural Information
+  Processing Systems, pp. 5998–6008, 2017.
+Zhang, Y., Yang, X., Ivy, J. S., and Chi, M. ATTAIN:
+  attention-based time-aware LSTM networks for disease
+  progression modeling. In Proceedings of the Twenty-
+  Eighth International Joint Conference on Artificial Intel-
+  ligence, pp. 4369–4375, 2019.
+                              Modeling Irregular Time Series with Continuous Recurrent Units
+
+A. Prior Computation
+A.1. f-CRU
+For an efficient implementation, we assume locally linear transitions with symmetric basis matrices {A(k) }k=1...K that
+share the same eigenvectors,
+
+                                         K
+                                                (k)
+                                         X
+                                  At =         αt A(k) ,           with     A(k) = ED(k) ET .                            (20)
+                                         k=1
+
+
+A.1.1. P RIOR M EAN
+We can simplify the matrix exponential in Eqn. (8) to the elementwise exponential function:
+
+                                                              
+                                     µ−
+                                      t = exp  A t (t − τ (t))   µ+
+                                                                  τ (t)
+                                                   K
+                                                  X                             
+                                         = exp              α(k) A(k) (t − τ (t)) µ+
+                                                                                   τ (t)
+                                                      k=1
+                                                   K
+                                                  X                                                                    (21)
+                                         = exp              α(k) ED(k) ET (t − τ (t)) µ+
+                                                                                       τ (t)
+                                                      k=1
+                                                       K
+                                                      X                            
+                                         = E exp               α(k) D(k) (t − τ (t)) ET µ+
+                                                                                         τ (t)
+                                                        i=1
+
+
+In the last step, we exploit a property of the matrix exponential. The exponential of diagonalizable matrices can be obtained
+by exponentiating each entry on the main diagonal of the matrix of eigenvalues.
+
+A.1.2. P RIOR C OVARIANCE
+For diagonalizable transition matrices of a linear time-invariant system Rome (1969) proposes an analytical solution for the
+computation of the prior covariance based on the eigendecomposition of the transition matrix. Precisely, we can define a
+new state vector w with covariance Σw  τ (t)
+
+
+                                                                                T +
+                                         wτ (t) = ET zτ (t)           Σw
+                                                                       τ (t) = E Στ (t) E                                (22)
+
+                                                                                                           PK    (k)
+We further define D̃ as the matrix whose ij-th element is the sum of the i-th and j-th diagonal entry of    k=1 D    ,
+
+                                                               K
+                                                                      (k)     (k)
+                                                               X
+                                                      D̃ij =         Dii + Djj                                           (23)
+                                                               k=1
+
+
+Let S be the transformed noise component,
+                                                        S = ET GQGT E,                                                   (24)
+then we can compute the covariance of w at time t with
+
+
+                         Σw                                        w
+                          t = (S ⊙ exp(D̃(t − τ (t))) − S) ⊘ D̃ + Στ (t) ⊙ exp(D̃(t − τ (t)))                            (25)
+
+Mapping back to the space of z, we obtain for the prior covariance of z at time t
+
+
+                                                         Σ−     w T
+                                                          t = EΣt E                                                      (26)
+                              Modeling Irregular Time Series with Continuous Recurrent Units
+
+A.2. CRU
+A.2.1. P RIOR C OVARIANCE
+The integral in the prior covariance (Eqn. (8)) can be resolved analytically using matrix fraction decomposition (Axelsson &
+Gustafsson, 2014). The idea of the method consists in computing the integral by solving a matrix valued ODE. We compute
+the matrix exponential of the matrix B
+
+                                      A GQGT
+                                                                                            
+                                                                                    M1 M2
+                               B=                          exp(B(t − τ (t))) =                                           (27)
+                                       0    −AT                                     0 M3
+
+where M1 , M2 , M3 and 0 are of dimension M × M . The prior covariance matrix at time t is then given by
+
+                                                                                 T
+                                    Σ−
+                                                         +
+                                     t =exp A(t − τ (t)) Στ (t) exp A(t − τ (t))
+                                                                T                                                           (28)
+                                        + M2 exp A(t − τ (t))
+
+B. Approximations
+In their work on RKNs, Becker et al. (2019) exploit assumptions on the structure of components of the Kalman filter to
+simplify computation. In particular, they reduce the matrix inversion in the Kalman gain to elementwise operations. We also
+exploit these approximations for the CRU. The following summarizes the approximations by Becker et al. (2019) and the
+resulting simplified update equations. We refer to Becker et al. (2019) for detailed derivations.
+
+Observation Model The dimension of the latent state M is twice of the dimension of the latent observation space D,
+i.e. M = 2D. The observation model links both spaces and is fixed at H = [ID , 0D ] where ID denotes the D-dimensional
+identity matrix and 0D the D-dimensional zero matrix. The idea is to split the latent state into an observed part, which
+extracts information directly from the observations and a memory part, which encodes features inferred over time.
+
+State Covariance The covariance matrix of the latent state Σt is built of diagonal blocks Σut , Σlt , Σst , whose vectors of
+diagonal entries are denoted by σ ut , σ lt , σ st , respectively.
+
+                                                                Σut    Σst
+                                                                            
+                                                     Σt =                                                                    (29)
+                                                                Σst    Σlt
+
+The observation part of the latent state is thus only correlated with the corresponding memory part. The argument behind
+this strong assumption is that the free parameters in the neural encoder and decoder suffice to find a representation where the
+above limitations hold.
+
+Simplified Update Step The Kalman gain simplifies to a structure with two diagonal blocks of size D × D, i.e. Kt =
+         T
+ Kt Klt . The vector of diagonal entries kut , klt can be computed with element wise division (⊘)
+ u
+
+
+                              kut = σ u,−
+                                      t   ⊘ (σ u,−
+                                               t   + σ obs
+                                                       t )            klt = σ s,−
+                                                                              t   ⊘ (σ u,−
+                                                                                       t   + σ obs
+                                                                                               t )                           (30)
+
+The posterior mean update then simplifies to
+
+                                                                  yt − µu,−
+                                                            u            
+                                                   −        kt
+                                             µ+
+                                              t = µt +          ⊙       t
+                                                                                                                             (31)
+                                                            klt   yt − µu,−
+                                                                        t
+
+                                                                                                              T
+where µut and µlt denote the upper and lower part of the prior mean respectively, i.e. µ−
+                                                                                            u,−
+                                                                                        t = µt         µl,−
+                                                                                                        t          . The update of
+the posterior covariance reduces to
+
+
+                                                 σ u,+
+                                                   t   = (1m − kut ) ⊙ σ u,−
+                                                                         t                                                   (32)
+                             Modeling Irregular Time Series with Continuous Recurrent Units
+
+
+                                                σ s,+
+                                                  t   = (1m − kut ) ⊙ σ s,−
+                                                                        t                                              (33)
+
+                                                σ l,+
+                                                  t   = σ l,−
+                                                          t   − klt ⊙ σ s,−
+                                                                        t                                              (34)
+
+where ⊙ denotes elementwise multiplication.
+
+C. Log-likelihood Results
+To assess uncertainty computation in the presence of high observation noise, we report negative log-likelihood on pendulum
+regression. Tab. 3 shows Gaussian negative loglikelihood (NLL) on test data for methods providing uncertainty estimates.
+As for MSE results, CRU outperforms baseline models.
+
+                               Table 3. Test Gaussian NLL (mean ± std) on pendulum regression.
+                                                 Model         Regression
+                                                 GRU          -4.78 ± 0.48
+                                                 GRU-∆t       -5.45 ± 0.09
+                                                 RKN          -4.38 ± 0.82
+                                                 RKN-∆t       -5.26 ± 0.24
+                                                 f-CRU        -5.46 ± 0.11
+                                                 CRU          -5.49 ± 0.05
+
+D. Implementation Details
+Training In all experiments, we train each model for 100 epochs using the Adam optimizer (Kingma & Ba, 2015).
+Reported MSE and Gaussian NLL results are averages over 5 runs. We used a batch size of 50 for the pendulum and USHCN
+data and a batch size of 100 for Physionet. For USHCN and Physionet, we split the data into 80% train and 20% test and
+used 25% of the train set for validation. For the pendulum experiments, we generated 2 000 training sequences, 1 000
+validation sequences and report results on a hold-out set of 1 000 sequences. The folds are reused for each compared model.
+
+Hyperparameters and Architecture Here, we summarize hyperparameter choices made in the empirical study with
+details provided in Appendices D.1 to D.8. We used the following procedure to select latent state size, number of layers,
+number of hidden units, and training parameters: For GRU-D, latent ODE and ODE-RNN, we use the choices optimized
+by Rubanova et al. (2019) in their Physionet setup. For mTAND, we keep the hyperparameters chosen by the authors on
+Physionet and adjust the number of hidden units to control for model size. We then designed the encoder and decoder of the
+CRU such that the CRU has roughly the same number of parameters as the latent ODE model. We proceed analogously
+for hyperparameters of GRU-ODE-B: We employ the hyperparameter settings optimized by the authors on their USHCN
+experiment. We keep the baseline architectures fixed across experiments, except for the latent state size, which we chose
+separately for each experiment according to the dimensionality of the input and previous work. See Appendix D.8 for the
+latent state size of each experiment, which is shared across architectures. For the pendulum image set, encoder, decoder and
+latent space sizes of CRU follow the RKN (Becker et al., 2019) baseline on this set. To scale the methods based on neural
+ODEs to images, we also embedded ODE-RNN, latent ODE and GRU-ODE-B into the same encoder-decoder structure as
+CRU. Similarly, the GRU baseline is augmented with the same encoder and decoder. This was also done in the pendulum
+experiments of Becker et al. (2019) and more details and justification can be found there. The transformer method, mTAND,
+scales to high-dimensional input and we thus apply it directly on the raw images. We found GRU-ODE-B unstable when
+trained jointly with an encoder and decoder on the image interpolation task and therefore trained it directly on the raw
+images.
+
+D.1. mTAND
+We use a hidden state size of M = 30 for pendulum, M = 20 for Physionet, and M = 10 for USHCN. We use a learning
+rate of 0.001 and 64 reference time points as in Shukla & Marlin (2021). For interpolation and extrapolation, we train
+mTAND-Full with 10 hidden units in encoder and decoder resulting in a model that has still three times as many parameters
+as CRU. For the per-time-point regression task, we use mTAND-Enc with 10 hidden units.
+                               Modeling Irregular Time Series with Continuous Recurrent Units
+
+D.2. RKN
+We use a hidden state size of M = 30 for pendulum, M = 20 for Physionet, and M = 10 for USHCN. For the pendulum
+experiment, we keep the architecture and hyperparameter choices from Becker et al. (2019). We employ the same choices
+for CRU across all experiments, which are detailed in Appendix D.8. For the time-aware variant, RKN-∆t , we feed
+the time gaps as additional input to the transition net that learns weights ατ (t) for the basis matrices (Eqn. (16)), i.e.
+ατ (t) = wψ ([t − τ (t), µ+
+                          τ (t) ]).
+
+
+D.3. GRU
+To make parameter sizes comparable, we use a hidden state size of 75 for GRU and GRU-∆t on all datasets. To test GRU
+on image data, we embed a GRU cell in the encoder-decoder architecture employed for RKN and CRU as in Becker et al.
+(2019). For GRU-∆t , the time gap between observations is concatenated to the input of the GRU cell.
+
+D.4. GRU-D
+We use a hidden state size of M = 30 for pendulum, M = 20 for Physionet, and M = 10 for USHCN. The other parameters
+are fixed across experiments. As described previously, we use hyperparameter and architecture choices by Rubanova et al.
+(2019), which result in 100 hidden units, a learning rate of 0.01 with a decay factor of 0.999.
+
+D.5. Latent ODE
+We use a latent state size of M = 30 for pendulum, M = 20 for Physionet, and M = 10 for USHCN. The other parameters
+are fixed across experiments. We used the latent ODE with an ODE-RNN recognition model. The recognition model has a
+hidden state of 40 dimensions, an ODE function with 3 layers and 50 hidden units and a GRU update with 50 hidden units.
+The ODE function of the generative model has 3 layers with 50 hidden units. We train the method with a learning rate of
+0.01 and a decay rate of 0.999.
+
+D.6. ODE-RNN
+We use a hidden state size of M = 30 for pendulum, M = 20 for Physionet and M = 10 for USHCN. The other parameters
+are fixed across experiments. We use the hyperparameter choices proposed by Rubanova et al. (2019). Notably, we use 100
+hidden units and a learning rate of 0.01 with a decay rate of 0.999.
+
+D.7. GRU-ODE-B
+We use a latent state size of M = 30 for pendulum, M = 20 for Physionet and M = 10 for USHCN. The other parameters
+are fixed across experiments. As outlined above, we keep the hyperparameters determined by the authors in their USHCN
+experiment. That is to say, we use 50 hidden units, a learning rate of 0.001, weight decay of 0.0001, and a dropout rate of
+0.2. The fprep function of the GRU-Bayes component has 10 hidden units, the fobs mapping has 25 hidden units.
+
+D.8. CRU and f-CRU
+We trained CRU with an Adam optimizer (Kingma & Ba, 2015) on the Gaussian negative log-likelihood (Eqn. (18)) for
+Physionet, USHCN and pendulum angle prediction and on the loss of Eqn. (19) for the pendulum interpolation task. On
+the validation set in the Pendulum interpolation experiment, we found a learning rate of 0.001 to work best for CRU and
+a slightly higher learning rate of 0.005 for f-CRU. We kept this choice for all datasets throughout all other experiments.
+(Through hyperparameter optimization on each dataset separately, the experimental results might improve further.) Gradient
+clipping was used on USHCN and Physionet.
+The initial conditions for the latent state are set to µ−           −
+                                                        t0 = 0 and Σt0 = 10·I. We found an initialization of the transitions such
+that the prior mean is close to the posterior mean of the previous time step crucial for performance and stability. Thus, we
+initialized the basis matrices {A(k) }k=1...K filled with zeros to start off with a prediction step of µ−       +
+                                                                                                        t′ = Iµt . Equivalently,
+                          (k)       −5
+we chose E = I and D = 1e · I, ∀k = 1...K for the f-CRU initialization. Missing features are zero-encoded and
+masked out in the NLL and MSE computation. For all experiments, we used a transition net wψ with one linear layer and
+softmax output.
+                             Modeling Irregular Time Series with Continuous Recurrent Units
+
+The CRU architecture used in each experiment is explicitly summarized next.
+
+D.8.1. P ENDULUM I NTERPOLATION
+Continuous-discrete Kalman filter
+
+  • Latent observation dimension: 15
+  • Latent state dimension: 30
+  • Number of basis matrices: 15
+  • Bandwidth (for CRU): 3
+
+Encoder: 2 convolution, 1 fully connected, linear output
+
+  • Convolution, 12 channels, 5 × 5 kernel, padding 2, ReLU, max pooling with 2 × 2 kernel and 2 × 2 stride
+  • Convolution, 12 channels, 3 × 3 kernel, padding 1, 2 × 2 stride, ReLU, max pooling with 2 × 2 kernel and 2 × 2 stride
+  • Fully-connected, 30 neurons, ReLU
+  • Linear output for latent observation; linear output, elu+1 activation for latent observation variance
+
+Decoder output sequence oT :     1 fully-connected, 3 Transposed convolution
+
+  • Fully connected, 144 neurons, ReLU
+  • Transposed convolution, 16 channels, 5 × 5 kernel, padding 2, 4 × 4 stride, ReLU
+  • Transposed convolution, 12 channels, 3 × 3 kernel, padding 1, 2 × 2 stride, ReLU
+  • Transposed convolution, 1 channel, 2 × 2 kernel, padding 5, 2 × 2 stride, sigmoid activation
+
+D.8.2. P ENDULUM R EGRESSION
+We used the same encoder and Kalman filter architecture as in the pendulum interpolation task.
+
+Decoder output sequence oT :     1 fully-connected, linear output
+
+  • Fully connected, 30 neurons, Tanh
+  • Linear output
+
+Decoder output variance σ out
+                          T : 1 fully-connected, linear output
+
+
+  • Fully connected, 30 neurons, Tanh
+  • Linear output, elu+1 activation
+
+D.8.3. USHCN
+Continuous-discrete Kalman filter
+
+  • Latent observation dimension: 5
+  • Latent state dimension: 10
+  • Number of basis matrices: 15
+  • Bandwidth (for CRU): 3
+                              Modeling Irregular Time Series with Continuous Recurrent Units
+
+Encoder: 3 fully connected, linear output
+
+   • Fully connected, 50 neurons, ReLU, layer normalization
+   • Fully connected, 50 neurons, ReLU, layer normalization
+   • Fully connected, 50 neurons, ReLU, layer normalization
+   • Linear output for latent observation; linear output, square activation for latent observation variance
+
+Decoder output sequence oT :       3 fully connected, linear output
+
+   • Fully connected, 50 neurons, ReLU, layer normalization
+   • Fully connected, 50 neurons, ReLU, layer normalization
+   • Fully connected, 50 neurons, ReLU, layer normalization
+   • Linear output for latent observation; linear output, square activation for latent observation variance
+
+Decoder output variance σ out
+                          T : 1 fully-connected, linear output
+
+   • Fully connected, 50 neurons, ReLU, layer normalization
+   • Linear output, square activation
+
+D.8.4. P HYSIONET
+We used the same encoder and decoder architecture as in the USHCN experiment.
+
+Continuous-discrete Kalman filter
+
+   • Latent observation dimension: 10
+   • Latent state dimension: 20
+   • Number of basis matrices: 20
+   • Bandwidth (for CRU): 10
+
+E. Data Preprocessing
+E.1. USHCN
+Daily weather records can be downloaded at https://cdiac.ess-dive.lbl.gov/ftp/ushcn_daily/. We
+remove observations with a bad quality flag as in Brouwer et al. (2019). However, unlike Brouwer et al. (2019) we are
+interested in long term extrapolation and thus, select a different time window of four years from 1990 to 1993. We keep only
+centers that start reporting before 1990 and end reporting after 1993. We split the remaining 1168 centers into 60% train
+20% validation and 20% test set. For each set, we remove measurements that are more than four standard deviations away
+from the set mean and normalize each feature to be in the [0,1] interval individually per set. For the baselines, we apply the
+time scaling strategies of previous work: we scale timestamps to be in the [0,1] for ODE-RNN, latent ODE and GRU-D as
+in Rubanova et al. (2019) and feed time points unprocessed to GRU-ODE-B as in Brouwer et al. (2019). For CRU, we scale
+the timestamps, which unit is days, by a factor of 0.3.
+
+E.2. Physionet
+The data is publicly available for download at https://physionet.org/content/challenge-2012/1.0.0/.
+We preprocess the data as in Rubanova et al. (2019): We discard four general descriptors reported once at admission (age,
+gender, height, ICU-type) and keep only the remaining set of 37 time-variant features. Time points are rounded to 6 minutes
+steps. We split the patients into 60% train, 20% validation and 20% test set. Lastly, we normalize each feature to be in the
+[0,1] interval separately per set. To mimic the training routine proposed by the authors, we scale the timestamps to the [0,1]
+interval for GRU-D, ODE-RNN and latent ODE, leave the timescale unchanged for GRU-ODE-B, and multiply timestamps
+by 0.2 for CRU.
+                                Modeling Irregular Time Series with Continuous Recurrent Units
+
+F. Computing Infrastructure
+Models were trained on one Nivida TU102GL Quatro RTX 6000/8000 with 40 physical Intel Xeon Gold 6242R CPU.
+
+G. Source Code
+Our code is available at https://github.com/boschresearch/Continuous-Recurrent-Units.
+
+H. Sample Trajectory
+
+
+
+
+                                                          Figure 6. f-CRU
+
+Figure 7. Test trajectory for the pendulum interpolation task: The f-CRU predicts images precisely despite irregular intervals between
+image frames.
+
