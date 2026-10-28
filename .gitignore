@@ -34,3 +34,4 @@ report/
 
 # Local assistant config with tokens
 .claude/settings.json
+.claude/skills/settings.local.json
