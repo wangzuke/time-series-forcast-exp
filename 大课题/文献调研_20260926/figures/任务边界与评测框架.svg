@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="690" viewBox="0 0 1360 690">
+<rect width="1360" height="690" fill="#fbfcfe"/>
+<text x="680" y="42" font-family="Noto Sans CJK SC,Arial" font-size="27" font-weight="bold" fill="#17202a" text-anchor="middle">缺失观测下时间序列预测：任务与证据边界</text>
+<rect x="50" y="95" width="270" height="110" rx="14" fill="#eaf3ff" stroke="#3b82c4" stroke-width="2"/>
+<text x="185.0" y="128" font-family="Noto Sans CJK SC,Arial" font-size="17" font-weight="bold" fill="#17202a" text-anchor="middle">历史散点 / 块缺失</text>
+<text x="185.0" y="156" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="normal" fill="#17202a" text-anchor="middle">预测未来全部或指定变量</text>
+<text x="185.0" y="182" font-family="Noto Sans CJK SC,Arial" font-size="12" font-weight="normal" fill="#47627b" text-anchor="middle">BiTGraph · HD-TTS · S4M</text>
+<rect x="375" y="95" width="270" height="110" rx="14" fill="#eaf3ff" stroke="#3b82c4" stroke-width="2"/>
+<text x="510.0" y="128" font-family="Noto Sans CJK SC,Arial" font-size="17" font-weight="bold" fill="#17202a" text-anchor="middle">整变量历史缺失</text>
+<text x="510.0" y="156" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="normal" fill="#17202a" text-anchor="middle">预测缺失变量未来</text>
+<text x="510.0" y="182" font-family="Noto Sans CJK SC,Arial" font-size="12" font-weight="normal" fill="#47627b" text-anchor="middle">GinAR · IBN</text>
+<rect x="700" y="95" width="270" height="110" rx="14" fill="#eaf3ff" stroke="#3b82c4" stroke-width="2"/>
+<text x="835.0" y="128" font-family="Noto Sans CJK SC,Arial" font-size="17" font-weight="bold" fill="#17202a" text-anchor="middle">训练未见节点</text>
+<text x="835.0" y="156" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="normal" fill="#17202a" text-anchor="middle">归纳预测新位置</text>
+<text x="835.0" y="182" font-family="Noto Sans CJK SC,Arial" font-size="12" font-weight="normal" fill="#47627b" text-anchor="middle">UIGNN</text>
+<rect x="1025" y="95" width="270" height="110" rx="14" fill="#eaf3ff" stroke="#3b82c4" stroke-width="2"/>
+<text x="1160.0" y="128" font-family="Noto Sans CJK SC,Arial" font-size="17" font-weight="bold" fill="#17202a" text-anchor="middle">异步 / 不规则观测</text>
+<text x="1160.0" y="156" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="normal" fill="#17202a" text-anchor="middle">指定未来查询点</text>
+<text x="1160.0" y="182" font-family="Noto Sans CJK SC,Arial" font-size="12" font-weight="normal" fill="#47627b" text-anchor="middle">GraFITi · t-PatchGNN</text>
+<text x="680" y="270" font-family="Noto Sans CJK SC,Arial" font-size="21" font-weight="bold" fill="#17202a" text-anchor="middle">不要混合的三个目标</text>
+<rect x="70" y="305" width="360" height="125" rx="14" fill="#fff7df" stroke="#c89018" stroke-width="2"/>
+<text x="250.0" y="339" font-family="Noto Sans CJK SC,Arial" font-size="18" font-weight="bold" fill="#17202a" text-anchor="middle">插补</text>
+<text x="250.0" y="369" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="normal" fill="#17202a" text-anchor="middle">同一历史范围内恢复空洞</text>
+<text x="250.0" y="398" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#465361" text-anchor="middle">指标：MAE/RMSE/CRPS（遮蔽点）</text>
+<rect x="500" y="305" width="360" height="125" rx="14" fill="#edf9ee" stroke="#4c9a59" stroke-width="2"/>
+<text x="680.0" y="339" font-family="Noto Sans CJK SC,Arial" font-size="18" font-weight="bold" fill="#17202a" text-anchor="middle">可用子集预测</text>
+<text x="680.0" y="369" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="normal" fill="#17202a" text-anchor="middle">只预测仍可观测变量</text>
+<text x="680.0" y="398" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#465361" text-anchor="middle">FDW/TRF；不能与全变量输出排名</text>
+<rect x="930" y="305" width="360" height="125" rx="14" fill="#fff0f1" stroke="#c85562" stroke-width="2"/>
+<text x="1110.0" y="339" font-family="Noto Sans CJK SC,Arial" font-size="18" font-weight="bold" fill="#17202a" text-anchor="middle">缺失变量/节点预测</text>
+<text x="1110.0" y="369" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="normal" fill="#17202a" text-anchor="middle">输出未观测变量或新节点未来</text>
+<text x="1110.0" y="398" font-family="Noto Sans CJK SC,Arial" font-size="13" font-weight="normal" fill="#465361" text-anchor="middle">GinAR/IBN/UIGNN；需外部先验</text>
+<text x="680" y="500" font-family="Noto Sans CJK SC,Arial" font-size="21" font-weight="bold" fill="#17202a" text-anchor="middle">共同的实验约束</text>
+<circle cx="126" cy="545" r="10" fill="#38a169"/>
+<text x="126" y="549" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">✓</text>
+<text x="150" y="550" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="normal" fill="#17202a" text-anchor="start">切分后再拟合归一化、图与插补器</text>
+<circle cx="526" cy="545" r="10" fill="#38a169"/>
+<text x="526" y="549" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">✓</text>
+<text x="550" y="550" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="normal" fill="#17202a" text-anchor="start">人工mask嵌套在原本可观测条目中</text>
+<circle cx="926" cy="545" r="10" fill="#38a169"/>
+<text x="926" y="549" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">✓</text>
+<text x="950" y="550" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="normal" fill="#17202a" text-anchor="start">历史双向可用，绝不跨预测起点</text>
+<circle cx="126" cy="605" r="10" fill="#38a169"/>
+<text x="126" y="609" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">✓</text>
+<text x="150" y="610" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="normal" fill="#17202a" text-anchor="start">报告实际缺失率、块长度与目标真值mask</text>
+<circle cx="526" cy="605" r="10" fill="#38a169"/>
+<text x="526" y="609" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">✓</text>
+<text x="550" y="610" font-family="Noto Sans CJK SC,Arial" font-size="14" font-weight="normal" fill="#17202a" text-anchor="start">概率预测同时看校准、尖锐度与联合事件</text>
+</svg>

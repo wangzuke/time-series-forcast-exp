@@ -1,0 +1,877 @@
+                                               GinAR: An End-To-End Multivariate Time Series Forecasting
+                                                          Model Suitable for Variable Missing
+                                                                             Chengqing Yu                                                                        Tangwen Qian
+                                                                              Fei Wang∗                                                                           Zhao Zhang
+                                                                              Zezhi Shao                                                           Institute of Computing Technology,
+                                                         Institute of Computing Technology,                                                    Chinese Academy of Sciences, Beijing, China
+                                                     Chinese Academy of Sciences, Beijing, China                                                {qiantangwen,zhangzhao2021}@ict.ac.cn
+                                                      University of Chinese Academy of Sciences,
+arXiv:2405.11333v1 [cs.LG] 18 May 2024
+
+
+
+
+                                                                     Beijing, China
+                                                  {yuchengqing22b,wangfei,Shaozezhi19b}@ict.ac.cn
+
+                                                                                   Wei Wei                                                                        Yongjun Xu∗
+                                              School of Computer Science and Technology, Huazhong                                                  Institute of Computing Technology,
+                                                       University of Science and Technology,                                                   Chinese Academy of Sciences, Beijing, China
+                                                                  Wuhan, China                                                                                 xyj@ict.ac.cn
+                                                                weiw@hust.edu.cn
+                                         ABSTRACT                                                                                        and even when 90% of variables are missing, it can still accurately
+                                         Multivariate time series forecasting (MTSF) is crucial for decision-                            predict the future values of all variables.
+                                         making to precisely forecast the future values/trends, based on the
+                                         complex relationships identified from historical observations of                                CCS CONCEPTS
+                                         multiple sequences. Recently, Spatial-Temporal Graph Neural Net-                                • Information systems → Data mining.
+                                         works (STGNNs) have gradually become the theme of MTSF model
+                                         as their powerful capability in mining spatial-temporal dependen-                               KEYWORDS
+                                         cies, but almost of them heavily rely on the assumption of historical
+                                                                                                                                         Multivariate time series forecasting, Variable missing, Adaptive
+                                         data integrity. In reality, due to factors such as data collector failures
+                                                                                                                                         graph convolution, Interpolation attention, Graph Interpolation
+                                         and time-consuming repairment, it is extremely challenging to col-
+                                                                                                                                         Attention Recursive Network
+                                         lect the whole historical observations without missing any variable.
+                                         In this case, STGNNs can only utilize a subset of normal variables                              ACM Reference Format:
+                                         and easily suffer from the incorrect spatial-temporal dependency                                Chengqing Yu, Fei Wang, Zezhi Shao, Tangwen Qian, Zhao Zhang, Wei
+                                         modeling issue, resulting in the degradation of their forecasting                               Wei, and Yongjun Xu. 2018. GinAR: An End-To-End Multivariate Time
+                                         performance. To address the problem, in this paper, we propose a                                Series Forecasting Model Suitable for Variable Missing. In Proceedings of
+                                         novel Graph Interpolation Attention Recursive Network (named                                    Make sure to enter the correct conference title from your rights confirmation
+                                         GinAR) to precisely model the spatial-temporal dependencies over                                emai (Conference acronym ’XX). ACM, New York, NY, USA, 12 pages. https:
+                                                                                                                                         //doi.org/XXXXXXX.XXXXXXX
+                                         the limited collected data for forecasting. In GinAR, it consists of
+                                         two key components, that is, interpolation attention and adaptive
+                                         graph convolution to take place of the fully connected layer of sim-                            1    INTRODUCTION
+                                         ple recursive units, and thus are capable of recovering all missing
+                                                                                                                                         Multivariate time series forecasting (MTSF) is widely used in prac-
+                                         variables and reconstructing the correct spatial-temporal depen-
+                                                                                                                                         tice, such as transportation [48], environment [55] and others [69].
+                                         dencies for recursively modeling of multivariate time series data,
+                                                                                                                                         It predicts future values of multiple interlinked time series by
+                                         respectively. Extensive experiments conducted on five real-world
+                                                                                                                                         using their historical observations, and contributes to decision-
+                                         datasets demonstrate that GinAR outperforms 11 SOTA baselines,
+                                                                                                                                         making [58, 70]. Indeed, multivariate time series (MTS) can be
+                                         ∗ Fei Wang and Yongjun Xu are the corresponding authors.
+                                                                                                                                         formalized as a kind of classical spatial-temporal graph data [3],
+                                                                                                                                         such as traffic flow [18], each variable of which is collected in
+                                                                                                                                         chronological order, using a sensor deployed at an independent
+                                         Permission to make digital or hard copies of all or part of this work for personal or
+                                         classroom use is granted without fee provided that copies are not made or distributed           position. Naturally, they usually have two key factors, temporal
+                                         for profit or commercial advantage and that copies bear this notice and the full citation       dependency [61] and spatial correlation [56]. The former charac-
+                                         on the first page. Copyrights for components of this work owned by others than the              terizes complex patterns (e.g., causal relationships) of instances in
+                                         author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+                                         republish, to post on servers or to redistribute to lists, requires prior specific permission   chronological order, and the later depicts the differences of time
+                                         and/or a fee. Request permissions from permissions@acm.org.                                     series corrected each other in spatial dimension. Therefore, effec-
+                                         Conference acronym ’XX, June 03–05, 2018, Woodstock, NY                                         tively mining spatial-temporal dependencies is crucial for MTSF
+                                         © 2018 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+                                         ACM ISBN 978-1-4503-XXXX-X/18/06                                                                to precisely predict future values of the time series, or to better
+                                         https://doi.org/XXXXXXX.XXXXXXX                                                                 understand of how they interact [44, 54].
+Conference acronym ’XX, June 03–05, 2018, Woodstock, NY                                                                                                         Yu et al.
+
+           V1   V2   V3   V4   V5       V1   V2   V3   V4   V5       V1   V2     V3   V4   V5
+  Input                                                                                           hand, existing STGNNs [22, 27, 34] need to use historical observa-
+features
+                                                                                                  tions from all variables to construct spatial correlations. Because
+                                                                                                  whole history observations of some variables are missing, existing
+                                                                                                  STGNNs cannot establish spatial correlations between missing and
+  Time
+
+
+
+
+                                                                                                  normal variables, leading to incorrect spatial correlations. In this
+                                                                                                  case, as the missing rate increases, the above phenomena become
+Output                                                                                            more serious, leading to a significant decline in the performance
+targets                                                                                           of STGNNs. For example, a classic STGNN model, temporal graph
+                 (a) MTSF           (b) MTSF with missing values (c) MTSF with variable missing
+                                                                            (ours)                convolutional network (TGCN) [79], is used for further analysis
+                                                                                                  when given different missing rates on PEMS04. Figure 1 (d) shows
+                                                                                                  that its performance deteriorates while increasing the missing rate.
+                                                                                                     At present, an intuitive strategy for addressing this challenge is
+                                                                                                  to combine imputation and forecasting methods and propose two-
+                                                                                                  stage models [33]. However, classic imputation methods [8, 63]
+                                                                                                  primarily rely on the context information of time series to recover
+                 (d) Forecasting results of TGCN under different missing rates
+                                                                                                  missing values. When history observations from some variables are
+                                                                                                  unavailable for a long time, these methods cannot achieve reliable
+ Figure 1: The principle and examples of multivariate time
+                                                                                                  recovery effects since the missing variables do not have any normal
+series forecasting with variable missing. V1 to V5 represent
+                                                                                                  value in the temporal dimension. In addition to the above classical
+ different variables. Compared to the other two tasks, our
+                                                                                                  methods, existing mainstream imputation methods [2, 46] combine
+task can only use historical observations of certain variables
+                                                                                                  the context information and spatial correlations of MTS for generat-
+to predict the future values of all variables. The forecasting
+                                                                                                  ing plausible missing values. However, they also have two problems:
+performance of TGCN declines as the missing rate increases.
+                                                                                                  (1) Components that use context information in these imputation
+                                                                                                  methods also introduce incorrect temporal dependencies, limiting
+                                                                                                  the effectiveness of data recovery and leading to error accumula-
+   Recently, Spatial-Temporal Graph Neural Networks (STGNNs)                                      tion [6]. (2) these imputation methods mainly rely on fixed spatial
+combine the sequence model and graph convolution (GCN) to cap-                                    correlations (such as road network structure) to establish correspon-
+ture spatial-temporal dependencies of MTS and achieve significant                                 dences between missing variables and normal variables [71]. When
+progress in MTSF [10], but their superior performances heavily rely                               the missing rate is significant, they cannot fully use all normal
+on the data quantity [81]. Since the time series data in practice is                              variables to recover missing variables, resulting in the ineffective
+always incomplete, it is very challenging to obtain whole historical                              recovery of missing variables that do not correspond with nor-
+observations of all variables for accurate forecasting [42]. To make                              mal variables [77]. In general, due to the introduction of incorrect
+things worse, the data from some variables may be even unavailable                                temporal dependencies and the lack of sufficient correspondences
+for a long time under certain conditions [11]. We can take a classical                            between missing variables and normal variables, two-stage models
+MTS application (i.e., air quality forecasting) as an example, the data                           cannot work well in MTSF with variable missing.
+collectors may easily work anomaly owing to some unforeseen fac-                                     To solve the above problems and realize MTSF with variable miss-
+tors (e.g., horrible weather) [43]. Because equipment maintenance                                 ing, forecasting models need to fully utilize historical observations
+usually takes days or even months, corresponding data collectors                                  of all normal variables to correct spatial-temporal dependencies
+only output outliers for a long time [73]. Thus, STGNNs need to                                   during the modeling process. To this end, we propose an end-to-
+address a problem, namely, whole history observations missing                                     end framework called Graph Interpolation Attention Recursive
+of some variables. This means that STGNNs only achieve MTSF                                       Network (GinAR). Specifically, we use simple recursive units (SRU)
+using the remaining normal variables (shown in Figure 1 (c)), which                               based on the RNN framework as the backbone and propose two key
+severely limits their performance. To alleviate this problem, some                                components (interpolation attention (IA) and adaptive graph con-
+works [6] only predict values of remaining normal variables by                                    volution (AGCN)) to replace all fully connected layers in SRU. This
+discarding all missing variables. However, if missing variables are                               is done to realize end-to-end forecasting while correcting spatial-
+key samples (e.g., important locations like hub nodes), the inability                             temporal dependencies. On the one hand, during the process of
+to predict their values will profoundly affect decision-making [62].                              recursive modeling, for data at each time steps, IA first generates
+   The above phenomenon shows that MTSF faces a significant                                       correspondences between normal variables and missing variables,
+practical challenge: how to forecast MTS when missing part                                        then uses attention to restore all missing variables to plausible rep-
+of variables? By rethinking the characteristics of STGNNs and                                     resentations. In this way, the sequence model avoids directly mining
+this task, the main problem is that STGNNs easily capture incor-                                  missing variables that do not have any valuable patterns, thereby
+rect spatial-temporal dependencies during the modeling process,                                   correcting temporal dependencies. On the other hand, for repre-
+resulting in error accumulation and degraded forecasting perfor-                                  sentations processed by IA, we use AGCN to reconstruct spatial
+mance. On the one hand, since each missing variable is usually a                                  correlations between all variables. Since all missing variables are
+straight-line sequence composed of outliers, the sequence model                                   recovered, AGCN can more accurately utilize their representations
+in STGNNs [16] cannot mine any valuable pattern and informa-                                      to generate a more reliable graph structure and obtain more accu-
+tion, resulting in incorrect temporal dependencies. On the other                                  rate spatial correlations. In this way, GinAR mines more accurate
+GinAR: An End-To-End Multivariate Time Series Forecasting Model Suitable for Variable Missing               Conference acronym ’XX, June 03–05, 2018, Woodstock, NY
+
+
+spatial-temporal dependencies in the process of recursive modeling                      variables, limiting its performance. Marisca et al. [28] combine cross-
+and effectively avoids the error accumulation problem. Thus, Gi-                        attention and temporal attention to achieve the recovery of missing
+nAR can implement MTSF with variable missing more accurately.                           data, but they do not take full advantage of the spatial correlations
+The main contributions of this paper are as follows:                                    between variables, which leads to inadequate data recovery. In ad-
+                                                                                        dition to the above methods, GNN-based methods [38] combine
+      • To the best of our knowledge, this is the first work that
+                                                                                        GCN and sequence models to analyze spatial-temporal dependen-
+        challenges to achieve MTSF with variable missing. The pro-
+                                                                                        cies between missing data and normal data, and further recover all
+        posed end-to-end framework can address the problem of
+                                                                                        missing data [60]. Wu et al. [65] propose inductive graph neural
+        error accumulation in the modeling process.
+                                                                                        network to recover missing data. Compared with classical methods,
+      • To achieve this challenging task, we carefully design Graph
+                                                                                        the proposed model has better performance. Chen et al. [12] use
+        Interpolation Attention Recursive Network, which contains
+                                                                                        the adaptive graph recursive network to realize the imputation of
+        two key components (interpolation attention and adaptive
+                                                                                        missing data. Experiments show that the framework combining
+        graph convolution). We use above components to replace
+                                                                                        graph convolution with recurrent neural networks can better use
+        all FC layers in SRU and propose the GinAR cell, aiming to
+                                                                                        temporal information and spatial correlation to recover missing
+        correct spatial-temporal dependencies during the process of
+                                                                                        data. Although imputation methods can recover missing data and
+        recursive modeling.
+                                                                                        improve the performance of forecasting models, they often suffer
+      • We design experiments on five real-world datasets. Results
+                                                                                        from several problems: (1) Classical imputation methods [1] need to
+        show that GinAR can outperform 11 baselines on all datasets.
+                                                                                        reconstruct both missing data and normal data, resulting in the loss
+        Even when 90% of variables are missing, it can still accurately
+                                                                                        of effective information. (2) Existing imputation methods [4, 45]
+        predict the future values of all variables.
+                                                                                        require full use of temporal information to recover missing data.
+                                                                                        When the data from some variables are unavailable for a long time,
+2 RELATED WORKS                                                                         existing methods introduce incorrect temporal dependencies, re-
+2.1 Spatial-Temporal Forecasting Method                                                 sulting in limited recovery performance [13, 37].
+STGNNs combine the advantages of GCN [32] and sequence mod-
+els [25] to fully mine spatial-temporal dependencies of MTS, and                        3 METHODOLOGY
+further improve the ability of spatial-temporal forecasting [15, 41,
+                                                                                        3.1 Preliminaries
+51]. Li et al. [35] combine gated recursive unit (GRU) and GCN
+to propose the diffused convolutional recurrent neural network                          Dependency graph. In multivariate time series, the change of
+(DCRNN) and realize MTSF. Wu et al. [67] propose the graph                              each time series depends not only on itself but also on other time
+wavenet (GWNET) by combining temporal convolutional network                             series. Such a dependency can be captured by the dependency graph
+(TCN) and GCN. Compared with traditional methods, above two                             𝐺 = (𝑉 , 𝐸). 𝑉 is the set of variables, and |𝑉 | = 𝑁 . Each variable
+models achieves excellent results. However, these methods ignore                        corresponds to a time series. 𝐸 is the set of edges. The dependency
+hidden spatial correlations between variables, which limits their                       graph can be represented by an adjacency matrix: 𝐴 ∈ 𝑅 𝑁 ∗𝑁 .
+effectiveness [32]. To further improve the ability of STGNN to                             Multivariate time series forecasting. Given a historical ob-
+mine spatial correlations, graph learning has been widely stud-                         servation tensor 𝑋 ∈ 𝑅 𝑁 ∗𝐻 ∗𝐶 from 𝐻 time slices in history, the
+ied [7]. Zheng et al. [80] design a spatial attention mechanism to                      model can predict the value 𝑌 ∈ 𝑅 𝑁 ∗𝐿 of the nearest 𝐿 time steps
+learn attention scores by considering traffic features and variable                     in the future. 𝐶 is the number of features. The goal of MTSF is to
+embeddings in the graph structure. Shang et al. [47] use histori-                       construct a mapping function between 𝑋 ∈ 𝑅 𝑁 ∗𝐻 ∗𝐶 and 𝑌 ∈ 𝑅 𝑁 ∗𝐿 .
+cal observations of all variables to learn the discrete probability                        Multivariate time series forecasting with variable missing.
+graph structure. Shao et al. [52] propose decoupled spatial-temporal                    Compared with MTSF, the main difference of this task is that there
+framework and dynamic graph learning to explore spatial-temporal                        are some variables with whole history data missing in historical
+dependencies between variables. Although STGNNs have made sig-                          observations 𝑋 ∈ 𝑅 𝑁 ∗𝐻 ∗𝐶 . Thus, we mask 𝑀 variables randomly
+nificant progress in MTSF, they need to use the variable features or                    from 𝑁 variables of the historical observation 𝑋 ∈ 𝑅 𝑁 ∗𝐻 ∗𝐶 . The
+prior knowledge to mine spatial-temporal dependencies [20, 30, 53].                     values of these 𝑀 variables are treated as 0, i.e. missing values and
+However, in MTSF with variable missing, the graph structure based                       a new input feature 𝑋𝑀 ∈ 𝑅 𝑁 ∗𝐻 ∗𝐶 is obtained. The core goal of
+on prior knowledge and the graph learning based on variable fea-                        this task is to construct a mapping function between input 𝑋𝑀 ∈
+tures are affected by missing variables, which leads to inaccurate                      𝑅 𝑁 ∗𝐻 ∗𝐶 and output 𝑌 ∈ 𝑅 𝑁 ∗𝐿 .
+modeling of spatial correlations [21, 36, 74].
+                                                                                        3.2     Overall Framework of GinAR
+2.2     Imputation Method                                                               The framework of GinAR is shown in Figure 2, which uses multiple
+Existing imputation methods include classical models [59] and deep                      GinAR layers as the encoder and MLP as the decoder. The GinAR
+learning-based models [19, 23, 24]. Compared with traditional mod-                      layer adopts the idea of recursive modeling, and its core structure is
+els, deep learning can analyze hidden correlations between missing                      the GinAR cell. By transmitting input features with variable missing
+and normal data and improve performance [75]. Wu et al. [63]                            to GinAR, it can predict future values of all variables. Next, we
+combine the matrix transformation with CNN to realize the miss-                         briefly introduce the design motivation of GinAR and the function
+ing data imputation, but it ignores correlations between different                      of its components.
+Conference acronym ’XX, June 03–05, 2018, Woodstock, NY                                                                                                           Yu et al.
+
+
+                 (a) GinAR                                                                                                    (b) Interpolation attention
+                                                                                                                  h1t
+                   Time      Input              GinAR             c1t-1          ʘ        +                             c1t        hIA2                hIA3
+                                                                                                                                          αi2
+                                                layer                                               ELU                                               αi3
+                                                GinAR                                                                          hIA1 α                      hIA4
+                       x1                                   h11                                                                      i1               αi4
+                                                 cell                                     ʘ          ʘ            +
+                                                                          f nt
+                                                    c11
+                                                                            GELU                  r nt            ʘ
+                                                GinAR                                                GELU                                     hIA'i
+                       x2                                   h12
+                                                 cell
+                                                                                                                              (c) AGCN
+                                                     c12                                                                          Apre        Feature
+                             ……                 ……                xt                                                                      *              * W
+                                                    c1H-1
+                       xH                       GinAR
+                                                            h1H
+                                                 cell
+                                                                                              …             Forecasting
+                                                                                                                                 Aadap     Feature
+                                                                                                              results
+                                                                           y1        y2             yL                                    *        * W
+
+
+
+  Figure 2: (a) The overall framework of GinAR. The GinAR layer adopts the RNN-based sequence framework and encodes
+historical observations of MTS with variable missing. The MLP-based decoder is used to predict future values of all variables.
+    (b) The specific structure of the interpolation attention. (c) The specific structure of the adaptive graph convolution.
+
+
+   Firstly, we intuitively discuss the design idea for the GinAR cell.               3.3      Interpolation Attention
+Specifically, we use IA and AGCN to replace all fully connected                      For each missing variable, interpolation attention needs to select the
+layers in SRU. IA can use normal variables to restore the missing                    normal variables for induction and give the corresponding weight
+variables to plausible representations, which can help the sequence                  for the selected normal variables. Thus, it contains two main steps:
+model to better mine temporal dependencies of missing variables.                     (1) It first generates correspondences between missing variables and
+Furthermore, for all variables processed by IA, their spatial cor-                   normal variables. (2) Based on above correspondences, attention
+relations cannot be determined by a predefined graph based on                        is used to realize the induction of missing variables. The main
+prior knowledge. Therefore, we use AGCN, which introduces graph                      schematic diagram of interpolation attention is shown in Figure 3.
+learning, to reconstruct spatial correlations between all variables.                 The specific modeling steps of IA are shown below:
+   Then, we briefly discuss the encoder, which uses the recursive                        Step 1: First, we need to generate correspondences between
+modeling framework. Specifically, at each time step 𝑇 , the input                    missing variables and normal variables. Specifically, we initialize a
+features 𝑥𝑇 ∈ 𝑅 𝑁 ∗𝐶 of the current moment and the cell state 𝑐𝑇 −1                  diagonal matrix 𝐼 𝑁 ∈ 𝑅 𝑁 ∗𝑁 and randomly initialize two variable-
+of the previous moment are transmitted to the GinAR cell. Then, the                  embedding matrices 𝐸𝐼𝐴1 ∈ 𝑅 𝑁 ∗𝑑 and 𝐸𝐼𝐴2 ∈ 𝑅𝑑∗𝑁 . The value of
+GinAR cell outputs the cell state 𝑐𝑇 for the next cell and obtains the               variable embedding matrix can be iterated continuously during
+hidden feature ℎ𝑇 . In this way, the GinAR layer utilizes the GinAR                  network training. Based on following formulas, correspondences
+cell to restore missing variables and reconstruct spatial correlations,              between missing variables and normal variables can be obtained:
+while simultaneously capturing temporal dependencies through
+the recursive modeling framework. Besides, due to the introduction                                       𝐴𝐼𝐴 = (𝐼 𝑁 + softmax(ReLU(𝐸𝐼𝐴1 𝐸𝐼𝐴2 )),                       (1)
+of skip connections in the GinAR cell, stacking multiple GinAR
+layers can capture deeper hidden information.                                        where, softmax(·) is the activation function. ReLU(·) is the activa-
+   Finally, we discuss the decoder and the forecasting process. An                   tion function. 𝐴𝐼𝐴 ∈ 𝑅 𝑁 ∗𝑁 is a two-dimensional matrix. When the
+important step in the forecasting process is to properly filter the                  value of row 𝑖 and column 𝑗 in the 𝐴𝐼𝐴 is greater than 0, it means
+hidden features obtained by the encoder. On the one hand, since the                  that there is a correlation between the variable 𝑖 and the variable
+encoder takes the form of recursive modeling, the last hidden state                  𝑗. In other words, the interpolation attention can use the normal
+of each GinAR layer contains all the information from the historical                 variable 𝑗 to recover the missing variable 𝑖. Based on the above
+observation [31]. On the other hand, due to the introduction of skip                 variable correlation matrix 𝐴𝐼𝐴 ∈ 𝑅 𝑁 ∗𝑁 , we can obtain the set of
+connections, the hidden features obtained by each GinAR layer                        normal variables 𝑁 (𝑖) associated with the missing variable 𝑖.
+contains different information [26]. Therefore, we concatenate the                       Step 2: Next, the missing variables 𝑖 are recovered by using
+last hidden state of all GinAR layers and use the concatenated tensor                attention mechanism and other associated normal variables 𝑗 ∈
+as the input to the decoder. Besides, we use the MLP, which is based                 𝑁 (𝑖). The attention coefficient 𝛼𝑖 𝑗 between the missing variable 𝑖
+on the direct multi-step (DMS) forecasting strategy [64], to predict                 and normal variable 𝑗 ∈ 𝑁 (𝑖) can be calculated as follows:
+future changes for all nodes. Compared with decoders based on
+auto-regressive [5] or iterated multi-step (IMS) [40] forecasting, the                                                                    
+                                                                                                             exp LeakyReLU 𝐹𝐶 (𝑊 𝑗𝐼𝐴ℎ𝐼𝐴   )
+proposed method can solve the problem of error accumulation and                                   𝛼𝑖 𝑗 = Í                      
+                                                                                                                                       𝑗
+                                                                                                                                                ,                    (2)
+improve the forecasting accuracy.                                                                                                        𝐼𝐴 𝐼𝐴
+                                                                                                          𝑘 ∈𝑁 (𝑖 ) exp LeakyReLU 𝐹𝐶 (𝑊𝑘 ℎ𝑘
+GinAR: An End-To-End Multivariate Time Series Forecasting Model Suitable for Variable Missing                Conference acronym ’XX, June 03–05, 2018, Woodstock, NY
+
+
+                                                                                        means concatenate two tensors. The adaptive graph can be obtained
+                                                                                        by the following formula:
+
+                                                                                                       𝐴𝑎𝑑𝑎𝑝 = (𝐼 𝑁 + softmax(GeLU(𝐸𝑛 𝐸𝑇𝑛 )),                    (6)
+
+         (a) Raw data      (b) Variable correspondence (c) Variable induction
+                                                                                        where, 𝐸𝑇𝑛 represents the transpose of 𝐸𝑛 .
+                                                                                           Adaptive graph convolution: Based on the above formulas, the
+   Figure 3: The schematic diagram of IA. Blue represents                               predefined graph and the adaptive graph can be obtained, which
+    normal variables. White represents missing variables.                               can reflect the spatial correlation of all variables from different
+       Yellow represents the variables after induction.                                 perspectives. Then, we combine the adaptive graph convolution and
+                                                                                        layer normalization to fuse these graph information. The formula
+                                                                                        of the adaptive graph convolution is given as follows:
+where, 𝐹𝐶 (·) is the fully connected layer. ℎ𝐼𝐴          𝐼𝐴
+                                                 𝑗 and 𝑊 𝑗 represent
+the features and weight of variable 𝑗, respectively. LeakyReLU(·)                                               𝐼𝐴                  𝐼𝐴
+                                                                                                 𝑍 = 𝐹𝐿𝑁 (𝐴𝑝𝑟𝑒 𝑋𝑀 𝑊1 + 𝑏 1 + 𝐴𝑎𝑑𝑎𝑝 𝑋𝑀 𝑊2 + 𝑏 2 ),                (7)
+is the activation function. exp(·) stands for exponential function.                             𝐼𝐴 represents the variable representation obtained by the
+                                                                                        where, 𝑋𝑀
+    Step 3: The above attention coefficients are weighted and summed                    IA.𝑊 and 𝑏 stand for weight and bias respectively. 𝐹𝐿𝑁 (·) stands for
+with the representations of all associated normal variables to achieve                  the layer normalization. Through above methods, the information
+the recovery of the missing variable 𝑖.                                                 of adaptive graph and predefined graph is fused.
+                      ′
+                                  ∑︁
+                  ℎ𝑖𝐼𝐴 = ReLU(          𝛼𝑖 𝑗 𝑊𝑖𝐼𝐴  𝐼𝐴
+                                               𝑗 ℎ 𝑗 ),             (3)
+                                     𝑗 ∈𝑁 (𝑖 )                                          3.5     GinAR
+   Step 4: Repeat steps 2 through 3 until all missing variables are                     The main idea of GinAR is to integrate the proposed interpolation
+restored. At this time, all variables have representations in the new                   attention and adaptive graph convolution into the simple recursive
+tensor obtained by the IA method. The original input feature 𝑋𝑀 ∈                       units. Next, we introduce the composition of the GinAR cell and
+𝑅 𝑁 ∗𝐻 ∗𝐶 can be converted to 𝑋𝑀   𝐼𝐴 ∈ 𝑅 𝑁 ∗𝐻 ∗𝐶 ′ . (Note: This step is               the overall modeling process of GinAR in detail.
+completed by using matrix multiplication for parallel computation.)                        GinAR cell: The GinAR cell is the most basic component of
+                                                                                        GinAR. Specifically, we introduce IA into the simple recursive unit
+3.4     Adaptive Graph Convolution                                                      cell to recover missing variables. Besides, we use the AGCN to
+By introducing prior knowledge to define an adjacency matrix 𝐴,                         replace all full connected layers in the SRU cell, enhancing the
+the predefined graph can help models establish a basic spatial cor-                     ability to correct spatial-temporal dependencies. The formula for
+relation. However, for MTSF with missing variables, the predefined                      each GinAR cell is given as follows:
+graph cannot adequately model the spatial correlation of all vari-
+ables due to a large number of missing variables. To this end, we                                                    𝑥𝑇𝐼𝐴 = 𝐹𝐼𝐴 (𝑥𝑇 ),                           (8)
+propose the data-based adaptive graph convolution, which consists
+of the predefined graph and the adaptive graph.                                           𝑓𝑇 = GeLU(𝐹𝐿𝑁 (𝐴𝑝𝑟𝑒 𝑥𝑇𝐼𝐴𝑊 𝑓 1 + 𝑏 𝑓 1 + 𝐴𝑎𝑑𝑎𝑝 𝑥𝑇𝐼𝐴𝑊 𝑓 2 + 𝑏 𝑓 2 )), (9)
+   Predefined graph: In this paper, distance is used to construct
+adjacency matrix 𝐴 for traffic data with road network information.
+For the data without road network information, the Pearson corre-                         𝑟𝑇 = GeLU(𝐹𝐿𝑁 (𝐴𝑝𝑟𝑒 𝑥𝑇𝐼𝐴𝑊𝑟 1 + 𝑏𝑟 1 + 𝐴𝑎𝑑𝑎𝑝 𝑥𝑇𝐼𝐴𝑊𝑟 2 + 𝑏𝑟 2 )), (10)
+lation coefficient [55] is used to form the adjacency matrix 𝐴. The
+predefined graph 𝐴𝑝𝑟𝑒 ∈ 𝑅 𝑁 ∗𝑁 for the graph convolution network                                         𝑐𝑇 = (1 − 𝑓𝑇 ) ⊙ 𝐹𝐿𝑁 (𝐴𝑝𝑟𝑒 𝑥𝑇𝐼𝐴𝑊𝑐1 +
+is obtained by the following formula:                                                                                                                          (11)
+                                          −1/2        −1/2
+                                                                                                                  𝐴𝑎𝑑𝑎𝑝 𝑥𝑇𝐼𝐴𝑊𝑐2 ) + 𝑓𝑇 ⊙ 𝑐𝑇 −1,
+                        𝐴𝑝𝑟𝑒 = (𝐼 𝑁 + 𝐷          𝐴𝐷          ),                 (4)
+                                                                                                        ℎ𝑇 = 𝑟𝑇 ⊙ ELU(𝑐𝑇 ) + (1 − 𝑟𝑇 ) ⊙ 𝑥𝑇𝐼𝐴 ,         (12)
+where, 𝐼 𝑁   ∈ 𝑅 𝑁 ∗𝑁 represents the diagonal matrix with value 1. 𝐷
+is the degree matrix of 𝐴.                                                              where, 𝑟𝑇 stands for reset gate. 𝑓𝑇 stands for forget gate. 𝑐𝑇 rep-
+    Adaptive graph: It needs to initialize a diagonal matrix 𝐼 𝑁 ∈                      resents the cell state of the current GinAR cell. ℎ𝑇 is the hidden
+𝑅 𝑁 ∗𝑁 of value 1 and randomly initialize a variable-embedded ma-                       state of the current GinAR cell. ⊙ stands for the Hadamard product.
+trix 𝐸𝐴 ∈ 𝑅 𝑁 ∗𝑑 . The value of variable embedding matrix can be                        GeLU(·) and ELU(·) are activation functions. 𝐹𝐼𝐴 (·) stands for the
+iterated continuously during neural network training. Then, based                       interpolation attention.
+                                  𝐼𝐴 ∈ 𝑅 𝑁 ∗𝐻 ∗𝐶 ′ obtained by the in-                     GinAR: The main components of GinAR include 𝑛 GinAR layers
+on the variable representation 𝑋𝑀
+                                                                                        and an MLP-based decoder. Each GinAR layer contains multiple
+terpolation attention and the variable-embedded matrix 𝐸𝐴 ∈ 𝑅 𝑁 ∗𝑑 ,                    GinAR cells. The modeling process of GinAR is given as follows:
+the new variable embedding 𝐸𝑛 ∈ 𝑅 𝑁 ∗𝑑 are obtained.                                       Step 1: The original input feature 𝑋 ∈ 𝑅 𝑁 ∗𝐻 ∗𝐶 is preprocessed
+                                        𝐼𝐴                                              and the input feature 𝑋𝑀 ∈ 𝑅 𝑁 ∗𝐻 ∗𝐶 for modeling is obtained. The
+                𝐸𝑛 = 𝐹𝐶 (concat(𝑊𝑥 𝑋𝑀      ,𝑊𝑒 𝐸𝐴 )),             (5)                   values of the 𝑀 variables in the 𝑁 variables of the input feature
+   where, 𝑊𝑥 and 𝑊𝑒 represent the weights of the variable represen-                     𝑋𝑀 ∈ 𝑅 𝑁 ∗𝐻 ∗𝐶 is 0.
+        𝐼𝐴 ∈ 𝑅 𝑁 ∗𝐻 ∗𝐶 ′ obtained by the interpolation attention and
+tation 𝑋𝑀
+the variable-embedded matrix 𝐸𝐴 ∈ 𝑅 𝑁 ∗𝑑 , respectively. concat(·)                                         𝑋𝑀 = [𝑥 1, 𝑥 2, ..., 𝑥𝐻 ], 𝑥 ∈ 𝑅 𝑁 ∗𝐶 ,             (13)
+Conference acronym ’XX, June 03–05, 2018, Woodstock, NY                                                                                        Yu et al.
+
+
+where, 𝐻 is the length of historical observation. 𝑁 is the number                Table 1: Values of the corresponding hyperparameters for
+of variables. 𝐿 is the length of future forecasting results. 𝐶 stands                               different missing rate.
+for embedding size.
+    Step 2: 𝑋𝑀 is passed to the first GinAR layer. Each GinAR layer                                                            Values
+contains 𝐻 GinAR cells, which are used to model 𝑥 1 to 𝑥𝐻 .                                        Config
+                                                                                                                        (25%, 50%, 75%, 90%)
+    Step 3: Initialize a cell state 𝑐 0 . 𝑥 1 and 𝑐 0 are passed to the first
+                                                                                                loss function                  L1 Loss
+GinAR cell in the GinAR layer. Based on the calculation formula of
+                                                                                                  optimizer                     Adam
+GinAR cell, the hidden state ℎ 11 of the current cell and the cell state
+                                                                                                learning rate                   0.006
+𝑐 1 are obtained. 𝑐 1 and 𝑥 2 are passed to the next GinAR cell.
+                                                                                               embedding size               32/32/16/16
+    Step 4: Repeat Step 3 to obtain 𝐻 hidden states of all GinAR cells
+                                                                                          variable embedding size             16/16/8/8
+in the first GinAR layer. These hidden states ℎ 1 are used as the
+                                                                                              number of layers                 2/2/3/3
+input features to the next GinAR layer.
+                                                                                                   dropout                       0.15
+                                 ℎ 1 = [ℎ 11, ℎ 12, ..., ℎ𝐻
+                                                          1
+                                                            ],          (14)               learning rate schedule           MultiStepLR
+   Step 5: Repeat steps 3 to 4 until all hidden states of 𝑛 GinAR                       clip gradient normalization                5
+layers are obtained. The hidden state of the last cell in each GinAR                              milestone                [1,15,40,70,90]
+layer is extracted. These hidden states are concatenated together                                  gamme                         0.5
+as a new tensor ℎ𝑛𝑎𝑙𝑙 , which is shown as follows:                                                batch size                      16
+                                                                                                    epoch                        100
+                                                                 ′
+                   ℎ𝑛𝑎𝑙𝑙 = [ℎ𝐻 , ℎ𝐻 , ..., ℎ𝑛𝐻 ], ℎ𝑛𝑎𝑙𝑙 ∈ 𝑅 𝑁 ∗𝐶 ∗𝑛 ,
+                             1 2
+                                                                        (15)
+   Step 6: ℎ𝑛𝑎𝑙𝑙 is passed to the MLP-based generative decoder. And
+                                                                                the fairness of experiments, we train the two-stage model in two
+the final forecasting result 𝑌 ∈ 𝑅 𝑁 ∗𝐿 is obtained.                            ways: first, train the two models separately. Second, based on the
+                                                                                reference [68], the two models are spliced together for training. The
+                              𝑌 = 𝐹𝐶 (ReLU(𝐹𝐶 (ℎ𝑛𝑎𝑙𝑙 ))),               (16)    final metrics are the optimal results.
+                                                                                   Metrics. To comprehensively evaluate the forecasting perfor-
+4 EXPERIMENTAL STUDY                                                            mance of different models, this paper utilizes three classical metrics:
+4.1 Experimental Design                                                         Mean Absolute Error (MAE), Root Mean Square Error (RMSE), and
+Datasets. Five real-world datasets are selected to conduct compar-              Mean Absolute Percentage Error (MAPE) [39].
+ative experiments, including two traffic speed datasets(METR-LA
+and PEMS-BAY)1 , two traffic flow datasets (PEMS04 and PEMS08)2                 4.2    Main Results
+and an air quality dataset (China AQI)3 .                                       Table 2 gives the performance comparison results of all baselines
+   Baselines. In order to fully compare and analyze the perfor-                 and GinAR on five datasets (The best results are shown in bold).
+mance of the proposed GinAR, eleven existing SOTA methods are                   Based on results, the following conclusions can be obtained: (1)
+selected as the main baselines, which include forecasting models                Compared with SOTA forecasting models, all two-stage forecasting
+(MegaCRN [29], DSformer [76] and STID [50]), and forecasting mod-               models can achieve better forecasting results. The main reason
+els with data recovery components (LGnet [57], TriD-MAE [78], GC-               is that imputation methods use normal variables to recover miss-
+VRNN [68], and BiTGraph [9]). Besides, we design two-phase mod-                 ing variables, which reduces the impact of missing variables on
+els (DCRNN [35] + GPT4TS [82], DFDGCN [34] + TimesNet [63]                      the forecasting model. However, the error accumulation problem
+and MTGNN [66] + GRIN [17], FourierGNN [72]+GATGPT[14]) as                      exists in two-stage models, which limits the performance of the
+additional baselines to further demonstrate GinAR’s effect.                     downstream predictors. (2) The forecasting models with data re-
+   Setting. Table 1 shows the main hyperparameters of the pro-                  covery components can work better than other baselines. On the
+posed model. We design experiments from the following aspects:                  one hand, they address the problem that one-stage models cannot
+(1) Our code is available at this link4 . (2) All datasets are uniformly        handle missing data. On the other hand, they avoid the error ac-
+divided into training sets, validation sets and test sets according to          cumulation problem of two-stage models. (3) GinAR can achieve
+the ratio in the reference [49]. (3) We set the history/future length           optimal experimental results on all datasets and all settings. Based
+based on the existing work [29, 34]. The history length and future              on interpolation attention, adaptive graph convolution and RNN-
+length of GinAR are both 12. Metrics are the average of 12-step                 based framework, the GinAR can realize missing variable recovery,
+forecasting results. (4) We randomly set mask variables according               spatial-temporal correlation reconstruction and end-to-end fore-
+to the ratio of 25%, 50%, 75% and 90%. Values of the masked variable            casting. Compared with one-stage models and two-stage models,
+are uniformly treated as 0. Besides, the experiment was repeated                GinAR can avoid the problem of error accumulation and produce
+with 5 different random seeds for each missing rate. The final met-             more accurate spatial-temporal dependencies. Therefore, GinAR
+rics are the mean values of repeated experiments. (5) To ensure                 can achieve better results than all baselines in MTSF with variable
+                                                                                missing. To further evaluate the effects of each component in Gi-
+1 https://github.com/liyaguang/DCRNN
+2 https://github.com/guoshnBJTU/ASTGNN/tree/main/data                           nAR, we conduct ablation experiments. Besides, to demonstrate the
+3 https://quotsoft.net/air/                                                     effect of the end-to-end framework, we analyze the performance
+4 https://github.com/ChengqingYu/GinAR                                          recovery effect of interpolation attention on MLP-based models.
+GinAR: An End-To-End Multivariate Time Series Forecasting Model Suitable for Variable Missing                    Conference acronym ’XX, June 03–05, 2018, Woodstock, NY
+
+
+                  Table 2: Performance comparison results of all baselines and the proposed model on all datasets.
+
+                                                      Missing rate 25%           Missing rate 50%          Missing rate 75%             Missing rate 90%
+             Datasets           Methods
+                                                   RMSE MAPE         MAE      RMSE MAPE         MAE     RMSE MAPE         MAE        RMSE MAPE         MAE
+                                  STID             10.31    17.85     5.05    10.73    18.88    5.35    11.35       20.57    5.84    12.06    23.17     6.24
+                               DSformer            7.69     11.05     4.02    8.27     12.78    4.38    9.21        14.59    4.77    10.15    17.69     5.02
+                               MegaCRN              7.43    10.47     3.81     7.87    11.02    3.94     8.28       12.13    4.24     8.72    13.54     4.58
+                           DCRNN+GPT4TS             7.41    10.72     3.78    7.91     11.61    3.98     8.16       11.93    4.15     8.31    12.18     4.29
+                          DFDGCN+TimesNet           7.42    10.42     3.72    7.68     11.45    3.89     8.11       11.75    4.14     8.33    12.24     4.34
+                            MTGNN+GRIN              7.28    10.48     3.69    7.43     11.22    3.77     8.05       11.58    4.12     8.29    12.14     4.25
+            METR-LA
+                         FourierGNN+GATGPT          7.40    10.87     3.71     7.84    11.75    3.82     8.25       12.25    4.21     8.37    12.28     4.33
+                                 LGnet              7.52    10.97     3.95    8.03     11.83    4.17     8.52       13.09    4.42     9.15    14.38     4.79
+                               GC-VRNN             7.04     10.51     3.68    7.73     10.98    3.87    8.19        11.71    4.17     8.35    12.29     4.32
+                               TriD-MAE             7.15    10.37     3.64    7.58     11.07    3.79     7.92       11.13    3.92     8.22    11.92     4.11
+                               BiTGraph             6.74    10.25     3.61    7.32     10.79    3.69     7.63       11.04    3.74    8.03     11.78     3.91
+                               Proposed            6.55     10.12     3.56    7.14     10.42    3.61    7.39        10.71    3.70    7.84     11.25     3.87
+                                  STID             7.13      7.78     3.01     7.86     8.21    3.39    8.26        9.24     3.51     8.65    10.07     3.78
+                               DSformer            6.32      7.15     2.91     6.46     7.73    3.08    8.15        9.06     3.45     9.06    10.23     3.72
+                               MegaCRN             5.93      7.03     2.85     7.36     7.75    3.02    7.75        8.77     3.35     8.25     9.23     3.54
+                           DCRNN+GPT4TS            5.54      6.24     2.63     6.22     6.75    2.87    7.14        7.82     3.09     7.69    8.82      3.31
+                          DFDGCN+TimesNet          5.39      6.17     2.58     6.17     7.03    2.74    6.96        7.59     3.07     7.15    8.34      3.27
+                            MTGNN+GRIN             5.78      5.73     2.65     6.19     6.55    2.83    7.06        7.75     3.02     7.26    8.45      3.22
+           PEMS-BAY
+                         FourierGNN+GATGPT         5.21      5.46     2.40     5.93     5.96    2.71    6.85        7.58     2.98     7.44     9.07     3.28
+                                 LGnet             6.02      7.19     2.88     6.74     8.15    3.14    8.08        9.18     3.43     8.92    9.83      3.67
+                               GC-VRNN             4.93      5.37     2.39     5.34     5.86    2.64    6.08        6.94     2.87     7.32    7.94      3.12
+                               TriD-MAE            5.17      5.48     2.46     5.53     6.12    2.69    5.97        6.85     2.79     7.02    7.63      3.02
+                               BiTGraph            4.52      5.16     2.17     5.06     6.07    2.44    5.79        6.68     2.61     6.75     7.42     2.83
+                               Proposed            4.34      4.90     2.10     4.78     5.88    2.35    5.48        6.17     2.54     6.43    6.94      2.77
+                                  STID             71.39    50.88    41.96    95.09    93.63    63.73   113.02     124.11   82.47    123.30   149.68   94.72
+                               DSformer            50.15    20.88    32.86    51.51    21.35    33.31   54.91      23.25    37.28    59.18     25.62   40.31
+                               MegaCRN             42.22    20.18    28.26    47.07    21.29    31.48    47.95      22.03   33.58     52.17    23.42   36.14
+                           DCRNN+GPT4TS            40.03    17.77    25.17    41.64    18.21    26.56   43.71      19.18    28.54     46.17    21.27   31.42
+                          DFDGCN+TimesNet          39.48    17.40    24.43    41.18    18.49    26.09   42.81      19.91    28.29     45.93    21.43   30.98
+                            MTGNN+GRIN             39.67    18.71    24.84    41.91    19.18    26.95   44.36      20.90    28.04     45.88    21.04   30.61
+             PEMS04
+                         FourierGNN+GATGPT         40.92    19.61    25.58    42.35    20.55    27.31    45.17      22.20   29.87     48.83    23.65   32.16
+                                 LGnet             42.64    18.42    26.53    46.39    21.30    30.81   52.05      24.83    33.94     55.12    23.74   36.29
+                               GC-VRNN             39.75    16.82    23.57    41.34    17.83    26.43   43.82      18.67    27.72    45.12    20.43    30.06
+                               TriD-MAE            39.83    16.98    24.15    40.65    17.52    25.89   41.90      18.04    26.95     44.23    20.05   29.54
+                               BiTGraph            38.94    16.75    23.01    40.03    17.34    24.15   41.69      17.92    26.33     43.37    19.08   28.71
+                               Proposed            38.22    16.45    22.52    39.02    17.04    23.78   41.53      17.58    25.98    42.82    18.31    28.20
+                                  STID             58.81    31.71    32.88    79.41    51.74    49.71   101.63      74.47   69.06    113.20   86.54    81.64
+                               DSformer            38.38    19.24    27.74    42.49    23.79    30.47   51.57       25.18   35.21    55.34    32.61    38.79
+                               MegaCRN             39.29    17.42    26.04    43.43    21.30    30.68    48.37      21.34   32.23     52.75   24.64    34.52
+                           DCRNN+GPT4TS            36.58    15.96    24.64    41.79    18.73    27.96   44.82       19.79   29.62     46.22   22.96    31.78
+                          DFDGCN+TimesNet          36.29    15.56    24.26    39.05    19.42    25.39   42.67       20.74   28.30     45.83   21.59    30.46
+                            MTGNN+GRIN             36.65    15.17    24.08    37.64    17.41    25.78   40.51       18.52   27.45     42.79   21.33    29.15
+             PEMS08
+                         FourierGNN+GATGPT         35.54    15.35    23.77    37.42    16.86    25.53    39.44      17.95   26.89     41.44   20.61    29.11
+                                 LGnet             37.54    22.18    26.51    47.23    21.91    32.04   50.38       21.43   33.65     52.06   25.71    35.48
+                               GC-VRNN             35.17    14.69    23.25    36.40    15.85    24.27   39.67       16.06   26.32    41.98    20.54    28.46
+                               TriD-MAE            33.15    14.25    21.53    35.95    15.32    23.18   37.64       15.58   24.89     39.25   16.43    26.18
+                               BiTGraph            31.89    14.05    20.65    35.06    14.62    22.44   36.98       15.04   23.38     39.06   16.18    25.01
+                               Proposed            31.34    13.76    20.41    34.53    14.21    22.01   36.04       14.77   23.10    38.87    15.82    24.83
+                                  STID             31.97    45.19    18.54    34.28    48.48    20.32   36.36       55.39   22.79    40.28    62.41    25.97
+                               DSformer            28.22    44.81    17.73    30.35    48.09    19.06   33.22       52.05   20.63    35.72    57.31    23.17
+                               MegaCRN             28.41    33.35    15.32    29.52    35.86    16.51   33.09       48.96   19.66    35.74    53.28    22.61
+                           DCRNN+GPT4TS            28.48    32.18    15.14    30.83    35.24    16.82   31.99       37.22   17.82    34.28    50.64    21.78
+                          DFDGCN+TimesNet          26.33    29.73    14.62    29.30    32.85    15.76   30.51       38.68   17.85    33.19    51.28    21.06
+                            MTGNN+GRIN             27.13    33.29    14.89    30.02    37.82    16.37   31.97       39.29   17.94    34.15    50.23    20.02
+            China AQI
+                         FourierGNN+GATGPT         27.17    32.82    14.65    30.77    38.37    16.13   31.86       39.90   18.01    34.17    50.94    20.18
+                                 LGnet             27.76    38.92    16.02    31.03    44.95    18.39   34.09       49.63   20.36    35.54    57.18    23.24
+                               GC-VRNN             26.88    31.88    14.66    28.67    34.21    15.70   30.57       37.66   16.99    32.91    48.73    19.24
+                               TriD-MAE            26.18    29.09    14.51    28.96    32.94    15.74   29.84       35.76   16.79    32.68    45.76    18.04
+                               BiTGraph            25.79    28.94    13.85    27.45    31.36    14.52   29.01       33.58   15.62    31.85    38.17    17.06
+                               Proposed            25.51    28.27    13.72    26.81    29.56    14.33   27.96       31.86   15.39    30.97    36.30    16.83
+
+
+
+4.3     Ablation Experiment                                                             remove the interpolation attention. (2) w/o pg: The predefined
+GinAR has three important components: interpolation attention,                          graph is deleted. It means that GinAR only uses the adaptive graph
+predefined graph, and adaptive graph learning. To demonstrate                           to construct spatial correlations. (3) w/o ag: The adaptive graph is
+the importance of these components, ablation experiments are                            removed. It means that spatial correlations are determined mainly
+conducted from the following three perspectives: (1) w/o ia: We                         through prior knowledge. Figure 4 shows the results of the ablation
+Conference acronym ’XX, June 03–05, 2018, Woodstock, NY                                                                                     Yu et al.
+
+
+                                                  pg                           Table 3: MAE values of interpolation attention and other
+                                                                                                imputation methods.
+
+                                                                                                                          Missing rate
+                                                                                    Datasets      Methods
+                                                                                                                  25%     50%     75%     90%
+                                                                                                 STID+GPT4TS      4.05    4.32    4.76    5.02
+                                                                                                STID+TimesNet     4.54    4.64    5.13    5.44
+                                                                                    METR-LA     STID+GATGPT       3.96    4.19    4.39    4.57
+                 Missing rate                          Missing rate                               STID+GRIN       3.83    3.98    4.21    4.35
+      (a) Results on PEMS-BAY dataset      (b) Results On China AQI dataset                        STID+IA        3.71    3.90    4.19    4.31
+                                                                                                 STID+GPT4TS     23.84   24.91   26.79   28.51
+        Figure 4: The results of the ablation experiment.
+                                                                                                STID+TimesNet    24.55   25.24   27.70   29.69
+                                                                                     PEMS08     STID+GATGPT      22.49   24.18   26.43   27.76
+                                                                                                  STID+GRIN      22.13   23.65   25.93   27.18
+                                                                                                   STID+IA       21.67   23.39   25.85   26.96
+experiment. Based on the experimental results, the following con-
+clusions can be drawn: (1) When the missing rate is low, deleting                                STID+GPT4TS     15.37   16.45   17.79   19.25
+the predefined graph has a great impact on the forecasting result.                              STID+TimesNet    15.81   17.14   18.33   19.74
+                                                                                    China AQI   STID+GATGPT      14.77   15.64   16.98   18.29
+However, when the missing rate is large, deleting the predefined
+                                                                                                  STID+GRIN      14.25   15.13   16.48   17.92
+graph has little impact on the result. (2) When the missing rate                                   STID+IA       13.75   14.87   16.25   17.83
+is large, deleting the adaptive graph can significantly reduce the
+forecasting accuracy. The main reason is that when there are more
+missing variables, the adaptive graph can better analyze the spatial
+correlation according to the characteristics of the data. Therefore,          (4) Compared with other two-stage models, the end-to-end frame-
+the adaptive graph plays an important role in this task. (3) When             work based on IA and STID can achieve good forecasting results.
+IA is removed, the performance of GinAR decreases significantly,              On the one hand, the two-stage models need to realize the feature
+proving that IA is the most important component. The main reason              reconstruction, and the problem of error accumulation results in
+is that IA realizes the recovery of missing variables, which provides         the decline of forecasting accuracy. On the other hand, IA realizes
+an important support for correcting spatial-temporal dependencies             adaptive induction by generating correspondences between normal
+and avoiding error accumulation. To further analysis the effect of            variables and missing variables.
+the IA, we compare IA with imputation methods in next section.
+                                                                              4.5     Hyperparameter Experiment
+4.4      Performance Evaluation of IA                                         The setting of the superparameter can affect the forecasting effect of
+As one of the most important components proposed in this paper, it            the GinAR. In this section, we evaluate the influence of three main
+is important to further evaluate the effect of interpolation attention.       hyperparameters on the experimental results, including embedding
+In addition, it is important to further evaluate the effectiveness of         size, variable embedding size, and number of layers. Figure 5 shows
+the end-to-end framework. Therefore, this section compares the                the influence of different hyperparameters on the experimental
+performance improvement effects of IA, GRIN, GATGPT, GPT4TS                   results (PEMS04 dataset). Based on the experimental results, the
+and TimesNet on STID. Specifically, TimesNet, GATGPT, GPT4TS                  following conclusions can be obtained: (1) The variable embedding
+and GRIN adopt the two-stage modeling framework (imputation                   size has the least influence on the forecasting results. It proves
+and forecasting) to optimize the performance of STID. IA uses the             that the adaptive graph with good performance can be generated
+end-to-end modeling framework to optimize the effects of STID.                without a large number of parameters. (2) The embedding size can
+Table 3 shows the performance comparison results (MAE values) of              be increased appropriately when the missing rate is small. And the
+these models (The best results are shown in boldface and the second           embedding size cannot be too large when the missing rate is large.
+best results are underlined). Based on the experimental results, the          The main reason is that when the missing rate is large, the large
+following conclusions can be drawn: (1) Compared with other meth-             embedding size can lead to overfitting, thus affecting the forecasting
+ods, TimesNet has minimal performance improvements to STID.                   accuracy. (3) The number of layers has the greatest influence on
+The main reason is that TimesNet uses temporal information to                 the forecasting result. Too few layers can not adequately mine and
+recover missing variables, without fully analyzing correspondences            analyze the data. Too many layers can lead to problems such as
+between missing variables and normal variables. (2) The proposed              overfitting. Therefore, the best forecasting results is achieved when
+IA method and other imputation methods can effectively improve                the number of layers is set to 2 or 3.
+the forecasting effect of STID. (3) IA and GRIN can recover the per-
+formance of STID and obtain better forecasting results than other             4.6     Visualization
+imputation methods. The main reason is that IA and GRIN adopt                 To prove that GinAR can effectively predict the future values of
+the graph-based framework to effectively reconstruct the spatial              all variables, this section visualizes the forecasting results from
+correlation between missing variables and normal variables, and               the spatial dimension. Figure 6 gives the visualization of the input
+then recover the missing variable data based on the normal variable.          features and forecasting results of GinAR on different missing rates
+GinAR: An End-To-End Multivariate Time Series Forecasting Model Suitable for Variable Missing                 Conference acronym ’XX, June 03–05, 2018, Woodstock, NY
+
+
+                                                                                                                     Ground truth
+
+
+
+
+               Missing rate                        Missing rate
+                        (a) Impact of embedding size                                                     (a) Real spatial distribution of China AQI
+                                                                                                  Input feature                          Forecasting results
+
+
+
+
+               Missing rate                       Missing rate                                  (b) The input and forecasting results of GinAR (Missing rate is 25%)
+                     (b) Impact of variable embedding size                                          Input feature                      Forecasting results
+
+
+
+
+                                                                                                 (c) The input and forecasting results of GinAR (Missing rate is 50%)
+              Missing rate                         Missing rate
+                       (c) Impact of the number of layers                                            Input feature                     Forecasting results
+
+
+    Figure 5: Hyperparameter experiment results (PEMS04).
+
+
+(China AQI dataset). Based on the visualization results, we can get
+the following conclusions: (1) As shown in Figure 6 (a), Figure 6
+                                                                                                (d) The input and forecasting results of GinAR (Missing rate is 75%)
+(b) and Figure 6 (c), GinAR can accurately predict the AQI value
+of all variables when the missing rate is not particularly large. (2)                               Input feature                       Forecasting results
+As shown in Figure 6 (a), Figure 6 (d) and Figure 6 (e), even though
+the number of normal variables is very sparse, GinAR can still
+accurately predict the spatial distribution of the AQI data. (3) GinAR
+can make full use of normal variables to realize accurate spatial-
+temporal forecasting for all variables. The visualization results can
+further demonstrate the practical value of GinAR.
+                                                                                                (e) The input and forecasting results of GinAR (Missing rate is 90%)
+
+5     CONCLUSION AND FUTURE WORK
+                                                                                        Figure 6: Visualization of the input features and forecasting
+In this paper, we try to address a new challenging task: MTSF with
+                                                                                          results of GinAR on different missing rates (China AQI
+variable missing. In this task, to solve the problems of producing
+                                                                                         dataset). As the missing rate increases, the input features
+incorrect spatial-temporal dependencies and error accumulation in
+                                                                                         become more and more sparse. However, the forecasting
+existing models, we carefully design two key components (Interpo-
+                                                                                         performence of GinAR does not deteriorate significantly.
+lation Attention and Adaptive Graph Convolution) and use them
+to replace all fully connected layers in the simple recursive unit. In
+this way, we propose the Graph Interpolation Attention Recursive                        will optimize the efficiency of GinAR and work on datasets with
+Network based on the end-to-end framework, which can simul-                             larger spatial dimensions and more complex spatial correlations.
+taneously recover all missing variables, correct spatial-temporal
+dependencies, and predict the future values of all variables. Experi-                   ACKNOWLEDGMENTS
+mental results on five real-world datasets demonstrate the practical                    This work is supported by NSFC No. 62372430, NSFC No. 62206266
+value of our model, and even when only 10% of variables are normal,                     and the Youth Innovation Promotion Association CAS No.2023112.
+it can predict the future values of all the variables. In the future, we
+Conference acronym ’XX, June 03–05, 2018, Woodstock, NY                                                                                                                    Yu et al.
+
+
+REFERENCES                                                                                 [23] Wenjie Du, David Côté, and Yan Liu. 2023. Saits: Self-attention-based imputation
+ [1] Dimitris Bertsimas, Agni Orfanoudaki, and Colin Pawlowski. 2021. Imputation                for time series. Expert Systems with Applications 219 (2023), 119619.
+     of clinical covariates in time series. Machine Learning 110 (2021), 185–248.          [24] Vincent Fortuin, Dmitry Baranchuk, Gunnar Rätsch, and Stephan Mandt. 2020.
+ [2] Ane Blázquez-García, Kristoffer Wickstrøm, Shujian Yu, Karl Øyvind Mikalsen,               Gp-vae: Deep probabilistic time series imputation. In International conference on
+     Ahcene Boubekki, Angel Conde, Usue Mori, Robert Jenssen, and Jose A Lozano.                artificial intelligence and statistics. PMLR, 1651–1661.
+     2023. Selective imputation for multivariate time series datasets with missing         [25] Jingxuan Geng, Chunhua Yang, Yonggang Li, Lijuan Lan, and Qiwu Luo. 2022.
+     values. IEEE Transactions on Knowledge and Data Engineering (2023).                        MPA-RNN: a novel attention-based recurrent neural networks for total nitrogen
+ [3] Defu Cao, Yujing Wang, Juanyong Duan, Ce Zhang, Xia Zhu, Congrui Huang,                    prediction. IEEE Transactions on Industrial Informatics 18, 10 (2022), 6516–6525.
+     Yunhai Tong, Bixiong Xu, Jing Bai, Jie Tong, et al. 2020. Spectral temporal graph     [26] Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. 2016. Deep residual
+     neural network for multivariate time-series forecasting. Advances in neural                learning for image recognition. In Proceedings of the IEEE conference on computer
+     information processing systems 33 (2020), 17766–17778.                                     vision and pattern recognition. 770–778.
+ [4] Wei Cao, Dong Wang, Jian Li, Hao Zhou, Lei Li, and Yitan Li. 2018. Brits:             [27] Jia Hu, Xianghong Lin, and Chu Wang. 2022. MGCN: Dynamic Spatio-Temporal
+     Bidirectional recurrent imputation for time series. Advances in neural information         Multi-Graph Convolutional Neural Network. In 2022 International Joint Confer-
+     processing systems 31 (2018).                                                              ence on Neural Networks (IJCNN). IEEE, 1–9.
+ [5] Vitor Cerqueira, Nuno Moniz, and Carlos Soares. 2021. Vest: Automatic feature         [28] Marisca Ivan, Cini Andrea, and Cesare Alippi. 2022. Learning to Reconstruct
+     engineering for forecasting. Machine Learning (2021), 1–23.                                Missing Data from Spatiotemporal Graphs with Sparse Observations. In 36th
+ [6] Jatin Chauhan, Aravindan Raghuveer, Rishi Saket, Jay Nandy, and Balaraman                  Conference on Neural Information Processing Systems (NeurIPS 2022). 1–17.
+     Ravindran. 2022. Multi-Variate Time Series Forecasting on Variable Subsets. In        [29] Renhe Jiang, Zhaonan Wang, Jiawei Yong, Puneet Jeph, Quanjun Chen, Ya-
+     Proceedings of the 28th ACM SIGKDD Conference on Knowledge Discovery and                   sumasa Kobayashi, Xuan Song, Shintaro Fukushima, and Toyotaro Suzumura.
+     Data Mining. 76–86.                                                                        2023. Spatio-temporal meta-graph learning for traffic forecasting. In Proceedings
+ [7] Ling Chen, Donghui Chen, Zongjiang Shang, Binqing Wu, Cen Zheng, Bo Wen,                   of the AAAI Conference on Artificial Intelligence, Vol. 37. 8078–8086.
+     and Wei Zhang. 2023. Multi-scale adaptive graph neural network for multivariate       [30] Renhe Jiang, Du Yin, Zhaonan Wang, Yizhuo Wang, Jiewen Deng, Hangchen Liu,
+     time series forecasting. IEEE Transactions on Knowledge and Data Engineering               Zekun Cai, Jinliang Deng, Xuan Song, and Ryosuke Shibasaki. 2021. Dl-traff:
+     (2023).                                                                                    Survey and benchmark of deep learning models for urban traffic prediction. In
+ [8] Xinyu Chen, Mengying Lei, Nicolas Saunier, and Lijun Sun. 2021. Low-rank                   Proceedings of the 30th ACM international conference on information & knowledge
+     autoregressive tensor completion for spatiotemporal traffic data imputation. IEEE          management. 4515–4525.
+     Transactions on Intelligent Transportation Systems 23, 8 (2021), 12301–12310.         [31] Tung Kieu, Bin Yang, Chenjuan Guo, Razvan-Gabriel Cirstea, Yan Zhao, Yale
+ [9] Xiaodan Chen, Xiucheng Li, Bo Liu, and Zhijun Li. 2023. Biased Temporal                    Song, and Christian S Jensen. 2022. Anomaly detection in time series with
+     Convolution Graph Network for Time Series Forecasting with Missing Values..                robust variational quasi-recurrent autoencoders. In 2022 IEEE 38th International
+     In The Twelfth International Conference on Learning Representations.                       Conference on Data Engineering (ICDE). IEEE, 1342–1354.
+[10] Yuzhou Chen, Sotiris Batsakis, and H Vincent Poor. 2023. Higher-Order Spatio-         [32] Thomas N Kipf and Max Welling. 2016. Semi-Supervised Classification with
+     Temporal Neural Networks for Covid-19 Forecasting. In ICASSP 2023-2023 IEEE                Graph Convolutional Networks. In International Conference on Learning Repre-
+     International Conference on Acoustics, Speech and Signal Processing (ICASSP). IEEE,        sentations.
+     1–5.                                                                                  [33] Jinlong Li, Pan Wu, Hengcong Guo, Ruonan Li, Guilin Li, and Lunhui Xu. 2023.
+[11] Yong Chen and Xiqun Michael Chen. 2022. A novel reinforced dynamic graph                   Multivariate Transfer Passenger Flow Forecasting with Data Imputation by Joint
+     convolutional network model with data imputation for network-wide traffic flow             Deep Learning and Matrix Factorization. Applied Sciences 13, 9 (2023), 5625.
+     prediction. Transportation Research Part C: Emerging Technologies 143 (2022),         [34] Yujie Li, Zezhi Shao, Yongjun Xu, Qiang Qiu, Zhaogang Cao, and Fei Wang.
+     103820.                                                                                    2023. Dynamic Frequency Domain Graph Convolutional Network for Traffic
+[12] Yakun Chen, Zihao Li, Chao Yang, Xianzhi Wang, Guodong Long, and Guandong                  Forecasting. arXiv preprint arXiv:2312.11933 (2023).
+     Xu. 2023. Adaptive graph recurrent network for multivariate time series impu-         [35] Yaguang Li, Rose Yu, Cyrus Shahabi, and Yan Liu. 2018. Diffusion Convolutional
+     tation. In Neural Information Processing: 29th International Conference, ICONIP            Recurrent Neural Network: Data-Driven Traffic Forecasting. In International
+     2022, Virtual Event, November 22–26, 2022, Proceedings, Part V. Springer, 64–73.           Conference on Learning Representations.
+[13] Yuanyuan Chen, Yisheng Lv, and Fei-Yue Wang. 2019. Traffic flow imputation            [36] Ke Liang, Yue Liu, Sihang Zhou, Wenxuan Tu, Yi Wen, Xihong Yang, Xiangjun
+     using parallel data and generative adversarial networks. IEEE Transactions on              Dong, and Xinwang Liu. 2023. Knowledge Graph Contrastive Learning Based
+     Intelligent Transportation Systems 21, 4 (2019), 1624–1630.                                on Relation-Symmetrical Structure. IEEE Transactions on Knowledge and Data
+[14] Yakun Chen, Xianzhi Wang, and Guandong Xu. 2023. Gatgpt: A pre-trained large               Engineering (2023).
+     language model with graph attention network for spatiotemporal imputation.            [37] Ke Liang, Lingyuan Meng, Meng Liu, Yue Liu, Wenxuan Tu, Siwei Wang, Si-
+     arXiv preprint arXiv:2311.14332 (2023).                                                    hang Zhou, Xinwang Liu, and Fuchun Sun. 2022. Reasoning over different
+[15] Yu Chengqing, Yan Guangxi, Yu Chengming, Zhang Yu, and Mi Xiwei. 2023.                     types of knowledge graphs: Static, temporal and multi-modal. arXiv preprint
+     A multi-factor driven spatiotemporal wind power prediction model based on                  arXiv:2212.05767 (2022), 7576–7584.
+     ensemble deep graph attention reinforcement learning networks. Energy 263             [38] Ke Liang, Jim Tan, Dongrui Zeng, Yongzhe Huang, Xiaolei Huang, and Gang Tan.
+     (2023), 126034.                                                                            2023. Abslearn: a gnn-based framework for aliasing and buffer-size information
+[16] Ranak Roy Chowdhury, Xiyuan Zhang, Jingbo Shang, Rajesh K Gupta, and Dezhi                 retrieval. Pattern Analysis and Applications (2023), 1–19.
+     Hong. 2022. Tarnet: Task-aware reconstruction for time-series transformer. In         [39] Hui Liu, Chengqing Yu, Haiping Wu, Zhu Duan, and Guangxi Yan. 2020. A new
+     Proceedings of the 28th ACM SIGKDD Conference on Knowledge Discovery and                   hybrid ensemble deep reinforcement learning model for wind speed short term
+     Data Mining. 212–220.                                                                      forecasting. Energy 202 (2020), 117794.
+[17] Andrea Cini, Ivan Marisca, and Cesare Alippi. 2022. Filling the G_ap_s: Mul-          [40] Linfeng Liu, Michael C Hughes, Soha Hassoun, and Liping Liu. 2021. Stochastic
+     tivariate Time Series Imputation by Graph Neural Networks. In International                iterative graph matching. In International Conference on Machine Learning. PMLR,
+     Conference on Learning Representations.                                                    6815–6825.
+[18] Razvan-Gabriel Cirstea, Bin Yang, Chenjuan Guo, Tung Kieu, and Shirui Pan.            [41] Yutian Liu, Soora Rasouli, Melvin Wong, Tao Feng, and Tianjin Huang. 2024.
+     2022. Towards spatio-temporal aware traffic time series forecasting. In 2022 IEEE          RT-GCN: Gaussian-based spatiotemporal graph convolutional network for robust
+     38th International Conference on Data Engineering (ICDE). IEEE, 2900–2913.                 traffic prediction. Information Fusion 102 (2024), 102078.
+[19] Jinliang Deng, Xiusi Chen, Zipei Fan, Renhe Jiang, Xuan Song, and Ivor W Tsang.       [42] Yonghong Luo, Ying Zhang, Xiangrui Cai, and Xiaojie Yuan. 2019. E2gan: End-
+     2021. The pulse of urban transport: Exploring the co-evolving pattern for spatio-          to-end generative adversarial network for multivariate time series imputation.
+     temporal forecasting. ACM Transactions on Knowledge Discovery from Data                    In Proceedings of the 28th international joint conference on artificial intelligence.
+     (TKDD) 15, 6 (2021), 1–25.                                                                 AAAI Press Palo Alto, CA, USA, 3094–3100.
+[20] Jinliang Deng, Xiusi Chen, Renhe Jiang, Xuan Song, and Ivor W Tsang. 2021. St-        [43] Soumen Pachal and Avinash Achar. 2022. Sequence Prediction under Missing
+     norm: Spatial and temporal normalization for multi-variate time series forecasting.        Data: An RNN Approach without Imputation. In Proceedings of the 31st ACM
+     In Proceedings of the 27th ACM SIGKDD conference on knowledge discovery & data             International Conference on Information & Knowledge Management. 1605–1614.
+     mining. 269–278.                                                                      [44] Tangwen Qian, Yile Chen, Gao Cong, Yongjun Xu, and Fei Wang. 2023. AdapTraj:
+[21] Jinliang Deng, Xiusi Chen, Renhe Jiang, Xuan Song, and Ivor W Tsang. 2022. A               A Multi-Source Domain Generalization Framework for Multi-Agent Trajectory
+     multi-view multi-task learning framework for multi-variate time series forecast-           Prediction. arXiv preprint arXiv:2312.14394 (2023).
+     ing. IEEE Transactions on Knowledge and Data Engineering (2022).                      [45] Xiaobin Ren, Kaiqi Zhao, Patricia J Riddle, Katerina Taskova, Qingyi Pan, and
+[22] Jinliang Deng, Xiusi Chen, Renhe Jiang, Du Yin, Yi Yang, Xuan Song, and Ivor W             Lianyan Li. 2023. DAMR: Dynamic Adjacency Matrix Representation Learning
+     Tsang. 2024. Disentangling Structured Components: Towards Adaptive, Inter-                 for Multivariate Time Series Imputation. Proceedings of the ACM on Management
+     pretable and Scalable Time Series Forecasting. IEEE Transactions on Knowledge              of Data 1, 2 (2023), 1–25.
+     and Data Engineering (2024).                                                          [46] Siyuan Shan, Yang Li, and Junier B Oliva. 2023. Nrtsi: Non-recurrent time
+                                                                                                series imputation. In ICASSP 2023-2023 IEEE International Conference on Acoustics,
+GinAR: An End-To-End Multivariate Time Series Forecasting Model Suitable for Variable Missing                      Conference acronym ’XX, June 03–05, 2018, Woodstock, NY
+
+
+     Speech and Signal Processing (ICASSP). IEEE, 1–5.                                         and Pattern Recognition. 9632–9643.
+[47] Chao Shang, Jie Chen, and Jinbo Bi. 2021. Discrete Graph Structure Learning          [69] Yongjun Xu, Xin Liu, Xin Cao, Changping Huang, Enke Liu, Sen Qian, Xingchen
+     for Forecasting Multiple Time Series. In International Conference on Learning             Liu, Yanjun Wu, Fengliang Dong, Cheng-Wei Qiu, et al. 2021. Artificial intelli-
+     Representations.                                                                          gence: A powerful paradigm for scientific research. The Innovation 2, 4 (2021),
+[48] Pan Shang, Xinwei Liu, Chengqing Yu, Guangxi Yan, Qingqing Xiang, and Xiwei               100179.
+     Mi. 2022. A new ensemble deep graph reinforcement learning network for               [70] Yongjun Xu, Fei Wang, Zhulin An, Qi Wang, and Zhao Zhang. 2023. Artificial
+     spatio-temporal traffic volume forecasting in a freeway network. Digital Signal           intelligence for science—bridging data to wisdom. The Innovation 4, 6 (2023).
+     Processing 123 (2022), 103419.                                                       [71] Yongchao Ye, Shiyao Zhang, and James JQ Yu. 2021. Spatial-temporal traffic
+[49] Zezhi Shao, Fei Wang, Yongjun Xu, Wei Wei, Chengqing Yu, Zhao Zhang, Di Yao,              data imputation via graph attention convolutional network. In International
+     Guangyin Jin, Xin Cao, Gao Cong, et al. 2023. Exploring Progress in Multivari-            Conference on Artificial Neural Networks. Springer, 241–252.
+     ate Time Series Forecasting: Comprehensive Benchmarking and Heterogeneity            [72] Kun Yi, Qi Zhang, Wei Fan, Hui He, Liang Hu, Pengyang Wang, Ning An, Long-
+     Analysis. arXiv preprint arXiv:2310.06119 (2023).                                         bing Cao, and Zhendong Niu. 2023. FourierGNN: Rethinking Multivariate Time
+[50] Zezhi Shao, Zhao Zhang, Fei Wang, Wei Wei, and Yongjun Xu. 2022. Spatial-                 Series Forecasting from a Pure Graph Perspective. In Thirty-seventh Conference
+     Temporal Identity: A Simple yet Effective Baseline for Multivariate Time Series           on Neural Information Processing Systems.
+     Forecasting. In Proceedings of the 31st ACM International Conference on Informa-     [73] Jennifer Yick, Biswanath Mukherjee, and Dipak Ghosal. 2008. Wireless sensor
+     tion and Knowledge Management. 4454–4458.                                                 network survey. Computer networks 52, 12 (2008), 2292–2330.
+[51] Zezhi Shao, Zhao Zhang, Fei Wang, and Yongjun Xu. 2022. Pre-training enhanced        [74] Du Yin, Renhe Jiang, Jiewen Deng, Yongkang Li, Yi Xie, Zhongyi Wang, Yifan
+     spatial-temporal graph neural network for multivariate time series forecasting.           Zhou, Xuan Song, and Jedi S Shang. 2023. MTMGNN: Multi-time multi-graph
+     In Proceedings of the 28th ACM SIGKDD Conference on Knowledge Discovery and               neural network for metro passenger flow prediction. GeoInformatica 27, 1 (2023),
+     Data Mining. 1567–1577.                                                                   77–105.
+[52] Zezhi Shao, Zhao Zhang, Wei Wei, Fei Wang, Yongjun Xu, Xin Cao, and Chris-           [75] Jinsung Yoon, James Jordon, and Mihaela Schaar. 2018. Gain: Missing data impu-
+     tian S Jensen. 2022. Decoupled dynamic spatial-temporal graph neural network              tation using generative adversarial nets. In International conference on machine
+     for traffic forecasting. Proceedings of the VLDB Endowment 15, 11 (2022), 2733–           learning. PMLR, 5689–5698.
+     2746.                                                                                [76] Chengqing Yu, Fei Wang, Zezhi Shao, Tao Sun, Lin Wu, and Yongjun Xu. 2023.
+[53] Mengshuai Su, Hui Liu, Chengqing Yu, and Zhu Duan. 2023. A novel AQI                      Dsformer: A double sampling transformer for multivariate time series long-term
+     forecasting method based on fusing temporal correlation forecasting with spatial          prediction. In Proceedings of the 32nd ACM International Conference on Information
+     correlation forecasting. Atmospheric Pollution Research 14, 4 (2023), 101717.             and Knowledge Management. 3062–3072.
+[54] Tao Sun, Fei Wang, Zhao Zhang, Lin Wu, and Yongjun Xu. 2022. Human mobility          [77] Chengqing Yu, Guangxi Yan, Chengming Yu, Xinwei Liu, and Xiwei Mi. 2024.
+     identification by deep behavior relevant location representation. In International        MRIformer: A multi-resolution interactive transformer for wind speed multi-step
+     Conference on Database Systems for Advanced Applications. Springer, 439–454.              prediction. Information Sciences 661 (2024), 120150.
+[55] Jing Tan, Hui Liu, Yanfei Li, Shi Yin, and Chengqing Yu. 2022. A new ensemble        [78] Kai Zhang, Chao Li, and Qinmin Yang. 2023. TriD-MAE: A Generic Pre-trained
+     spatio-temporal PM2. 5 prediction method based on graph attention recursive               Model for Multivariate Time Series with Missing Values. In Proceedings of the
+     networks and reinforcement learning. Chaos, Solitons & Fractals 162 (2022),               32nd ACM International Conference on Information and Knowledge Management.
+     112405.                                                                                   3164–3173.
+[56] Peiwang Tang, Qinghua Zhang, and Xianchao Zhang. 2023. A Recurrent Neural            [79] Ling Zhao, Yujiao Song, Chao Zhang, Yu Liu, Pu Wang, Tao Lin, Min Deng, and
+     Network based Generative Adversarial Network for Long Multivariate Time                   Haifeng Li. 2019. T-gcn: A temporal graph convolutional network for traffic
+     Series Forecasting. In Proceedings of the 2023 ACM International Conference on            prediction. IEEE transactions on intelligent transportation systems 21, 9 (2019),
+     Multimedia Retrieval. 181–189.                                                            3848–3858.
+[57] Xianfeng Tang, Huaxiu Yao, Yiwei Sun, Charu Aggarwal, Prasenjit Mitra, and           [80] Chuanpan Zheng, Xiaoliang Fan, Cheng Wang, and Jianzhong Qi. 2020. Gman: A
+     Suhang Wang. 2020. Joint modeling of local and global temporal dynamics for               graph multi-attention network for traffic prediction. In Proceedings of the AAAI
+     multivariate time series forecasting with missing values. In Proceedings of the           conference on artificial intelligence, Vol. 34. 1234–1241.
+     AAAI Conference on Artificial Intelligence, Vol. 34. 5956–5963.                      [81] Fan Zhou, Chen Pan, Lintao Ma, Yu Liu, Shiyu Wang, James Zhang, Xinxin Zhu,
+[58] Fei Wang, Di Yao, Yong Li, Tao Sun, and Zhao Zhang. 2023. AI-enhanced spatial-            Xuanwei Hu, Yunhua Hu, Yangfei Zheng, et al. 2023. SLOTH: Structured Learning
+     temporal data-mining technology: New chance for next-generation urban com-                and Task-Based Optimization for Time Series Forecasting on Hierarchies. In
+     puting. The Innovation 4, 2 (2023).                                                       Proceedings of the AAAI Conference on Artificial Intelligence, Vol. 37. 11417–11425.
+[59] Pu Wang, Zhihong Feng, Yan Tang, and Yuzhi Zhang. 2019. A fingerprint data-          [82] Tian Zhou, Peisong Niu, Xue Wang, Liang Sun, and Rong Jin. 2023. One Fits
+     base reconstruction method based on ordinary kriging algorithm for indoor                 All: Universal Time Series Analysis by Pretrained LM and Specially Designed
+     localization. In 2019 International Conference on Intelligent Transportation, Big         Adaptors. arXiv preprint arXiv:2311.14782 (2023).
+     Data & Smart City (ICITBS). IEEE, 224–227.
+[60] Peixiao Wang, Tong Zhang, Yueming Zheng, and Tao Hu. 2022. A multi-view
+     bidirectional spatiotemporal graph network for urban traffic flow imputation.
+     International Journal of Geographical Information Science 36, 6 (2022), 1231–1257.   A EXPERIMENTAL DETAILS
+[61] Zhiyuan Wang, Fan Zhou, Goce Trajcevski, Kunpeng Zhang, and Ting Zhong.
+     2023. Learning Dynamic Temporal Relations with Continuous Graph for Multi-           A.1 Datasets
+     variate Time Series Forecasting (Student Abstract). In Proceedings of the AAAI       Table 4 shows the statistics of these datasets. A brief overview of
+     Conference on Artificial Intelligence, Vol. 37. 16358–16359.
+[62] Yuanyuan Wei, Julian Jang-Jaccard, Wen Xu, Fariza Sabrina, Seyit Camtepe, and        all datasets is shown as follows:
+     Mikael Boulic. 2023. LSTM-autoencoder-based anomaly detection for indoor air
+     quality time-series data. IEEE Sensors Journal 23, 4 (2023), 3787–3800.                    • METR-LA: It is a traffic speed dataset collected by loop-
+[63] Haixu Wu, Tengge Hu, Yong Liu, Hang Zhou, Jianmin Wang, and Mingsheng                        detectors located on the LA County road network, which
+     Long. 2023. TimesNet: Temporal 2D-Variation Modeling for General Time Series
+     Analysis. In The Eleventh International Conference on Learning Representations.
+                                                                                                  contains data collected by 207 sensors from Mar 1st, 2012
+[64] Haixu Wu, Jiehui Xu, Jianmin Wang, and Mingsheng Long. 2021. Autoformer: De-                 to Jun 30th, 2012. Each time series is sampled at a 5-minute
+     composition transformers with auto-correlation for long-term series forecasting.             interval, totaling 34272 time slices.
+     Advances in Neural Information Processing Systems 34 (2021), 22419–22430.
+[65] Yuankai Wu, Dingyi Zhuang, Aurelie Labbe, and Lijun Sun. 2021. Inductive                   • PEMS-BAY: It is a traffic speed dataset collected by Califor-
+     graph neural networks for spatiotemporal kriging. In Proceedings of the AAAI                 nia Transportation Agencies (CalTrans) Performance Mea-
+     Conference on Artificial Intelligence, Vol. 35. 4478–4485.                                   surement System (PeMS), which contains data collected by
+[66] Zonghan Wu, Shirui Pan, Guodong Long, Jing Jiang, Xiaojun Chang, and Chengqi
+     Zhang. 2020. Connecting the dots: Multivariate time series forecasting with graph            325 sensors from Jan 1st, 2017 to May 31th, 2017. Each time
+     neural networks. In Proceedings of the 26th ACM SIGKDD international conference              series is sampled at a 5-minute interval, totaling 52116 time
+     on knowledge discovery & data mining. 753–763.
+[67] Zonghan Wu, Shirui Pan, Guodong Long, Jing Jiang, and Chengqi Zhang. 2019.
+                                                                                                  slices.
+     Graph wavenet for deep spatial-temporal graph modeling. In Proceedings of the              • PEMS04: It is a traffic flow dataset collected by CalTrans
+     28th International Joint Conference on Artificial Intelligence. 1907–1913.                   PeMS, which contains data collected by 307 sensors from
+[68] Yi Xu, Armin Bazarjani, Hyung-gun Chi, Chiho Choi, and Yun Fu. 2023. Uncov-
+     ering the Missing Pattern: Unified Framework Towards Trajectory Imputation                   January 1st, 2018 to February 28th, 2018. Each time series is
+     and Prediction. In Proceedings of the IEEE/CVF Conference on Computer Vision                 sampled at a 5-minute interval, totaling 16992 time slices.
+Conference acronym ’XX, June 03–05, 2018, Woodstock, NY                                                                                       Yu et al.
+
+
+           Table 4: The statistics of the five datasets.                  B     EFFICIENCY
+                                                                          In this section, we compare the efficiency of GinAR with that of sev-
+           Datasets       Variates    Timesteps       Granularity         eral baselines (GC-VRNN, TriD-MAE, MTGNN + GRIN, DFDGCN
+          MET-LA            207          34272            5minutes        + TimesNet and DCRNN + GPT4TS) on the PEMS08 dataset. To en-
+         PEMS-BAY           325          52116            5minutes        sure the fairness of the experiment, we compare the mean training
+          PEMS04            307          16992            5minutes        time of each epoch of each model. The experimental equipment is
+          PEMS08            170          17856            5minutes        the Intel(R) Xeon(R) Gold 5217 CPU @ 3.00GHz, 128G RAM com-
+         China AQI          350          59710             1hour          puting server with RTX 3090 graphics card. The batch size is set
+                                                                          to 16. Based on Figure 7, it can be found that the training time of
+                                                                          GinAR is not large. Compared with several two-stage models, the
+                                                                          GinAR does not require the imputation stage, which reduces the
+                                                                          overall training time. Besides, although the training time of GinAR
+                                                                          is greater than that of the one-stage models, it solves the problem of
+     • PEMS08: It is a traffic flow dataset collected by CalTrans
+                                                                          variable missing, which can improve its forecasting performance.
+       PeMS, which contains data collected by 170 sensors from
+       July 1st, 2018 to Aug 31th, 2018. Each time series is sampled
+       at a 5-minute interval, totaling 17833 time slices.
+     • China AQI: It is an air quality dataset collected by China
+       Environmental Monitoring Station, which contains data col-
+       lected by 350 cities in China from January 2015 to December
+       2022. Each time series is sampled at a 1 hour interval, totaling
+       59710 time slices.
+
+                                                                                      GinAR   MTGNN DFDGCN DCRNN             GC-      TriD-
+                                                                                              + GRIN +TimesNet +GPT4TS      VRNN      MAE
+A.2     Baselines
+All baselines are introduced as follows:                                  Figure 7: Training time for each epoch of different models.
+
+     • STID: It uses spatial-temporal identity embedding to im-
+       prove the ability of MLP to mine multivariate time series.         C     NOTATIONS
+     • DSformer: It uses double sampling block and temproal vari-
+                                                                          Some of the commonly used notations are presented in Table 5.
+       able attention block to mine spatiotemporal correlation and
+       improve prediction performance.
+                                                                                          Table 5: Frequently used notation.
+     • MegaCRN: This method uses memory back to improve the
+       ability of AGCRN to model spatial correlation.
+     • DCRNN+GPT4TS : It first uses GPT4TS to realize the impu-                Notation       size                   Definitions
+       tation of missing variables, and then uses DCRNN to model                   𝐻       Constant      The length of historical observation
+       the processed data.                                                         𝐿       Constant     The length of future forecasting results
+     • DFDGCN + TimesNet: It first uses TimesNet to realize the                    𝐵       Constant                    Batch size
+       imputation of missing variables, and then uses DFDGCN to                    𝑁       Constant              Number of variables
+       model the processed data.                                                  𝑀        Constant          Number of missing variables
+     • MTGNN+GRIN: It first uses GRIN to realize the imputation                    𝐶       Constant                 Embedding size
+                                                                                   𝑑       Constant            Variable embedding size
+       of missing variables, and then uses MTGNN to model the
+                                                                                   𝑛       Constant            Number of GinAR layers
+       processed data.                                                             𝑋       𝑁 ∗𝐻 ∗𝐶                   Input features
+     • FourierGNN+GATGPT : It first uses GATGPT to realize the                    𝑋𝑀       𝑁 ∗𝐻 ∗𝐶     Input features with 𝑀 missing variables
+       imputation of missing variables, and then uses FourierGNN                   𝑌         𝑁 ∗𝐿                 Forecasting results
+       to model the processed data.                                              𝐴𝑝𝑟𝑒       𝑁 ∗𝑁                   Predefined graph
+     • LGnet: It uses the memory component to effectively improve               𝐴𝑎𝑑𝑎𝑝       𝑁 ∗𝑁                    Adaptive graph
+       the performance of long and short term memory networks.                    𝐸𝑎         𝑁 ∗𝑑       Variable embedding of adaptive graph
+     • GC-VRNN : It combines the Multi-Space Graph Neural Net-                   𝐹𝐿𝑁       Functions             Layer normalization
+       work with Conditional Variational Recurrent Neural to real-                𝐹𝐶       Functions            Fully connected layer
+       ize time series forecasting with missing values.                          ReLU      Functions          Activation function ReLU
+                                                                                 ELU       Functions           Activation function ELU
+     • TriD-MAE: It uses MAE to optimize the ability of the TCN
+                                                                                GeLU       Functions          Activation function GeLU
+       model to realize multivariate time series forecasting with             LeakyReLU    Functions       Activation function LeakyReLU
+       missing values.                                                         softmax     Functions         Activation function softmax
+     • BiTGraph: It proposes a Biased Temporal Convolution Graph
+       Network that jointly captures the temporal dependencies
+       and spatial structure.
+

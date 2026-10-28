@@ -1,0 +1,376 @@
+[
+  {
+    "id": "P03",
+    "doi": "10.1145/3637528.3672055",
+    "resolver_ok": false,
+    "crossref_metadata": {
+      "error": "HTTPSConnectionPool(host='doi.org', port=443): Max retries exceeded with url: /api/handles/10.1145/3637528.3672055 (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1007)')))"
+    }
+  },
+  {
+    "id": "P05",
+    "doi": "10.1145/3711896.3737046",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Merlin: Multi-View Representation Learning for Robust Multivariate Time Series Forecasting with Unfixed Missing Rates",
+      "authors": "Yu, C., Wang, F., Yang, C., et al.",
+      "year": "2025",
+      "journal": "Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining V.2",
+      "volume": "",
+      "pages": "3633-3644",
+      "doi": "10.1145/3711896.3737046"
+    }
+  },
+  {
+    "id": "P11",
+    "doi": "10.1145/3534678.3539394",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Multi-Variate Time Series Forecasting on Variable Subsets",
+      "authors": "Chauhan, J., Raghuveer, A., Saket, R., et al.",
+      "year": "2022",
+      "journal": "Proceedings of the 28th ACM SIGKDD Conference on Knowledge Discovery and Data Mining",
+      "volume": "",
+      "pages": "76-86",
+      "doi": "10.1145/3534678.3539394"
+    }
+  },
+  {
+    "id": "P12",
+    "doi": "10.24963/ijcai.2024/228",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Reconstructing Missing Variables for Multivariate Time Series Forecasting via Conditional Generative Flows",
+      "authors": "Hu, X., Fan, W., Chen, H., et al.",
+      "year": "2024",
+      "journal": "Proceedings of the Thirty-ThirdInternational Joint Conference on Artificial Intelligence",
+      "volume": "",
+      "pages": "2063-2071",
+      "doi": "10.24963/ijcai.2024/228"
+    }
+  },
+  {
+    "id": "P13",
+    "doi": "10.1007/s10618-022-00903-7",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Graph convolutional networks for traffic forecasting with missing values",
+      "authors": "Zuo, J., Zeitouni, K., Taher, Y., et al.",
+      "year": "2023",
+      "journal": "Data Mining and Knowledge Discovery",
+      "volume": "37",
+      "pages": "913-947",
+      "doi": "10.1007/s10618-022-00903-7"
+    }
+  },
+  {
+    "id": "P14",
+    "doi": "10.1109/TITS.2022.3233890",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Traffic Prediction With Missing Data: A Multi-Task Learning Approach",
+      "authors": "Wang, A., Ye, Y., Song, X., et al.",
+      "year": "2023",
+      "journal": "IEEE Transactions on Intelligent Transportation Systems",
+      "volume": "24",
+      "pages": "4189-4202",
+      "doi": "10.1109/TITS.2022.3233890"
+    }
+  },
+  {
+    "id": "P15",
+    "doi": "10.1109/JSYST.2023.3268717",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Engineering Traffic Prediction With Online Data Imputation: A Graph-Theoretic Perspective",
+      "authors": "Yue, W., Zhou, D., Wang, S., et al.",
+      "year": "2023",
+      "journal": "IEEE Systems Journal",
+      "volume": "17",
+      "pages": "4485-4496",
+      "doi": "10.1109/JSYST.2023.3268717"
+    }
+  },
+  {
+    "id": "P16",
+    "doi": "10.1109/ICDM58522.2023.00152",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Uncertainty-aware Traffic Prediction under Missing Data",
+      "authors": "Mei, H., Li, J., Liang, Z., et al.",
+      "year": "2023",
+      "journal": "2023 IEEE International Conference on Data Mining (ICDM)",
+      "volume": "",
+      "pages": "1223-1228",
+      "doi": "10.1109/ICDM58522.2023.00152"
+    }
+  },
+  {
+    "id": "P17",
+    "doi": "10.1016/j.physa.2021.126474",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Laplacian integration of graph convolutional network with tensor completion for traffic prediction with missing data in inter-city highway network",
+      "authors": "Dong, H., Ding, F., Tan, H., et al.",
+      "year": "2022",
+      "journal": "Physica A: Statistical Mechanics and its Applications",
+      "volume": "586",
+      "pages": "126474",
+      "doi": "10.1016/j.physa.2021.126474"
+    }
+  },
+  {
+    "id": "P18",
+    "doi": "10.1016/j.trc.2022.103820",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "A novel reinforced dynamic graph convolutional network model with data imputation for network-wide traffic flow prediction",
+      "authors": "Chen, Y., Chen, X.",
+      "year": "2022",
+      "journal": "Transportation Research Part C: Emerging Technologies",
+      "volume": "143",
+      "pages": "103820",
+      "doi": "10.1016/j.trc.2022.103820"
+    }
+  },
+  {
+    "id": "P19",
+    "doi": "10.1049/itr2.12200",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Traffic forecasting with missing data via low rank dynamic mode decomposition of tensor",
+      "authors": "Zhang, X., Zhang, Y., Wei, X., et al.",
+      "year": "2022",
+      "journal": "IET Intelligent Transport Systems",
+      "volume": "16",
+      "pages": "1164-1176",
+      "doi": "10.1049/itr2.12200"
+    }
+  },
+  {
+    "id": "P20",
+    "doi": "10.23919/ICAC50006.2021.9594248",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "The Sequence-to-Sequence Architecture with An Embedded Module for Long-Term Traffic Speed Forecasting with Missing Data",
+      "authors": "Zheng, G., Chai, W., Katos, V.",
+      "year": "2021",
+      "journal": "2021 26th International Conference on Automation and Computing (ICAC)",
+      "volume": "",
+      "pages": "1-6",
+      "doi": "10.23919/ICAC50006.2021.9594248"
+    }
+  },
+  {
+    "id": "P21",
+    "doi": "10.1016/j.eswa.2026.132412",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Effective and efficient incomplete multivariate time series forecasting",
+      "authors": "Shi, H., Wu, Y., Pan, D., et al.",
+      "year": "2026",
+      "journal": "Expert Systems with Applications",
+      "volume": "323",
+      "pages": "132412",
+      "doi": "10.1016/j.eswa.2026.132412"
+    }
+  },
+  {
+    "id": "P22",
+    "doi": "10.1016/j.neucom.2026.134695",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "error": "HTTPSConnectionPool(host='api.crossref.org', port=443): Max retries exceeded with url: /works/10.1016/j.neucom.2026.134695 (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1007)')))"
+    }
+  },
+  {
+    "id": "P23",
+    "doi": "10.1016/j.ijforecast.2022.12.006",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Wind energy forecasting with missing values within a fully conditional specification framework",
+      "authors": "Wen, H., Pinson, P., Gu, J., et al.",
+      "year": "2024",
+      "journal": "International Journal of Forecasting",
+      "volume": "40",
+      "pages": "77-95",
+      "doi": "10.1016/j.ijforecast.2022.12.006"
+    }
+  },
+  {
+    "id": "P24",
+    "doi": "10.1016/j.apenergy.2025.126771",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Robust photovoltaic forecasting under severe data missingness via multi-domain collaboration and covariate interaction",
+      "authors": "Yan, K., Liu, J., Zhang, J., et al.",
+      "year": "2025",
+      "journal": "Applied Energy",
+      "volume": "401",
+      "pages": "126771",
+      "doi": "10.1016/j.apenergy.2025.126771"
+    }
+  },
+  {
+    "id": "P25",
+    "doi": "10.1109/TSTE.2025.3611370",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Probabilistic Wind Power Forecasting With Missing Data Tolerance: An End-to-End Nonparametric Approach",
+      "authors": "Meng, Z., Guo, Y., Zhao, C.",
+      "year": "2026",
+      "journal": "IEEE Transactions on Sustainable Energy",
+      "volume": "17",
+      "pages": "1202-1213",
+      "doi": "10.1109/TSTE.2025.3611370"
+    }
+  },
+  {
+    "id": "P27",
+    "doi": "10.3390/jsan15040052",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Citywide Air Quality Forecasting over Sparse Sensor Networks: Cross-Location Generalization and Deep Learning Reliability Under Missing Data",
+      "authors": "Alvarado-Alcon, F., Asorey-Cacheda, R., Garcia-Haro, J., et al.",
+      "year": "2026",
+      "journal": "Journal of Sensor and Actuator Networks",
+      "volume": "15",
+      "pages": "52",
+      "doi": "10.3390/jsan15040052"
+    }
+  },
+  {
+    "id": "P28",
+    "doi": "10.1007/s44408-026-00145-y",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "DeepSIP: A Deep Learning Approach for Sensor Data Imputation and Time Series Forecasting",
+      "authors": "Surakhi, O., Hossein Motlagh, N., Iturrate-Garcia, M., et al.",
+      "year": "2026",
+      "journal": "Aerosol and Air Quality Research",
+      "volume": "26",
+      "pages": "",
+      "doi": "10.1007/s44408-026-00145-y"
+    }
+  },
+  {
+    "id": "P34",
+    "doi": "10.1609/aaai.v38i15.29560",
+    "resolver_ok": false,
+    "crossref_metadata": {
+      "error": "HTTPSConnectionPool(host='doi.org', port=443): Max retries exceeded with url: /api/handles/10.1609/aaai.v38i15.29560 (Caused by ProxyError('Cannot connect to proxy.', ConnectionResetError(104, 'Connection reset by peer')))"
+    }
+  },
+  {
+    "id": "P40",
+    "doi": "10.1609/aaai.v39i20.35494",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Probabilistic Forecasting of Irregularly Sampled Time Series with Missing Values via Conditional Normalizing Flows",
+      "authors": "Yalavarthi, V., Scholz, R., Born, S., et al.",
+      "year": "2025",
+      "journal": "Proceedings of the AAAI Conference on Artificial Intelligence",
+      "volume": "39",
+      "pages": "21877-21885",
+      "doi": "10.1609/aaai.v39i20.35494"
+    }
+  },
+  {
+    "id": "P48",
+    "doi": "10.1016/j.eswa.2023.119619",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "SAITS: Self-attention-based imputation for time series",
+      "authors": "Du, W., Côté, D., Liu, Y.",
+      "year": "2023",
+      "journal": "Expert Systems with Applications",
+      "volume": "219",
+      "pages": "119619",
+      "doi": "10.1016/j.eswa.2023.119619"
+    }
+  },
+  {
+    "id": "P52",
+    "doi": "10.24963/ijcai.2025/320",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Filling the Missings: Spatiotemporal Data Imputation by Conditional Diffusion",
+      "authors": "He, W., Huang, J., Gu, J., et al.",
+      "year": "2025",
+      "journal": "Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence",
+      "volume": "",
+      "pages": "2874-2882",
+      "doi": "10.24963/ijcai.2025/320"
+    }
+  },
+  {
+    "id": "P57",
+    "doi": "10.1016/j.knosys.2022.110188",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Dynamic graph convolutional recurrent imputation network for spatiotemporal traffic missing data",
+      "authors": "Kong, X., Zhou, W., Shen, G., et al.",
+      "year": "2023",
+      "journal": "Knowledge-Based Systems",
+      "volume": "261",
+      "pages": "110188",
+      "doi": "10.1016/j.knosys.2022.110188"
+    }
+  },
+  {
+    "id": "P58",
+    "doi": "10.1016/j.future.2024.03.015",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "A transferred spatio-temporal deep model based on multi-LSTM auto-encoder for air pollution time series missing value imputation",
+      "authors": "Zhang, X., Zhou, P.",
+      "year": "2024",
+      "journal": "Future Generation Computer Systems",
+      "volume": "156",
+      "pages": "325-338",
+      "doi": "10.1016/j.future.2024.03.015"
+    }
+  },
+  {
+    "id": "P59",
+    "doi": "10.1029/2025JH000656",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Imputing Missing Long‐Term Spatiotemporal Multivariate Atmospheric Data With CNN‐Transformer Machine Learning",
+      "authors": "Hu, J., Dong, W., Liu, A.",
+      "year": "2026",
+      "journal": "Journal of Geophysical Research: Machine Learning and Computation",
+      "volume": "3",
+      "pages": "",
+      "doi": "10.1029/2025JH000656"
+    }
+  },
+  {
+    "id": "P60",
+    "doi": "10.24963/ijcai.2025/1187",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Deep Learning for Multivariate Time Series Imputation: A Survey",
+      "authors": "Wang, J., Du, W., Yang, Y., et al.",
+      "year": "2025",
+      "journal": "Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence",
+      "volume": "",
+      "pages": "10696-10704",
+      "doi": "10.24963/ijcai.2025/1187"
+    }
+  },
+  {
+    "id": "P64",
+    "doi": "10.1038/s41598-018-24271-9",
+    "resolver_ok": true,
+    "crossref_metadata": {
+      "title": "Recurrent Neural Networks for Multivariate Time Series with Missing Values",
+      "authors": "Che, Z., Purushotham, S., Cho, K., et al.",
+      "year": "2018",
+      "journal": "Scientific Reports",
+      "volume": "8",
+      "pages": "",
+      "doi": "10.1038/s41598-018-24271-9"
+    }
+  }
+]

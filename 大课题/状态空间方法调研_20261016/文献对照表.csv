@@ -1,0 +1,15 @@
+论文,年份与状态,SSM类型,缺失如何进入模型,主要任务,数据场景与公开数据,缺失模式,与S4M的可比性,代码/复现状态
+S4M,ICLR 2025,S4,掩码编码作为独立输入流；ATPM原型检索,多变量未来预测,"ETTh1/Electricity/Traffic/Weather；附录USHCN",全变量同步时间块/各变量独立时间块,直接基线,代码公开；未复现
+MAS-Mamba,IET ITS 2026,Mamba选择性SSM,"掩码和距上次观测时间条件化离散步长",短期未来预测,"道路交通：METR-LA(207)/PEMS-BAY(325)",MCAR/NMAR/传感器断连,最直接正式同类,论文摘要与元数据已核；正文待获取
+Mamba-NTP,JNCA 2025,Mamba,"稀疏测量输入下的联合完成、图学习和预测",网络流量矩阵预测,通信网络流量矩阵,稀疏测量/不完整矩阵,任务直接但领域不同,以期刊页面为准
+MAP-SSM,未来刊期页面2026,SSM,"Missing-Gated Discretization+原型记忆",多变量未来预测,"ETT/Weather/Electricity/Traffic/Exchange/Solar",块/散点/混合,机制高度重合但非已发表可复现基线,仅协议工具；模型未发布
+EMIRA,博士论文2026,Mamba,"全局不规则性进入选择性扫描；预测查询检索",不规则多变量预测,论文中多个IMTS任务,不规则采样,机制参考,非独立同行评议论文
+CRU,ICML 2022,连续时间概率SSM,"真实时间间隔推进；观测到达时Kalman更新",不规则序列插值/表征,医疗等不规则序列,异步/不规则采样,连续时间机制参考,代码可查
+SSSD,TMLR 2022,S4+条件扩散,条件掩码用于去噪插补,插补和尾段预测,"METR-LA/PEMS-BAY/Solar/ETTm1等",随机/MNAR/blackout,重要S4缺失基线但协议需区分,完整代码公开
+TIMBA,arXiv 2024,双向Mamba+扩散+GNN,条件插补框架中的掩码,时空插补,"AQI-36/METR-LA/PEMS-BAY",块/散点/历史掩码,同数据场景但非因果预测,预印本且代码匿名
+GraphS4mer,CHIL 2023,S4+动态图学习,无专门缺失机制,生理信号分类,EEG/PSG/ECG,未以缺失为目标,仅图SSM组合参考,论文公开
+STG-Mamba,arXiv 2024,Mamba+时空图模块,无专门缺失机制,时空未来预测,"PEMS04/KnowAir/HZ-Metro",常规完整输入,时空骨干参考,代码公开
+S-Mamba,Neurocomputing 2025,Mamba沿变量维扫描,无专门缺失机制,一般多变量预测,"ETT/Electricity/Traffic/Weather/PEMS等",常规完整输入,预测骨干参考；非时间扫描Mamba,代码公开
+TimeMachine,ECAI 2024,四分支Mamba,无专门缺失机制,长时预测,通用公开预测基准,常规完整输入,多尺度骨干参考,代码公开
+SpaceTime,ICLR 2023,companion离散SSM,无专门缺失机制,长时预测,Informer等公开预测任务,常规完整输入,状态参数化参考,论文公开
+S5,ICLR 2023,MIMO SSM,无专门缺失机制,长序列建模,长程序列基准,常规完整输入,S4工程替代层参考,代码公开

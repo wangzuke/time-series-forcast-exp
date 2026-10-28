@@ -1,0 +1,698 @@
+                                                               Uncertainty-aware Traffic Prediction
+                                                                       under Missing Data
+                                                                      Hao Mei                                                         Junxian Li
+                                              School of Computing and Augmented Intelligence                    Faculty of Electronic and Information Engineering
+                                                          Arizona State University                                           Xi’an Jiaotong University
+                                                                Tempe, US                                                          Xi’an, China
+                                                              hmei7@asu.edu                                                 ljx201806@stu.xjtu.edu.cn
+
+                                                                    Zhiming Liang                                                  Guanjie Zheng
+arXiv:2309.06800v5 [cs.LG] 29 Nov 2023
+
+
+
+
+                                             Faculty of Electronic and Information Engineering             School of Electronic Information and Electrical Engineering
+                                                          Xi’an Jiaotong University                                        Shanghai Jiaotong University
+                                                                Xi’an, China                                                     Shanghai, China
+                                                        zhimingliang@stu.xjtu.edu.cn                                           gjzheng@sjtu.edu.cn
+
+                                                                       Bin Shi                                                        Hua Wei∗
+                                             Faculty of Electronic and Information Engineering                   School of Computing and Augmented Intelligence
+                                                          Xi’an Jiaotong University                                          Arizona State University
+                                                                 Xi’an, China                                                      Tempe, US
+                                                              shibin@xjtu.edu.cn                                                 hwei27@asu.edu
+
+
+
+
+                                            Abstract—Traffic prediction is a crucial topic because of its                             I. I NTRODUCTION
+                                         broad scope of applications in the transportation domain. Re-
+                                         cently, various studies have achieved promising results. However,         Traffic prediction is an important problem in urban comput-
+                                         most studies assume the prediction locations have complete
+                                                                                                                ing with numerous applications ranging from urban mobility
+                                         or at least partial historical records and cannot be extended
+                                         to non-historical recorded locations. In real-life scenarios, the      systems to autonomous vehicle operations [1], [2]. In recent
+                                         deployment of sensors could be limited due to budget limitations       years, the availability of large-scale traffic datasets, coupled
+                                         and installation availability, which makes most current models         with advancements in information collection infrastructures,
+                                         not applicable. Though few pieces of literature tried to impute        has led to increased attention and analysis of these datasets
+                                         traffic states at the missing locations, these methods need the data
+                                                                                                                [3]–[5]. Notably, significant progress has been made in traf-
+                                         simultaneously observed at the locations with sensors, making
+                                         them not applicable to prediction tasks. Another drawback is the       fic prediction accuracy, primarily driven by data-driven ap-
+                                         lack of measurement of uncertainty in prediction, making prior         proaches and the proliferation of deep learning models. For
+                                         works unsuitable for risk-sensitive tasks or involving decision-       instance, Ma et al. [6] leverage Convolutional Neural Networks
+                                         making. To fill the gap, inspired by the previous inductive            to model spatial correlations, while Liu et al. [7] employ Graph
+                                         graph neural network, this work proposed an uncertainty-
+                                                                                                                Neural Networks to capture spatiotemporal dependencies using
+                                         aware framework with the ability to 1) extend prediction to
+                                         missing locations with no historical records and significantly         the diffusion mechanism.
+                                         extend spatial coverage of prediction locations while reducing            Despite the promising results achieved in recent studies on
+                                         deployment of sensors and 2) generate probabilistic prediction         traffic prediction, there are two main limitations in most exist-
+                                         with uncertainty quantification to help the management of              ing works. Firstly, many assume that all prediction locations
+                                         risk and decision making in the down-stream tasks. Through
+                                         extensive experiments on real-life datasets, the result shows our      are equipped with sensors and can access historical data. How-
+                                         method achieved promising results on prediction tasks, and the         ever, in real-life scenarios, due to budget constraints or limited
+                                         uncertainty quantification gives consistent results which highly       accessibility, it is common for specific locations of interest
+                                         correlated with the locations with and without historical data. We     to be absent from sensor coverage. Consequently, existing
+                                         also show that our model could help support sensor deployment          prediction models only apply to locations with historical data
+                                         tasks in the transportation field to achieve higher accuracy with
+                                         a limited sensor deployment budget.                                    observable, limiting prediction capabilities at locations missing
+                                            Index Terms—1. Traffic prediction, 2. Data mining 3. Uncer-         historical observation. There is a critical need for models that
+                                         tainty quantification                                                  can forecast observable and missing locations. While some
+                                                                                                                methods have focused on the kriging problem, which involves
+                                                                                                                data imputation using surrounding location data [3], [8], [9],
+                                           *Corresponding author.                                               these approaches require simultaneous access to current data
+and cannot be directly applied to predict future data.                                    II. R ELATED W ORK
+   Secondly, most current traffic prediction studies primarily
+                                                                     A. Traffic Prediction
+report the accuracy of their models, neglecting the crucial as-
+pect of prediction uncertainty. In many downstream tasks, es-           Traffic prediction has been a challenging problem due to the
+pecially those involving risk management or decision-making          complex dependencies in the time and space domain. Recently,
+based on prediction results, the quantification of uncertainty       with the help of data-driven approaches, many successes
+is essential in determining whether a method can be imple-           have been achieved and significantly reduced the gap for its
+mented in real-life. Failure to assess potential risks can lead      application for downstream tasks in real life. However, most of
+to significant costs in high-stakes transportation tasks. Some       these methods are either suffering from either strong stationary
+recent works have attempted to address this issue. For exam-         or linear dependencies assumptions [12], [13], making them
+ple, Wu et al. [10] quantified uncertainty in spatiotemporal         not suitable for real-life tasks with highly complicated and
+prediction tasks by discussing different uncertainty quantifi-       stochastic characterization in nature. Deep learning mod-
+cation methods from frequentist and Bayesian perspectives.           els also provide promising results and more flexibility for
+Similarly, Prob-GNNs [11] proposed a probabilistic graph             spatiotemporal dependencies modeling. Convolutional neural
+neural network framework and investigated various proba-             networks(CNN) have been used to model the regular 2-D
+bilistic assumptions specific to ride-sharing demand tasks.          structured traffic network in the transportation domain and
+However, these methods assume the availability of historical         have promising results in predicting crowd flow [14]. Graph
+data at each location for evaluating prediction uncertainty.         neural network is another counterpart to model more complex
+Importantly, locations missing historical observation exhibit        spatial structure [15]. The graph convolutional network (GCN)
+distinct topology properties within their surrounding sub-           proposed by Bruna et al. [16] first bridged the gap between
+graphs, which locations with historical data may not ade-            the deep neural network and the graph spectral theory [16] and
+quately represent. As a result, predictions at these locations       then introduced in the traffic prediction problem by [17], [18].
+are characterized by low confidence and need to be discerned         Graph attention network (GAT) is an alternative approach that
+among all points of interest. Thus, there is an urgent need for a    can learn the attentional weights on each graph node and is
+new framework that enables predictions while uncovering the          broadly used in spatiotemporal forecasting problems [19].
+spatiotemporal pattern of uncertainty and extends to locations          Though plenty of research exists in solving the traffic
+missing historical observation.                                      prediction problem, most rely on the assumption that the
+   Motivated by the concept of inductive graph neural networks       historical data of each location of interest in the prediction
+[9], initially employed to solve spatial kriging problems, we        task are accessible. However, in real life, this assumption does
+adapt this idea to the context of traffic prediction and pro-        not always hold. One way to solve this problem is to krige
+pose an Uncertainty-awarded Inductive Graph Neural Network           the unrecorded locations and then forecast the future time
+(UIGNN) to attack this problem. Our framework can extend             point. Some statical models, like using mean or zero to fill the
+to new locations missing historical data while integrating           unrecorded locations or regression-based models [20], matrix
+uncertainty quantification methods to assess predictions com-        factorization [21], are also used. However, the completed
+prehensively. The details description is shown in Fig. 1. The        data used in training the prediction model will also bring
+main contributions of our proposed framework are as follows:         in errors and weaken the prediction accuracy at locations
+• Our work is the first to investigate traffic prediction problems   with historical data. To avoid these problems, inspired by
+concerning the ability to be spatially extended to locations         the inductive graph neural network [9], we proposed a new
+missing historical data in the road network. Our proposed            framework that can directly execute prediction tasks at both
+single-step model (directly predict) in traffic prediction prob-     locations with historical data and locations whose historical
+lems outperforms the other two-step (impute then predict)            data are not accessible because of reasons like sensors not
+methods on the missing data locations. At the same time, keep        deployed at these points of interest.
+the same level of performance at observable data locations.
+• To investigate the model performance at different locations,       B. Inductive Graph Learning
+we integrate uncertainty quantification to evaluate the predic-         In recent years, graph neural network has attracted much
+tion quality at each road network location since the error-based     attention due to their high expressiveness in capturing intricate
+metric is not accessible at missing data locations. The result       relationships and dependencies of structured data and their
+shows the uncertainty reported by our model can successfully         flexibility to model irregular data [22]–[24]. After the proven
+distinguish observable and missing locations and reflect the         of both transductive and inductive representation capabil-
+prediction accuracy. And we also justify our model in the            ity [25], researchers have developed many inductive GNN
+downstream active sensing tasks by using uncertainty to assist       methods in applications such as recommendation systems from
+deployment of sensors.                                               learning embedding of each node in a fixed graph to learning to
+• We investigate our model on three real-world datasets with         embed of node features that can be generated to unseen nodes
+historical data observable at partial locations. The result shows    [26]. For example, Zhang et al. [27] train a GCN by masking
+our model performs better than two-step approaches and is            a part of the observed user and item embedding and learning
+effective in real-world sensor deployment tasks.                     to reconstruct the masked ones. And Zeng [25] trains GNNs
+                   (a) Training procedure of UIGNN                                             (b) Prediction procedure of UIGNN
+Fig. 1. Framework of UIGNN. (a) The missing locations indexes are 7,10. And during training, we random sample sub-graph and mask locations 4,6 (upper
+sample) and train GNN to impute mask locations from time t − T to t and predict all sampled locations at t + ∆t and quantify the prediction uncertainty.
+(b) During prediction, UIGNN predicts both missing and observable locations at time t + ∆t and quantifies the prediction uncertainty.
+
+
+
+for large graphs by sampling and learning from the subgraph.                 investigate from both Bayesian and frequentist perspectives
+In inductive learning, learning node embedding through the                   on our spatiotemporal forecasting problem. And we pay more
+structural properties of a node’s neighbor properties instead of             attention to the evidential deep learning approach in the
+learning each node’s embedding in a fixed graph is suitable.                 Bayesian framework as it can distinguish the OOD samples
+It can be easily adapted to the prediction problem at locations              in the data, which can best help explain the high uncertainty
+with and without historical data, as we sample subgraphs                     predictions in prediction locations with no historical data.
+at locations with historical data and train inductive GNN
+models. Then the trained GNN model could treat locations                                                   III. P RELIMINARY
+without historical data as unseen nodes and embed the unseen                    In this section, we first introduce definitions and the original
+nodes using the learned topological structure of these node’s                problem statement of traffic prediction problems following
+neighborhoods and the distribution of the node features in the               the previous works [7]. Then we will extend the original
+neighborhood [25]. Thus in this paper, we take the setting from              traffic prediction problem to missing historical data locations
+the previous inductive graph neural network [9] and extend                   and give a formal problem statement. All the notation is
+the task from spatiotemporal kriging into the prediction tasks               summarized in Table I for brevity.
+with the ability to extend the perception to locations without
+historical data.                                                                                                 TABLE I
+                                                                                                                N OTATIONS
+C. Uncertainty Quantification
+                                                                                 Notations                               Descriptions
+   Research in uncertainty quantification related to deep learn-                    N                 Number of locations of interest in the network
+ing has become a thriving field in recent years. There are two                    No , Ne                Number of observable/missing locations
+                                                                                                       Nodes representing the locations of interest
+mainstream uncertainty quantification methods, mostly beyond                         V
+                                                                                                                    in the traffic network
+consideration. The first category is the Bayesian method which                                        Adjacent matrix representing the connectivity
+                                                                                     A
+models the posterior distribution of the network parameters                                                         of the traffic network
+optimized with the data. Methods including dropout [28], [29],                                        Adjacent matrix representing the connectivity
+                                                                                    Ao
+                                                                                                                   of observable locations
+ensembling [30], and other approaches [31], [32] are taken                        G(·, ·)                  Graph representation of the network
+to quantify the variance and place the priors over network                        Vo , Ve                 Nodes at observable/missing locations
+weights using variational inference [33]. A recent method,                                              Node features at observable locations and
+                                                                                   X(t)                    0 at missing locations at time step t
+the evidential deep learning method, alternatively trains a
+                                                                                        (t)
+deterministic model and places the uncertainty before the                          Xo               Node features at observable locations at time step t
+predictive distribution instead [34] and can simultaneously                       (t)         (t)     Predicted node features at observable/missing
+                                                                                X̂o , X̂e                          locations at time step t
+detect OOD and adversarial data. The second category is the                         h(·)            The function to predict future node features at Vo
+frequentist uncertainty quantification methods which focus on                                         The function to predict future node features at
+                                                                                    f (·)
+the robustness, not the variations in the data [10]. Existing                                               all locations of interest Vo and Ve
+methods quantify uncertainty by taking the prediction intervals
+as the prediction objective [35] or with bootstrapping using                    Suppose we have predefined N locations of interest in the
+the influence function [36] for example. In this work, we                    traffic network which are deemed critical and have a strong
+desire to acquire timely information. We present this traffic         challenging due to the lack of prior knowledge and the com-
+network as a directed graph G = (V, A), where V is a set              plex spatial dependencies on the traffic network. To overcome
+of nodes and the cardinality of the nodes |V| is N . A is the         these problems, we adopt the inductive graph neural network,
+adjacent matrix describing the connectivity of the network G          which is used initially in kriging tasks, and extend it to traffic
+and A ∈ RN ×N .                                                       prediction. At the same time, we integrate the uncertainty
+   In real life, due to the accessibility of sensors at some given    quantification component into our prediction model to evaluate
+locations, No out of N locations, which are a subset Vo ⊆             the confidence of the prediction in the absence of ground truth
+V (also known as the observed locations) represented on G             data. The proposed uncertainty-aware inductive neural network
+have sensors deployed and historical data Xo ∈ RNo ×P are             (UIGNN) framework can predict traffic state at observable
+observable, where P is the number of features of each node.           locations with historical data and extend prediction perception
+  (t)
+Xo represents the traffic state observed at time t and location       to missing locations with no historical data while quantifying
+Vo . And the sub-graph of these observed locations is described       the uncertainty of predictions. In the rest of this section, we
+as Go = (Vo , Ao ), where Ao is the adjacent matrix describing        will briefly introduce the UIGNN framework.
+the connectivity between observed locations. For the rest of the
+locations of interest with no historical records at Ve ⊆ V (also      A. Traffic Prediction with Missing Locations
+known as the missing location), we denote historical data at             In the setting defined by Problem 2, the model f (·) should
+              (t)                                                     be applicable to predict observed locations Vo and missing
+time t as Xe ∈ RNe ×P , where Ne is the number of missing
+locations.                                                            locations Ve . Most current methods in conventional traffic
+                                                                      prediction problems cannot be directly used in this scenario
+Problem 1 (Traffic Prediction Problem). In the traffic pre-           because of the lack of training data at the missing locations.
+diction problem, at time step t, we have T length of historical       To stress this problem, inspired by graph sampling-based
+                (t−T +1)    (t−T +2)            (t)
+traffic state Xo         , Xo        , · · · , Xo at locations Vo     inductive learning methods [37] and its recent application
+and the network structure G, the goal is to learn a function          in spatiotemporal kriging problem [9], we take an inductive
+h(·) that takes the historical traffic states and graph structure     learning method that models the traffic network with graph
+and predict the traffic states at locations Vo at the future time     neural network and take a sampling-based method to learn
+t + ∆t:                                                               the representation of nodes in the sampled graph and gener-
+                                                h(·)                  alize those representations to unseen nodes and graphs. The
+      [X(t−T
+        o
+             +1)
+                 , Xo(t−T +2) , · · · , X(t)          (t+∆t)
+                                         o , G] −−→ X̂o        (1)
+                                                                      inductive graph neural network (inductive GNN) can learn
+   In real-life scenarios, due to budget or physical restrictions,    the topological structure and distribution of the node features
+only part of the locations are observable and have accessibility      in the neighborhood and is thus applicable to graphs both
+to historical records. However, the information in other miss-        with and without node features w.r.t observable locations and
+ing locations is also critical and of interest; for example, the      missing locations, respectively. In this work, we follow the past
+predicted future speed could help plan routines for vehicles          IGNNK [9] and extend the task from kriging node features
+                                                                         (t)         (t−T +1)     (t−T +2)            (t)
+or to control traffic signals for better traffic regulation; we       X̂e = g(Xo              , Xo         , · · · , Xo , G), where g(·) is
+need to predict traffic state at both observable locations Vo and     the learned function to kriging the missing locations, into the
+extend the perception to missing locations Ve . Based on the          traffic prediction with missing location problem. Below are the
+differences mentioned above, we extend the original problem           details of how we take the inductive learning method and train
+to the traffic prediction with missing locations problem and          the model to learn the node representation only on observable
+formally define it as follows:                                        locations and generalize the learned node representation to
+                                                                      predict future traffic states on observable and missing locations
+Problem 2 (Traffic Prediction with Missing Locations                  the model has not seen.
+Problem). In the traffic prediction with missing locations               1) Inductive Graph Neural Network: To overcome the lack
+problem, following the original setting [7], we have the histor-      of historical data and learn a node representation generalized
+ical observations at locations Vo and the network structure. In       to Ve , we follow the implementation of IGNNK to train an
+the new problem, the goal is to learn a function f (·) that takes     inductive graph neural network by sampling sub-graph node
+the historical traffic state at locations Vo and traffic network      features at Vo . Following the inductive learning approach,
+graph structure G and predicts the future traffic state at both       there is an assumption that the observable locations represent
+observed locations Vo and missing locations Ve at the future          the overall population distribution, and the message-passing
+time points t + ∆t:                                                   mechanism could be generated to unseen locations Ve .
+                                        f (·)                            Considering our task is to predict traffic network state with
+[X(t−T
+  o
+       +1)
+           , X(t−T
+              o
+                   +2)
+                       , · · · , X(t)           (t+∆t)
+                                  o , G] −−→ [X̂o      , X̂(t+∆t)
+                                                           e      ]   only partial locations observable, during training, our inductive
+                                                               (2)    model should also be able to learn node representation with
+                                                                      part of node features available such that the learned model
+                         IV. M ETHOD
+                                                                      could predict all locations V with only historical data at
+  While traffic prediction is a well-studied field, making            observed locations Vo . Thus we take a sampling strategy to
+prediction extendable to locations with no historical data is still   train our model on Gs ⊆ Go instead of Go .
+   2) Random Sample of Sub-graph: To prepare the sample               Algorithm 1: Sub-graph sampling and random mask
+for training GNN, we first generate random integers ns ≤ no ,         for GNN training
+which is the number of sampled nodes Vs ⊆ Vo . And next,                Input: Historical data X of the traffic network, graph
+we split sampled nodes Vs into two groups Vr and Vm                            structure of traffic network G(V, A), initialized
+with carnality of |Vr | = nr , |Vm | = nm , nr + nm = ns .                     GNN model f (·)
+And we reserve the observed historical data at Vr and mask              Output: trained GNN model f (·)
+the observed historical data at Vm to make node features             1 for i = 1,2, . . . , I do
+partially accessible. Thus we have the set of sampled nodes,         2     create sampl mask list Ml = [], adjacent matrix list
+reserved nodes, and masked nodes in the network following                    Al = [], feature list Xl = [], target list Yl = []
+the relationship: Vs = Vr ∪Vm . To make annotation simple, we        3     for s = 1, 2 . . . , S do
+use V ⊂ G with slight abuse to represent the node V itself and       4         Generate number nr , nm
+also its index in the graph G. For example, i ∈ Vr ⊂ Gs means        5         Sample nr of nodes Vr ⊂ Vo , nm of nodes
+the set of index belongs to observed nodes in the sampled                        Vm ⊂ Vo \ Vr and Vs = Vr ∪ Vm
+graph Gs .                                                           6         Construct adjacent matrix As by selecting
+   Then we generate the mask matrix Ms ∈ Rns ×P with                             entries at Ai,j , where i, j ∈ Vs ⊂ G, and
+                            (                                                    construct sub-graph Gs = (Vs , As ).
+                              1, if i ∈ Vr ⊂ Gs ,                                Al .append(As )
+                Ms [i, :] =                                 (3)
+                              0, otherwise                           7         Generate mask matrix Ms with 1 at row
+                                                                                 i ∈ Vr ∈ Gs and 0 at row j ∈ Vm ⊂ Gs ,
+and construct adjacent matrix As of sub-graph Gs by selecting                    Ml .append(Ms )
+entries at Ai,j of A, where i, j ∈ Vs ⊂ G. And the sampled 8                   Random sample time step t and obtain node
+graph could be represent as Gs = (Vs , As )                                                    (t−T +1:t)
+                                                                                 features Xs               at Vs for T historical
+                                                        (t−T +1:t)                                        (t+∆t)
+   We finally randomly sample time step t and pick Xs                            length and target Xs            ,
+                                                                                                  (t−T +1:t)                   (t+∆t)
+at Vs from t−T +1 to t time interval, where T is the length of                   Xl .append(Xs               ), Yl .append(Xs         )
+the historical data taken by the model as input node features 9            end
+       (t+∆t)
+and Xs         as the target.                                      10      Train GNN model f (·) with sampled data Ml , Al ,
+   We iterate for I iterations, and in each iteration, we sample             Xl , Y l .
+                                                                   11 end
+sub-graph Gs for S times and train the GNN model f (·)
+with the samples described above. The detail is shown in
+Algorithm 1. Then we apply the trained f (·) in the prediction
+task on the graph G.                                                , where ⊗ is the Hadamard product. Since H0 [j, :], wherej ∈
+   3) Diffusion Graph Convolutional Network: To capture             V  s ⊂ Gs is all 0 after masked by Ms , we follow [9] and
+the stochastic nature of spatiotemporal dependencies in the         define  the second layer as:
+directional network, we follow the past work and adopt                            XK
+Diffusion Graph Convolutional Network [38] (DGCNs) as the               H2 = σ(         Tk (Āf )H1 Θkb,1 + Tk (Āb )H1 Θkf,1 ) + H1 (6)
+basic building block for the GNN architecture. The DGCNs                          k=1
+model the message passing on the GNN as a diffusion process where σ(·) is the nonlinear activation function for the DGCN
+that explicitly captures the stochastic nature of the transition layers. We add the H1 to the H2 since it contains the infor-
+dynamics and is theoretically and experimentally justified mation at the Vm locations with no sensors. The prediction
+applied to spatiotemporal forecasting problems. The basic target is the output of the last layer from DGCN, changing
+building block could be represented as:                             into the right shape through a fully connected layer. During
+                  K
+                                                                      training, the forward and backward transition adjacent matrix
+         Hl+1 =
+                  X
+                        Tk (Āf )Hl Θkb,l + Tk (Āb )Hl Θkf,l   (4)   is Ās calculated from As for learning the graph representation
+                                                                                                    {1,2,··· ,K}
+                  k=1
+                                                                      and parameter {Θkf,l , Θkb,l }{1,2,··· ,L} , where K is the order of
+                                                                      Chebyshev polynomial and L is the number of layers of GNN
+where Āb is A normalized across each row and Āb =                   model.
+Āf .transpose(). The two matrices represent the forward and             Since our task is to predict future traffic state on observable
+backward transition matrices, respectively. We have Tk (Ā) =         and missing locations on G, the training procedure on the sam-
+2ĀTk−1 (Ā) − Tk−2 (Ā) and T0 (Ā) = I, T1 (Ā) = Ā for the        pled network Gs should be able to predict reserved locations
+first and second order, where k is the order of the Chebyshev         observable after masking and recover locations masked from
+polynomial used in the DGCN block. And the Θkf,l and Θkb,l            observation such that the message passing mechanism could
+are learnable parameters of GNN model. The input layer in             be generalized to all nodes. As a result, the learned inductive
+our traffic forecasting problem is                                    GNN model trained on Gs could be generalized to network
+                                                                      G. To achieve this, we design the prediction loss function as
+                         H0 = Xs ⊗ Ms                           (5)   follows:
+                                                                           at both observable and missing locations, since it is most
+          X                                                                compatible with our Problem 2 setting.
+ Jpre =         Loss(Xst+∆t , MLP(f (Xs(t−T +1:t) ⊗ Ms , As )))
+                                                                              Intuitively, the inductive graph neural network enables our
+          s∈S
+                                                         (7)               model to predict future traffic states in both observable and
+where MLP means the fully connected layer for final outputs.               missing locations; However, due to the absence of node fea-
+  To keep more structure and feature information, we also                  tures at missing locations, the information may be lost and thus
+minimize the difference between recovered data and initial                 bring in additional data uncertainty compared to observable
+model inputs by defining a recovery loss as follows:                       locations with node features. Besides, due to the topological
+                                                                           structure and distribution of node features in the neighborhood
+                 X                                                         in the traffic network graph, some of the nodes’ representation
+       Jrec =          Loss(f (X(t−T
+                                s
+                                     +1:t)
+                                           ⊗ Ms , As ), H0 )         (8)   may not be well-represented during the training process and,
+                 s∈S                                                       as a result, have higher model uncertainty compared to other
+And we can define our total loss as follows:                               locations. And finally, the out-of-distribution nodes at missing
+                                                                           locations will have high prediction uncertainty.
+                         Jtotal = Jpre + αJrec                       (9)      To quantify the uncertainty at each location, we incorporate
+where α is a hyperparameter for balancing the two loss                     the uncertainty quantification layer with the output layer and
+functions.                                                                 output the negative log-likelihood along with the predicted
+                                                                           traffic states.
+B. Uncertainty Aware Traffic Forecasting
+                                                                           C. Computational Complexity Analysis
+    In this section, we will introduce the limitations of most
+current models based on point estimation [10] in our Problem 2                To demonstrate the efficiency of our proposed model, we
+and propose a new method that can predict the future traffic               discuss the advantage of taking diffusion graph neural network
+state and quantify the uncertainty at each location in the traffic         (DGCN) as our model backbone here. In general, computing
+network and show how the down-stream tasks can benefit from                a convolution on the graph is expensive. However, since G
+it.                                                                        is sparse due to the nature of traffic network connection
+    1) Model Uncertainty on Sensor Network: The past works                 and use of Gaussian thresholded kernel, Equation 4 could
+in traffic prediction problems usually use point estimation                be computed efficiently using O(K) recursive sparse-dense
+rather than probabilistic prediction with built-in uncertainty.            matrix multiplication [7]. The overall total time complexity
+However, accurate point estimations often require evaluation               is O(K|E|) ≪ O(|V 2 |), which makes our model able to be
+metrics like root mean square error (RMSE), which is not                   deployed on real-time hardware with a limited computational
+retrievable at missing locations with no historical data. As a             resource.
+result, model performance can only be evaluated at observable
+                                                                                         V. E XPERIMENTAL EVALUATION
+locations, and we will have no sense of the model performance
+at missing locations. And the resulting predictions will not                  To evaluate our model’s performance in the Problem 2 and
+be accredited in the downstream tasks that need assessing                  justify that our new problem setting holds significant relevance
+potential risks and involve decision-making.                               and could serve as guidance for different downstream tasks,
+    To overcome the limitations of point estimation and asses              we focus on the following research questions:
+sable at missing locations, we need to quantify the uncertainty               RQ1: Comparing to other approaches applicable in our
+at different locations of traffic networks, especially at the              problem setting, how does our model UIGNN perform?
+extended missing ones. Specifically, we would like to output                  RQ2: Does our model veritably reflect the prediction un-
+the uncertainty value along with the prediction value at each              certainty at different sensor locations?
+location:                                                                     RQ3: Does the model trained in our new problem setting
+                                                                           applicable and guide the downstream task?
+                                          f (·)
+[X(t−T
+  o
+       +1)
+           , X(t−T
+              o
+                   +2)
+                       , · · · , X(t)          (t+∆t)
+                                  o , G] −−→[X̂o      , X̂(t+∆t)
+                                                          e      ],        A. Dataset
+                                                  [Uo(t+∆t) , U(t+∆t) ]       We conduct our experiments on three real-world, large-
+                                                               e
+                                                                   (10)    scale traffic datasets. METR-LA: This dataset contains traffic
+                                                                           information from loop detectors located in the Los Angeles
+                (t+∆t)     (t+∆t)
+where the Uo       , Ue      are uncertainty at observable and             highway road net. We follow the settings of IGNNK [9] and
+missing locations respectively.                                            select 207 sensors with a 6-month record in total to construct
+  Any uncertainty quantification method applies to our pro-                a spatiotemporal graph. PeMS-BAY: It’s a dataset similar
+posed framework as long as it can quantify the uncertainty of              to METR-LA, collected from highway networks with 325
+the deep neural network in regression tasks such as evidential             sensors. Different from METR-LA, the weighted adjacency
+deep regression [34] (EDL), Dropout [28] (Dropout), Quantile               matrix is not constructed by latitude and longitude for the
+Regression [39] (QR), etc. In this paper, we use EDL to                    sensors listed directly, but by matching absolute postmile
+quantify model uncertainty and investigate the uncertainty                 markers to find connectivity information. SeData: This dataset
+is collected from 323 locations with loop detectors on highway          the learning rate to 1e-4, and train the UIGNN model for 750
+road net, following the same format as METR-LA. Its adja-               epochs. We choose time slice h=24 for METR-LA, PeMS-bay,
+cency matrix is a simple binary matrix representing whether             and SeData.
+two nodes are connected or not.                                            3) Metrics: To compare our model and other baseline
+   In these datasets, we choose 70% of the data for training and        model performance, we use mean RMSE at 30 mins for all
+the rest for validation and testing. During the sampling period,        three traffic speed datasets and split the locations into two
+we randomly select a subset of sensors as unknown ones                  groups: observed and missing. To directly show our prediction
+removed from the full set(the number changes when using                 and uncertainty quantification results, we report the root mean
+different datasets). This removed set is defined as missing             square error (RMSE) and negative log-likelihood (NLL) loss
+locations (Ve ) without historical data available and cannot be         of all sensors in our experiments and split them into two
+used as the target in training. And the remained set is denoted         groups: observable and missing locations. We report 15-, 30-
+as the observable locations (Vo ) with historical data available        and 60-min results for all three datasets to investigate their
+during training and inference.                                          prediction performance at different time scales.
+   The adjacent matrix is computed with the thresholded
+                                                                        C. Implementation of Downstream Task
+Gaussian kernel [40], paired wisely from the distances along
+the road network between the two locations to construct the                To answer RQ3, we evaluate our model for the active
+traffic sensor network graph. It is related to the direction of         sensing downstream task in a traffic sensor network [42], [43].
+                                                 dist(vi ,vj )2         This task involved deploying sensors at a subset of locations
+the road network. Each entry Ai,j = exp(−             σ2        ) and
+trucked to be 0 if dist(vi , vj ) ≤ κ, where σ is the standard          and gradually adding sensors based on the model’s output at
+deviation of distances and κ is the threshold.                          each step. Due to budget constraints and communication costs,
+                                                                        this active sensing scenario is crucial in real-life situations, and
+B. Experiment Setup                                                     the current traffic prediction problem has not yet been stressed.
+   1) Baselines: Since our problem predicts future traffic state           The experiment is conducted on the METR-LA dataset and
+with historical data at partial locations, this is of major differ-     predicts the traffic state for the upcoming 30 minutes. During
+ence to past traffic prediction problems, and most past models          the initial phase, we randomly selected 50 sample locations
+cannot be directly adopted in this scenario. Thus, we take              from 207 locations in the traffic sensor network. These selected
+a two-step approach first, predict the historical traffic state at      locations Vo among all locations V are designated as ”deployed
+locations without sensors (missing locations) and then forecast         with sensors,” indicating that historical data was observable.
+the future traffic state based on the completed historical data.        We proceeded to train our model using the available data from
+To make the comparison fair, we use the diffusion graph                 these 50 locations. In the active sensing phase, new sensors are
+convolution neural network (DGCN) as the building block, the            available with a fixed budget (10 sensors are deployed at each
+same as our UIGNN model. We pick 1) Kriging + DGCN:                     step). At each stage, we sample ten new locations from V \ Vo
+kriging is a spatial interpolation model [3] widely used in the         based on the highest uncertainty indicated by our model. We
+geostatistical field to recover data at missing locations and           then made the historical data available for these newly selected
+then use DGCN to forecast future traffic state at time t + ∆t.          locations. Subsequently, we retrained our model using both the
+We use the ordinary Kriging method, and the correlation is              previously observable locations and the newly acquired data.
+solely dependent on the network road distances instead of the
+                                                                                        VI. E XPERIMENTAL RESULTS
+spatial distance since it is on a road network structure. 2)
+KNN + DGCN: K spatially nearest neighbors of the missing                A. Overall Performance of UIGNN (RQ1)
+locations are aggregated and averaged to estimate their traffic            To evaluate traffic prediction performance, we separately
+states. And the prediction step is the same as Kriging + DGCN.          report the results of our method and four other two-step
+3) ST-MVL + DGCN: ST-MVL [41] is a spatiotemporal                       approaches on three traffic speed datasets in terms of root
+multiview-based learning algorithm to recover missing data              mean square error (RMSE), mean absolute error (MAE). We
+of geo-sensory time series data. In our setting, since missing          additionally measure the coefficient of determination (R2 ) to
+locations, the historical data is unavailable; we only use spatial      describe the proportion of the variation in prediction errors
+view to complete data. The prediction step is the same as the           over historical mean values.
+previous methods. 4) IGNNK + DGCN: We first train an                       The result in Table II shows that our UIGNN achieves the
+IGNNK model to complete data at missing locations following             best or second best performance in all three datasets compared
+the original work procedure [9]. The prediction step is the             to all two-step-based (first impute then predict) approaches on
+same as previous methods. Notice matrix factorization-based             both observable and unobservable locations. On unobservable
+methods do not apply to our problem since they need future              locations, our result shows UIGNN can accurately forecast
+traffic states at observable locations to recover the missing           future traffic states at locations without any historical records
+locations at the test dataset. Thus it is not fair to compare.          in the sensor network. While on observable locations, it also
+   2) Hyperparameters: The dimension of the hidden layers               achieves promising results without hurting its accuracy on
+of our model is set to 100. We implement all our batch sizes            the traditional traffic prediction problem. We also find the
+in our experiments set to 4. We use the Adam optimizer, set             performance of two-step approaches largely relies on the
+                                                                  TABLE II
+   OVERALL PERFORMANCE OF UGINN AND OTHER BASELINE METHODS ON 30 MINS PREDICTION TASK .F OR MAE AND RMSE, THE LOWER , THE
+  BETTER . F OR R2 , THE HIGHER , THE BETTER . T HE B EST AND SECOND BEST PERFORMANCES ARE HIGHLIGHTED . ‘’-’ MEANS THE PERFORMANCE
+                                                              CANNOT CONVERGE .
+
+
+                                                                                     Method
+            Dataset       Location    Metric
+                                               UIGNN     Kriging+DGCN           KNN+DGCN    ST-MVL+DGCN                           IGNNK+DGCN
+                                      MAE       6.5677      7.5525                                  7.2840          7.5547             7.2916
+              METR-LA
+
+
+                         Observable   RMSE      3.9850      4.1465                                  4.0180          4.3918             4.0263
+                                       R2       0.9141      0.8917                                  0.8992          0.8916             0.8991
+                                      MAE      10.5004      16.7824                                 14.4969        11.8830            10.8898
+                          Missing     RMSE      7.3052      12.0907                                 10.5916         8.0088            7.7083
+                                       R2       0.7997      0.3950                                  0.6214         0.7456             0.7865
+                                      MAE      4.8879         —                                     4.4959          4.5611            4.4065
+              PeMS-BAY
+
+
+
+
+                         Observable   RMSE     1.9735         —                                     2.1616          2.2434            2.1282
+                                       R2      0.8062         —                                     0.8006          0.7948            0.8085
+                                      MAE      6.9762         —                                     7.9449         17.6647            6.9922
+                          Missing     RMSE     4.1054         —                                     5.0034          9.8226            4.1738
+                                       R2      0.4518         —                                     0.3138         -4.5843            0.4688
+                                      MAE      6.4863       6.6840                                  6.7028         6.9860             6.5252
+                         Observable   RMSE     3.8114       3.9150                                  3.8350         4.2137             3.7636
+              SeData
+
+
+
+
+                                       R2      0.7299       0.7132                                  0.7116         0.6867             0.7281
+                                      MAE      8.1671       10.6495                                 12.3653        13.0136            7.8984
+                          Missing     RMSE     4.9139       7.0653                                  9.9310         7.6135             4.9779
+                                       R2      0.6103       0.2693                                  0.2567         0.0911             0.6002
+
+
+
+performance of the imputation model in the first step. While          locations have no node features, and the node representations
+on missing locations, since the imputed input is not accurate         are aggregated from the neighboring locations.
+and thus brings in errors in node representation learning hence          From Fig. 2 (d), we found the uncertainty successfully
+weakens the performance at these locations. Since the IGNNK           reflects model performance at both observed and missing lo-
++ DGCN method is a learning-based model and achieves                  cations, as error steadily decreases with epistemic uncertainty
+higher accuracy in the data imputation step. As a result,             decreasing.
+it outperforms other baseline models. And kriging+DGCN
+method cannot converge since the imputation error on missing                                     TABLE III
+locations is too large.                                                   P ERFORMANCE OF UIGNN ON 15 MINS , 30 MINS , AND 1- HOUR
+                                                                      PREDICTION TASKS ON THREE REAL - WORLD DATASETS . RMSE AND NLL
+B. Uncertainty on Sensor Network (RQ2)                                    REFLECT MODEL ACCURACY AND UNCERTAINTY, RESPECTIVELY.
+
+   One of the distinct advantages of the proposed method is
+                                                                                                                      RMSE                   NLL
+the capability to quantify uncertainties for its prediction. To                                        Time
+                                                                                                               Observable Missing     Observable Missing
+investigate the capability of uncertainty quantification of our
+                                                                          SeData PeMS-BAY METR-LA
+
+
+
+
+                                                                                                      15 min    3.2874       7.1424     5.1535    8.6832
+method at different sensor locations, we conduct experiments
+                                                                                                      30 min    3.9450       7.3052     5.5716    9.0121
+on three traffic datasets and report NLL and RMSE regarding
+                                                                                                      1 hour    5.0083       7.8019     6.3048    8.6404
+model uncertainty and accuracy at each location in Table III.
+The results show that observable ones have higher accuracy                                            15 min    1.6456       3.9945     3.5171    6.5895
+and less model uncertainty among all three datasets than                                              30 min    1.9735       4.1254     3.7642    7.0601
+missing locations. This is consistent with the detailed result                                        1 hour    2.7178       4.2870     5.1537    7.2614
+on the METR-LA dataset shown in Fig. 2 (a) and (b). Most of
+                                                                                                      15 min    3.1805       4.7916     6.2262    7.9262
+the missing locations (stars in the figure) have high RMSE and
+                                                                                                      30 min    3.8114       4.9139     6.8129    8.1601
+NLL compared to observable ones (dots in the figure). In Fig. 2
+                                                                                                      1 hour    4.8856       5.8468     7.6020    8.5669
+(c), we use normalized neighbor weights which reflect the
+distance between the location and its surrounding observable
+neighbors. The larger the weight, the closer this location is to
+its nearby observable locations; the result shows the epistemic       C. Case Study: Active Sensing Task (RQ3)
+uncertainty at observable locations is not affected by its neigh-       Fig. 3 shows the performance of 1-hour traffic prediction
+boring, while at missing locations, the epistemic uncertainty         on the METR-LA dataset under the uncertainty sampling
+negatively correlates with its neighboring weights. This is           method directed by the UIGNN model (blue lines) and random
+due to the node feature at available observable locations, and        sampling method (orange lanes):
+our GNN model can learn better node representations. And              • In random and uncertainty sampling methods, the RMSE
+at the missing locations, the result is weakened since these          decreases with the number of observable locations increasing,
+              (a) RMSE on METR-LA traffic network                                          (b) NLL on METR-LA traffic network
+
+
+
+
+  (c) Epistemic uncertainty distribution on different locations                (d) Relationship between RMSE and epistemic uncertainty
+Fig. 2. Model uncertainty of 30 mins task prediction task on different locations of the METR-LA road network. (a) and (b) shows RMSE and NLL on
+different locations of the road network, and the starts and dots mean missing and observable locations. Compared to observable locations, missing locations
+have higher error and model uncertainty. (c) shows the Epistemic uncertainty of predictions at different locations. Missing locations with more and closer
+observable neighbors have lower model uncertainty, and observable locations do not have this effect. (d) shows that the error increases with the epistemic
+uncertainty increasing in both observable and missing locations.
+
+
+
+and they finally achieve the same level of performance. This                   of these methods achieve the best performance at around
+shows the performance of both methods benefits from more                       100 observable locations. This is because of features at each
+training data as the traffic sensing network becomes complete.                 location, and few of its neighbors can approximate the future
+And the same level of performance of different methods is also                 traffic state accurately; thus, when nearly half of the locations
+explainable as in the final few steps, the observable locations                are observable, the forecasting model achieves the best per-
+of the two methods are highly overlapping.                                     formance. Since uncertainty helps the sensing network pick
+• At unobserved locations, the RMSE of the uncertainty                         up the most likely unseen data at high-uncertainty locations,
+sampling method decreases faster than the random sampling                      it does not provide much improvement at locations with data
+method at the beginning. This is because, at high-uncertainty                  already seen.
+locations, the topology of the locations in the sensing network
+and traffic states of its surrounding locations are more likely                                          VII. C ONCLUSION
+to be out-of-distribution (OOD) samples which the learned
+                                                                                  We investigate the traffic prediction problem in a realistic
+model has difficulty generalizing to [34], [37]. Picking at these
+                                                                               setting where data is missing at part of the locations. To extend
+locations will make our model learn from the unseen data, thus
+                                                                               prediction perception to these locations missing historical
+decreasing the RMSE even if it is exposed to limited locations.
+                                                                               records, we propose an uncertainty-aware inductive graph
+And random sample method cannot benefit from uncertainty
+                                                                               neural network that can: 1) predict future traffic state at both
+quantification at unobserved locations and is therefore exposed
+                                                                               observable locations and missing locations; 2) quantify the un-
+to these OOD data later than the uncertainty sampling method.
+                                                                               certainty of the prediction which can help evaluate the model
+As a result, the RMSE of this method decreases slower.
+                                                                               performance at both observable and missing locations. We
+                                                                               conduct extensive environments using three real-world datasets
+• At the observable locations, the RMSE of uncertainty and                     and testify our method performs better than intuitive solutions
+random sampling method have no major differences, and both                     based on twp-steps (impute then forecast) approaches. In
+                                                                                   [7] Y. Li, R. Yu, C. Shahabi, and Y. Liu, “Diffusion convolutional re-
+                                                                                       current neural network: Data-driven traffic forecasting,” arXiv preprint
+                                                                                       arXiv:1707.01926, 2017.
+                                                                                   [8] M. T. Bahadori, Q. R. Yu, and Y. Liu, “Fast multivariate spatio-temporal
+                                                                                       analysis via low rank tensor learning,” Advances in neural information
+                                                                                       processing systems, vol. 27, 2014.
+                                                                                   [9] Y. Wu, D. Zhuang, A. Labbe, and L. Sun, “Inductive graph neural
+                                                                                       networks for spatiotemporal kriging,” in Proceedings of the AAAI
+                                                                                       Conference on Artificial Intelligence, vol. 35, no. 5, 2021, pp. 4478–
+                                                                                       4485.
+                                                                                  [10] D. Wu, L. Gao, M. Chinazzi, X. Xiong, A. Vespignani, Y.-A. Ma, and
+                                                                                       R. Yu, “Quantifying uncertainty in deep spatiotemporal forecasting,”
+                                                                                       in Proceedings of the 27th ACM SIGKDD Conference on Knowledge
+                                                                                       Discovery & Data Mining, 2021, pp. 1841–1851.
+                                                                                  [11] Q. Wang, S. Wang, D. Zhuang, H. Koutsopoulos, and J. Zhao, “Uncer-
+                                                                                       tainty quantification of spatiotemporal travel demand with probabilistic
+                                                                                       graph neural networks,” arXiv preprint arXiv:2303.04040, 2023.
+        (a) RMSE of Vo at different Ne on METR-LA                                 [12] H.-F. Yu, N. Rao, and I. S. Dhillon, “Temporal regularized matrix
+                                                                                       factorization for high-dimensional time series prediction,” Advances in
+                                                                                       neural information processing systems, vol. 29, 2016.
+                                                                                  [13] Y. Zhao, L. Ye, P. Pinson, Y. Tang, and P. Lu, “Correlation-constrained
+                                                                                       and sparsity-controlled vector autoregressive model for spatio-temporal
+                                                                                       wind power forecasting,” IEEE Transactions on Power Systems, vol. 33,
+                                                                                       no. 5, pp. 5029–5040, 2018.
+                                                                                  [14] J. Zhang, Y. Zheng, and D. Qi, “Deep spatio-temporal residual networks
+                                                                                       for citywide crowd flows prediction,” in Proceedings of the AAAI
+                                                                                       conference on artificial intelligence, vol. 31, no. 1, 2017.
+                                                                                  [15] J. Ye, J. Zhao, K. Ye, and C. Xu, “How to build a graph-based deep
+                                                                                       learning architecture in traffic domain: A survey,” IEEE Transactions on
+                                                                                       Intelligent Transportation Systems, vol. 23, no. 5, pp. 3904–3924, 2020.
+                                                                                  [16] J. Bruna, W. Zaremba, A. Szlam, and Y. LeCun, “Spectral networks and
+                                                                                       locally connected networks on graphs,” arXiv preprint arXiv:1312.6203,
+                                                                                       2013.
+                                                                                  [17] Y. Seo, M. Defferrard, P. Vandergheynst, and X. Bresson, “Structured
+                                                                                       sequence modeling with graph convolutional recurrent networks,” in
+                                                                                       Neural Information Processing: 25th International Conference, ICONIP
+           (b) RMSE of Ve at different Ne METR-LA                                      2018, Siem Reap, Cambodia, December 13-16, 2018, Proceedings, Part
+                                                                                       I 25. Springer, 2018, pp. 362–373.
+Fig. 3. Performance of Uncertainty sampling and random sampling method on         [18] J. Gehring, M. Auli, D. Grangier, D. Yarats, and Y. N. Dauphin, “Con-
+active the sensing task. Lower RMSE means better prediction performance. (a)           volutional sequence to sequence learning,” in International conference
+It shows different sampling methods have similar performance on observable             on machine learning. PMLR, 2017, pp. 1243–1252.
+locations. (b) The uncertainty sampling method performs better compared to        [19] Y. Liu, Z. Liu, C. Lyu, and J. Ye, “Attention-based deep ensemble net for
+the random sampling method. And two methods finally converge and achieve               large-scale online taxi-hailing demand prediction,” IEEE transactions on
+the same level of accuracy.                                                            intelligent transportation systems, vol. 21, no. 11, pp. 4798–4807, 2019.
+                                                                                  [20] C. F. Ansley and R. Kohn, “On the estimation of arima models with
+                                                                                       missing values,” in Time Series Analysis of Irregularly Observed Data:
+addition, we show in the case study on the METR-LA dataset                             Proceedings of a Symposium held at Texas A & M University, College
+that the uncertainty can help evaluate prediction accuracy                             Station, Texas February 10–13, 1983. Springer, 1984, pp. 9–37.
+                                                                                  [21] E. Acar, D. M. Dunlavy, T. G. Kolda, and M. Mørup, “Scalable
+and assist downstream tasks like sensor deployment on traffic                          tensor factorizations for incomplete data,” Chemometrics and Intelligent
+networks.                                                                              Laboratory Systems, vol. 106, no. 1, pp. 41–56, 2011.
+                                                                                  [22] F. Scarselli, M. Gori, A. C. Tsoi, M. Hagenbuchner, and G. Monfar-
+                              R EFERENCES                                              dini, “The graph neural network model,” IEEE transactions on neural
+ [1] Y. Zheng, L. Capra, O. Wolfson, and H. Yang, “Urban computing:                    networks, vol. 20, no. 1, pp. 61–80, 2008.
+     concepts, methodologies, and applications,” ACM Transactions on In-          [23] D. K. Duvenaud, D. Maclaurin, J. Iparraguirre, R. Bombarell, T. Hirzel,
+     telligent Systems and Technology (TIST), vol. 5, no. 3, pp. 1–55, 2014.           A. Aspuru-Guzik, and R. P. Adams, “Convolutional networks on graphs
+ [2] I. Lana, J. Del Ser, M. Velez, and E. I. Vlahogianni, “Road traffic               for learning molecular fingerprints,” Advances in neural information
+     forecasting: Recent advances and new challenges,” IEEE Intelligent                processing systems, vol. 28, 2015.
+     Transportation Systems Magazine, vol. 10, no. 2, pp. 93–109, 2018.           [24] T. N. Kipf and M. Welling, “Semi-supervised classification with graph
+ [3] N. Cressie and C. K. Wikle, Statistics for spatio-temporal data. John             convolutional networks,” arXiv preprint arXiv:1609.02907, 2016.
+     Wiley & Sons, 2015.                                                          [25] H. Zeng, H. Zhou, A. Srivastava, R. Kannan, and V. Prasanna, “Graph-
+ [4] H. V. Jagadish, J. Gehrke, A. Labrinidis, Y. Papakonstantinou, J. M.              saint: Graph sampling based inductive learning method,” arXiv preprint
+     Patel, R. Ramakrishnan, and C. Shahabi, “Big data and its technical               arXiv:1907.04931, 2019.
+     challenges,” Communications of the ACM, vol. 57, no. 7, pp. 86–94,           [26] M. Zhang and Y. Chen, “Inductive matrix completion based on graph
+     2014.                                                                             neural networks,” arXiv preprint arXiv:1904.12058, 2019.
+ [5] M. X. Hoang, Y. Zheng, and A. K. Singh, “Fccf: forecasting citywide          [27] J. Zhang, X. Shi, J. Xie, H. Ma, I. King, and D.-Y. Yeung, “Gaan: Gated
+     crowd flows based on big data,” in Proceedings of the 24th ACM                    attention networks for learning on large and spatiotemporal graphs,”
+     SIGSPATIAL international conference on advances in geographic in-                 arXiv preprint arXiv:1803.07294, 2018.
+     formation systems, 2016, pp. 1–10.                                           [28] Y. Gal and Z. Ghahramani, “Dropout as a bayesian approximation:
+ [6] X. Ma, Z. Dai, Z. He, J. Ma, Y. Wang, and Y. Wang, “Learning                      Representing model uncertainty in deep learning,” in international
+     traffic as images: A deep convolutional neural network for large-scale            conference on machine learning. PMLR, 2016, pp. 1050–1059.
+     transportation network speed prediction,” Sensors, vol. 17, no. 4, p. 818,   [29] Y. Gal, J. Hron, and A. Kendall, “Concrete dropout,” Advances in neural
+     2017.                                                                             information processing systems, vol. 30, 2017.
+[30] B. Lakshminarayanan, A. Pritzel, and C. Blundell, “Simple and scalable
+     predictive uncertainty estimation using deep ensembles,” Advances in
+     neural information processing systems, vol. 30, 2017.
+[31] C. Blundell, J. Cornebise, K. Kavukcuoglu, and D. Wierstra, “Weight
+     uncertainty in neural network,” in International conference on machine
+     learning. PMLR, 2015, pp. 1613–1622.
+[32] J. M. Hernández-Lobato and R. Adams, “Probabilistic backpropagation
+     for scalable learning of bayesian neural networks,” in International
+     conference on machine learning. PMLR, 2015, pp. 1861–1869.
+[33] D. P. Kingma, T. Salimans, and M. Welling, “Variational dropout and
+     the local reparameterization trick,” Advances in neural information
+     processing systems, vol. 28, 2015.
+[34] A. Amini, W. Schwarting, A. Soleimany, and D. Rus, “Deep eviden-
+     tial regression,” Advances in Neural Information Processing Systems,
+     vol. 33, pp. 14 927–14 937, 2020.
+[35] T. Pearce, A. Brintrup, M. Zaki, and A. Neely, “High-quality prediction
+     intervals for deep learning: A distribution-free, ensembled approach,”
+     in International conference on machine learning. PMLR, 2018, pp.
+     4075–4084.
+[36] A. Alaa and M. Van Der Schaar, “Frequentist uncertainty in recurrent
+     neural networks via blockwise influence functions,” in International
+     Conference on Machine Learning. PMLR, 2020, pp. 175–190.
+[37] W. Hamilton, Z. Ying, and J. Leskovec, “Inductive representation
+     learning on large graphs,” Advances in neural information processing
+     systems, vol. 30, 2017.
+[38] J. Atwood and D. Towsley, “Diffusion-convolutional neural networks,”
+     Advances in neural information processing systems, vol. 29, 2016.
+[39] R. Koenker and K. F. Hallock, “Quantile regression,” Journal of eco-
+     nomic perspectives, vol. 15, no. 4, pp. 143–156, 2001.
+[40] D. I. Shuman, S. K. Narang, P. Frossard, A. Ortega, and P. Van-
+     dergheynst, “The emerging field of signal processing on graphs: Ex-
+     tending high-dimensional data analysis to networks and other irregular
+     domains,” IEEE signal processing magazine, vol. 30, no. 3, pp. 83–98,
+     2013.
+[41] X. Yi, Y. Zheng, J. Zhang, and T. Li, “St-mvl: filling missing values in
+     geo-sensory time series data,” in Proceedings of the 25th International
+     Joint Conference on Artificial Intelligence, 2016.
+[42] A. Krause, A. Singh, and C. Guestrin, “Near-optimal sensor placements
+     in gaussian processes: Theory, efficient algorithms and empirical stud-
+     ies.” Journal of Machine Learning Research, vol. 9, no. 2, 2008.
+[43] C. Guestrin, A. Krause, and A. P. Singh, “Near-optimal sensor place-
+     ments in gaussian processes,” in Proceedings of the 22nd international
+     conference on Machine learning, 2005, pp. 265–272.
+

@@ -1,0 +1,922 @@
+                                               PriSTI: A Conditional Diffusion Framework for
+                                                         Spatiotemporal Imputation
+                                                              Mingzhe Liu∗1 , Han Huang∗1 , Hao Feng1 , Leilei SunB 1 , Bowen Du1 , Yanjie Fu2
+                                                    1
+                                                        State Key Laboratory of Software Development Environment, Beihang University, Beijing 100191, China
+                                                                  2
+                                                                    Department of Computer Science, University of Central Florida, FL 32816, USA
+                                                                 {mzliu1997, h-huang, pinghao, leileisun, dubowen}@buaa.edu.cn, yanjie.fu@ucf.edu
+
+
+
+                                            Abstract—Spatiotemporal data mining plays an important role           The early studies applied for spatiotemporal imputation
+arXiv:2302.09746v1 [cs.LG] 20 Feb 2023
+
+
+
+
+                                         in air quality monitoring, crowd flow modeling, and climate           usually impute along the temporal or spatial dimension with
+                                         forecasting. However, the originally collected spatiotemporal data    statistic and classic machine learning methods, including but
+                                         in real-world scenarios is usually incomplete due to sensor
+                                         failures or transmission loss. Spatiotemporal imputation aims         not limited to autoregressive moving average (ARMA) [8],
+                                         to fill the missing values according to the observed values and       [9], expectation-maximization algorithm (EM) [10], [11], k-
+                                         the underlying spatiotemporal dependence of them. The previous        nearest neighbors (KNN) [12], [13], etc. But these methods
+                                         dominant models impute missing values autoregressively and            impute missing values based on strong assumptions such as
+                                         suffer from the problem of error accumulation. As emerging pow-       the temporal smoothness and the similarity between time
+                                         erful generative models, the diffusion probabilistic models can
+                                         be adopted to impute missing values conditioned by observations       series, and ignore the complexity of spatiotemporal correla-
+                                         and avoid inferring missing values from inaccurate historical im-     tions. With the development of deep learning, most effective
+                                         putation. However, the construction and utilization of conditional    spatiotemporal imputation methods [1], [7], [14] use the re-
+                                         information are inevitable challenges when applying diffusion         current neural network (RNN) as the core to impute missing
+                                         models to spatiotemporal imputation. To address above issues,         values by recursively updating their hidden state, capturing
+                                         we propose a conditional diffusion framework for spatiotemporal
+                                         imputation with enhanced prior modeling, named PriSTI. Our            the temporal correlation with existing observations. Some of
+                                         proposed framework provides a conditional feature extraction          them also simply consider the feature correlation [1] by the
+                                         module first to extract the coarse yet effective spatiotemporal       multilayer perceptron (MLP) or spatial similarity between
+                                         dependencies from conditional information as the global context       different time series [7] by graph neural networks. However,
+                                         prior. Then, a noise estimation module transforms random noise        these approaches inevitably suffer from error accumulation
+                                         to realistic values, with the spatiotemporal attention weights
+                                         calculated by the conditional feature, as well as the consideration   [6], i.e., inference missing values from inaccurate historical
+                                         of geographic relationships. PriSTI outperforms existing imputa-      imputation, and only output the deterministic values without
+                                         tion methods in various missing patterns of different real-world      reflecting the uncertainty of imputation.
+                                         spatiotemporal data, and effectively handles scenarios such as           More recently, diffusion probabilistic models (DPM) [15]–
+                                         high missing rates and sensor failure. The implementation code        [17], as emerging powerful generative models with impressive
+                                         is available at https://github.com/LMZZML/PriSTI.
+                                            Index Terms—Spatiotemporal Imputation, Diffusion Model,
+                                                                                                               performance on various tasks, have been adopted to impute
+                                         Spatiotemporal Dependency Learning                                    multivariate time series. These methods impute missing values
+                                                                                                               starting from randomly sampled Gaussian noise, and convert
+                                                                                                               the noise to the estimation of missing values [18]. Since
+                                                                     I. I NTRODUCTION
+                                                                                                               the diffusion models are flexible in terms of neural network
+                                            Spatiotemporal data is a type of data with intrinsic spatial       architecture, they can circumvent the error accumulation prob-
+                                         and temporal patterns, which is widely applied in the real            lem from RNN-based methods through utilizing architectures
+                                         world for tasks such as air quality monitoring [1], [2], traffic      such as attention mechanisms when imputation, which also
+                                         status forecasting [3], [4], weather prediction [5] and so on.        have a more stable training process than generative adversarial
+                                         However, due to the sensor failures and transmission loss             networks (GAN). However, when applying diffusion models
+                                         [2], the incompleteness in spatiotemporal data is a common            to imputation problem, the modeling and introducing of the
+                                         problem, characterized by the randomness of missing value’s           conditional information in diffusion models are the inevitable
+                                         positions and the diversity of missing patterns, which results        challenges. For spatiotemporal imputation, the challenges can
+                                         in incorrect analysis of spatiotemporal patterns and further          be specific to the construction and utilization of conditional
+                                         interference on downstream tasks. In recent years, extensive          information with spatiotemporal dependencies. Tashiro et al.
+                                         research [1], [6], [7] has dived into spatiotemporal imputation,      [18] only model temporal and feature dependencies by atten-
+                                         with the goal of exploiting spatiotemporal dependencies from          tion mechanism when imputing, without considering spatial
+                                         available observed data to impute missing values.                     similarity such as geographic proximity and time series corre-
+                                                                                                               lation. Moreover, they combine the conditional information
+                                           ∗ Equal contribution. B   Corresponding author.                     (i.e., observed values) and perturbed values directly as the
+          Statistic methods                       Classic machine learning methods                                                Deep learning methods
+                   MEAN                                                                           RNN-based                 GAN-based            VAE-based           Diffusion model-based
+                                                          VAR             TRMF
+                                                                                                    BRITS                     rGAIN                V-RIN                      CSDI
+                    KNN
+                                                     Kalman Filter        BATF
+
+
+
+
+                                                                                                                                  …
+                                                                                                       GRIN                                           GP-VAE                PriSTI (Ours)
+              Interpolation
+
+
+
+
+                                                                            …
+                                                         MICE
+
+
+
+
+                                                                                                                                                                                   …
+                                                                                                                                                          …
+                                                                                                        …
+                        …
+
+
+                                                                                                                                        Geographic        Observed       Interpolated
+                                                                                                                                        information        values         information
+          Geographic
+          information       Observed values              Imputed values   Observed values
+                                                                                                                                                                     𝑋
+                                                                                                                                                      𝐴
+                                                                                           𝑋
+                        𝐴
+                                                                                                                                                                     Conditional Feature
+                                                                                                                                                                         Extraction
+
+             Spatiotemporal Encoder
+
+
+                                               Spatial                                      …            …                                                …                   …
+                                              Decoder
+                                                                          Gaussian noise                         Imputed values          Gaussian noise                                 Imputed values
+
+                                     GRIN                                                       CSDI                                                           PriSTI (Ours)
+
+                Multivariate time series imputation                              Multivariate time series imputation                          Spatiotemporal imputation
+                Consider geographic information                                  Alleviate error accumulation problem                         Alleviate error accumulation problem
+                Suffer from error accumulation problem                           Not consider geographic information                          Consider geographic information
+                                                                                 Use conditional information simply                           Construct and utilize conditional information
+
+Fig. 1: The motivation of our proposed methods. We summarize the existing methods that can be applied to spatiotemporal
+imputation, and compare our proposed methods with the recent existing methods. The grey shadow represents the missing part,
+while the rest with blue solid line represents observed values X.
+
+input for models during training, which may lead to incon-                                             prehensively aggregates spatiotemporal global features and
+sistency inside the input spatiotemporal data, increasing the                                          geographic information to fully exploit the explicit and implicit
+difficulty for the model to learn spatiotemporal dependencies.                                         spatiotemporal relationships in different application scenarios.
+   To address the above issues, we propose a conditional                                               For the utilization of conditional information, we design a
+diffusion framework for SpatioTemporal Imputation with en-                                             noise estimation module to mitigate the impact of the added
+hanced Prior modeling (PriSTI).We summarize the existing                                               noise on the spatiotemporal dependencies learning. The noise
+methods that can be applied to spatiotemporal imputation, and                                          estimation module utilizes the extracted conditional feature,
+compare the differences between our proposed method and                                                as the global context prior, to calculate the spatiotemporal
+the recent existing methods, as shown in Figure 1. Since the                                           attention weights, and predict the added Gaussian noise by
+main challenge of applying diffusion models on spatiotemporal                                          spatiotemporal dependencies. PriSTI performs well in spa-
+imputation is how to model and utilize the spatiotemporal                                              tiotemporal data scenarios with spatial similarity and feature
+dependencies in conditional information for the generation                                             correlation. For three real-world datasets in the fields of air
+of missing values, our proposed method reduce the difficulty                                           quality and traffic, our proposed method outperforms existing
+of spatiotemporal dependencies learning by extracting condi-                                           methods in various missing patterns. Moreover, PriSTI can
+tional feature from observation as a global context prior. The                                         support downstream tasks through imputation, and effectively
+imputation process of spatiotemporal data with our proposed                                            handles the case of high missing rates and sensor failure.
+method is shown in the right of Figure 1, which gradually                                                    Our contributions are summarized as follows:
+transform the random noise to imputed missing values by the
+trained PriSTI. PriSTI takes observed spatiotemporal data and                                                • We propose PriSTI, a conditional diffusion framework
+geographic information as input. During training, the observed                                                 for spatiotemporal imputation, which constructs and uti-
+values are randomly erased as imputation target through a                                                      lizes conditional information with spatiotemporal global
+specific mask strategy. The incomplete observed data is first                                                  correlations and geographic relationships.
+interpolated to obtain the enhanced conditional information                                                  • To reduce the difficulty of learning spatiotemporal depen-
+for diffusion model. For the construction of conditional in-                                                   dencies, we design a specialized noise prediction model
+formation, a conditional feature extraction module is provided                                                 that extracts conditional features from enhanced obser-
+to extract the feature with spatiotemporal dependencies from                                                   vations, calculating the spatiotemporal attention weights
+the interpolated information. Considering the imputation of                                                    using the extracted global context prior.
+missing values not only depends on the values of nearby time                                                 • Our proposed method achieves the best performance
+and similar time series, but also is affected by geographically                                                on spatiotemporal data in various fields, and effectively
+surrounding sensors, we design the specialized spatiotemporal                                                  handles application scenarios such as high missing rates
+dependencies learning methods. The proposed method com-                                                        and sensor failure.
+   The rest of this paper is organized as follows. We first          TABLE I: Important notations and corresponding descriptions.
+state the definition of the spatiotemporal imputation problem           Notations Descriptions
+and briefly introduce the background of diffusion models in
+Section II. Then we introduce how the diffusion models are                   X          Spatiotemporal data
+applied to spatiotemporal imputation, as well as the details                 X
+                                                                             f          Manually selected imputation target
+                                                                             N          The number of the observation nodes
+of our proposed framework in Section III. Next, we evaluate                 L, l        Length of the observed time and observed time step
+the performance of our proposed method in various missing                   T, t        Length of the diffusion steps and diffusion step
+patterns in Section IV. Finally, we review the related work                  A          Adjacency matrix of geographic information
+for spatiotemporal imputation in Section V and conclude our                  X          Interpolated conditional information
+                                                                        βt , αt , α̂t   Constant hyperparameters of diffusion model
+work in Section VI.                                                          θ         Noise prediction model
+
+                      II. P RELIMINARIES
+   In this section, we introduce some key definitions in spa-                                  III. M ETHODOLOGY
+tiotemporal imputation, state the problem definition and briefly        The pipeline of our proposed spatiotemporal imputation
+introduce the diffusion probabilistic models.                        framework, PriSTI, is shown in Figure 2. PriSTI adopts
+   Spatiotemporal data. We formalize spatiotemporal data             a conditional diffusion framework to exploit spatiotemporal
+as a sequence X1:L = {X1 , X2 , · · · , XL } ∈ RN ×L over            global correlation and geographic relationship for imputation.
+consecutive time, where Xl ∈ RN is the values observed at            To address the challenge about the construction and utilization
+time l by N observation nodes, such as air monitoring stations       of conditional information when impute by diffusion model,
+and traffic sensors. Not all observation nodes have observed         we design a specialized noise prediction model to enhance
+values at time l. We use a binary mask Ml ∈ {0, 1}N to rep-          and extract the conditional feature. In this section, we first
+resent the observed mask at time l, where mi,j l = 1 represents      introduce how the diffusion models are applied to spatiotem-
+the value is observed while mi,jl   = 0  represents  the value is    poral imputation, and then introduce the detail architecture of
+missing. Since there is no ground truth for real missing data in     the noise prediction model, which is the key to success of
+practice, we manually select the imputation target X  e ∈ RN ×L      diffusion models.
+from available observed data for training and evaluation, and
+identify them with the binary mask M  f ∈ RN ×L .                    A. Diffusion Model for Spatiotemporal Imputation
+   Adjacency matrix. The observation nodes can be for-                  To apply the diffusion models on spatiotemporal imputa-
+malized as a graph G = hV, Ei, where V is the node                   tion, we regard the spatiotemporal imputation problem as a
+set and E is the edge set measuring the pre-defined spatial          conditional generation task. The previous studies [18] have
+relationship between nodes, such as geographical distance. We        shown the ability of conditional diffusion probabilistic model
+denote A ∈ RN ×N to represent the geographic information             for multivariate time series imputation. The spatiotemporal
+as the adjacency matrix of the graph G. In this work, we             imputation task can be regarded as calculating the conditional
+only consider the setting of static graph, i.e., the geographic      probability distribution q(X   e 0 |X1:L ), where the imputation
+                                                                                                      1:L
+information A does not change over time.                                   0
+                                                                     of X1:L is conditioned by the observed values X1:L . How-
+                                                                         e
+   Problem statement. Given the incomplete observed spa-             ever, the previous studies impute without considering the
+tiotemporal data X and geographical information A, our task          spatial relationships, and simply utilize the observed values
+of spatiotemporal imputation is to estimate the missing values       as conditional information. In this section, we explain how
+or corresponding distributions in spatiotemporal data X1:L .         our proposed framework impute spatiotemporal data by the
+   Diffusion probabilistic models. Diffusion probabilistic           diffusion models. In the following discussion, we use the
+models [16], [19] are deep generative models that have               superscript t ∈ {0, 1, · · · , T } to represent the diffusion step,
+achieved cutting-edge results in the field of image synthesis        and omit the subscription 1 : L for conciseness.
+[20], audio generation [21], etc., which generate samples               As mentioned in Section II, the diffusion probabilistic model
+consistent with the original data distribution by adding noise       includes the diffusion process and reverse process. The diffu-
+to the samples and learning the reverse denoising process.           sion process for spatiotemporal imputation is irrelavant with
+The diffusion probabilistic model can be formalized as two           conditional information, adding Gaussian noise into original
+Markov chain processes of length T , named the diffusion             data of the imputation part, which is formalized as:
+process and the reverse process. Let X     e 0 ∼ pdata where
+                                                                                                   T
+pdata is the clean data distribution, and X  e t is the sampled                   e 1:T |X
+                                                                                         e 0) =
+                                                                                                   Y
+                                                                                                           e t |X
+                                                                                                                e t−1 ),
+                                                                                q(X                      q(X
+latent variable sequence, where t = 1, · · · , T is the diffusion                                  t=1
+                                                                                                                                         (1)
+step. Xe T ∼ N (0, I) where N is Gaussian distribution. The                                                  p
+                                                                                  e t |X
+                                                                                q(X    e t−1 ) = N (X
+                                                                                                    e t;                e t−1 , βt I),
+                                                                                                                 1 − βt X
+diffusion process adds Gaussian noise gradually into X   e 0 until
+   0               T                                        e t to
+X is close to X , while the reverse process denoises X
+ e               e                                                   where βt is a small constant hyperparameter that controls the
+            0                                                                                           e t is sampled by X et =
+recover X . More details about applying the diffusion models
+          e                                                          variance of√the added noise. The X
+                                                                     √                                              Qt
+                                                                             0
+on spatiotemporal imputation are introduced in Section III.            ᾱt X + 1 − ᾱt , where αt = 1 − βt , ᾱt = i=1 αi , and
+                                                                           e
+ is the sampled standard Gaussian noise. When T is large                             𝐴                 𝑋1:𝐿
+
+enough, q(X  e T |X
+                  e 0 ) is close to standard normal distribution .                                                    Mask
+   The reverse process for spatiotemporal imputation gradually
+convert random noise to missing values with spatiotemporal                                                  Linear Interpolation         Noise sampling
+
+consistency based on conditional information. In this work, the
+reverse process is conditioned on the interpolated conditional                                                                                                       𝑋෨1:𝐿
+information X that enhances the observed values, as well as
+the geographical information A. The reverse process can be                                                                                               Numerical
+                                                                                                                                                        Information     𝐻𝑖𝑛
+formalized as:                                                                                  Conditional Feature
+                                                                                                                                   Diffusion time
+                                                                                                                                    embedding
+                                                                                                                                                    𝑡            Input to next layer
+                                 T                                                              Extraction Module
+                                Y
+      e 0:T −1 |X
+  pθ (X         e T , X , A) =          e t−1 |X
+                                    pθ (X      e t , X , A),
+                                t=1
+                                                               (2)                          𝐻𝑝𝑟𝑖    Conditional                                          Temporal
+                                                                                                     Feature                                             Attention
+ pθ (Xe t−1    et
+              |X , X , A) = N (Xe t−1   ; µθ (X , X , A, t), σt2 I).
+                                              et                                                                                                              𝐻𝑡𝑒𝑚
+                                                                                                                                                    Spatial Attention
+   Ho et al. [16] introduce an effective parameterization of µθ                           Addition                                                    with MPNN
+and σt2 . In this work, they can be defined as:                                           1x1 Convolution
+                                                                                          Concatenation
+                                                                                                                                Attention
+                                                                                                                                 weights                      𝐻 𝑠𝑝𝑎
+                                                                                                                             Noise Estimation Module
+        t                 1        t     βt           t
+ µθ (X , X , A, t) = √
+      e                         X −√
+                                 e              θ (X , X , A, t) ,
+                                                    e                                                                                               Gated activation
+                          ᾱt           1 − ᾱt                                                Output
+         1 − ᾱt−1
+ σt2 =             βt ,
+          1 − ᾱt                                                            Fig. 2: The pipeline of PriSTI. PriSTI takes observed val-
+                                                                  (3)
+where θ is a neural network parameterized by θ, which                       ues and geographic information as input. It first interpolates
+takes the noisy sample X    e t and conditional information X and            observations and models the global context prior by the
+adjacency matrix A as input, predicting the added noise  on                 conditional feature extraction module, and then utilizes the
+imputation target to restore the original information of the                 noise estimation module to predict noise with help of the
+noisy sample. Therefore, θ is often named noise prediction                  conditional information.
+model. The noise prediction model does not limit the network
+architecture, whose flexibility is benificial for us to design the           Algorithm 1 Training process of PriSTI.
+model suitable for spatiotemporal imputation.                                 Input:Incomplete observed data X, the adjacency matrix A,
+   Training Process. During training, we mask the input ob-                  the number of iteration Nit , the number of diffusion steps T ,
+served value X through a random mask strategy to obtain the                  noise levels sequence ᾱt .
+imputation target X e t , and the remaining observations are used             Output:Optimized noise prediction model θ .
+to serve as the conditional information for imputation. Similar                1: for i = 1 to Nit do
+to CSDI [18], we provide the mask strategies including point                   2:     e 0 ← Mask(X);
+                                                                                      X
+strategy, block strategy and hybrid strategy (see more details                 3:     X ← Interpolate(X  e 0 );
+in Section IV-D). Mask strategies produce different masks for                  4:     Sample t ∼ Uniform({1,    · · · , T }),  ∼ N (0, I);
+each training sample. After obtaining the training imputation                  5:     X          e 0 + √1 − ᾱt ;
+                                                                                      e t ← √ᾱt X
+        e 0 and the interpolated conditional information X , the                                                                              2
+target X                                                                                                                      e t , X , A, t) .
+                                                                               6:     Updating the gradient ∇θ  − θ (X
+training objective of spatiotemporal imputation is:
+                                                               2
+                                            e t , X , A, t)
+   L(θ) = EXe 0 ∼q(Xe 0 ),∼N (0,I)  − θ (X                      .   (4)
+   Therefore, in each iteration of the training process, we                     Through the above framework, the diffusion model can
+sample the Gaussian noise , the imputation target X       e t and           be applied to spatiotemporal imputation with the conditional
+the diffusion step t, and obtain the interpolated conditional                information. However, the construction and utilization of
+information X based on the remaining observations. More                      conditional information with spatiotemporal dependencies are
+details on the training process of our proposed framework is                 still challenging. It is necessary to design a specialized noise
+shown in Algorithm 1.                                                        prediction model θ to reduce the difficulty of learning spa-
+   Imputation Process. When using the trained noise predic-                  tiotemporal dependencies with noisy information, which will
+tion model θ for imputation, the observed mask M    f of the data           be introduced in next section.
+is available, so the imputation target X is the all missing values
+                                       e
+in the spatiotemporal data, and the interpolated conditional                 B. Design of Noise Prediction Model
+information X is constructed based on all observed values.                     In this section, we illustrate how to design the noise pre-
+The model receives X   e T and X as inputs and generates samples             diction model θ for spatiotemporal imputation. Specifically,
+of the imputation results through the process in Equation (2).               we first interpolate the observed value to obtain the enhanced
+The more details on the imputation process of our proposed                   coarse conditional information. Then, a conditional feature
+framework is shown in Algorithm 2.                                           extraction module is designed to model the spatiotemporal
+Algorithm 2 Imputation process with PriSTI.                              noise prediction model, which can not be solved by a simple
+  Input:A sample of incomplete observed data X, the adja- binary mask identifier.
+cency matrix A, the number of diffusion steps T , the optimized             To address the above problem, we first enhance the ob-
+noise prediction model θ .                                              vserved values for the conditional feature extraction, expecting
+  Output:Missing values of the imputation target X       e 0.            the designed model to learn the spatiotemporal dependencies
+  1: X ← Interpolate(X);                                                 based on this enhanced information. In particular, inspired
+  2: Set Xe T ∼ N (0, I);                                                by some spatiotemporal forecasting works based on temporal
+  3: for t = T to 1 do                                                 continuity [22], we apply linear interpolation to the time
+  4:     µθ (Xe t , X , A, t) ← √1 X    e t − √ βt θ (Xe t , X , A, t) series of each node to initially construct a coarse yet ef-
+                                  ᾱt          1−ᾱt
+            t−1                 t            2                           fective interpolated conditional information X for denoising.
+  5:     Xe      ← N (µθ (X , X , A, t), σt I)
+                              e
+                                                                         Intuitively, this interpolation does not introduce randomness to
+                                                                         the time series, while also retaining a certain spatiotemporal
+                                                                         consistency. From the test results of linear interpolation on the
+                                                                         air quality and traffic speed datasets (see Table III), the spa-
+                                                                         tiotemporal information completed by the linear interpolation
+                                                                         method is available enough for a coarse conditional informa-
+                                                                         tion. Moreover, the fast computation of linear interpolation
+                                                                         satisfies the training requirements of real-time construction
+                                                                         under random mask strategies in our framework.
+                                                                            Although linear interpolation solves the completeness of
+                                                                         observed information simply and efficiently, it only simply
+                                                                         describes the linear uniform change in time, without model-
+Fig. 3: The architecture of the conditional feature extraction ing temporal nonlinear relationship and spatial correlations.
+module (left) and noise estimation module (right). Both mod- Therefore, we design a learnable module γ(·) to model a
+ules utilize the same components, including a temporal atten- conditional feature H pri with spatiotemporal information as
+tion Attntem , a spatial attention Attnspa and a message passing a global context prior, named Conditional Feature Extraction
+neural network MPNN. The conditional feature extraction Module. The module γ(·) takes the interpolated conditional
+module extract spatiotemporal dependencies from interpolated information X and adjacency matrix A as input, extract the
+conditional information in a wide network architecture, while spatiotemporal dependencies from X and output H pri as the
+the noise estimation module learning spatiotemporal depen- global context for the calculation of spatiotemporal attention
+dencies in a deep network architecture.                                  weights in noise prediction.
+                                                                            In particular, the conditional feature H pri ∈ RN ×L×d is
+                                                                         obtained by H pri = γ(H, A), where H = Conv(X ) and
+correlation from the coarse interpolation information. The Conv(·) is 1 × 1 convolution, H ∈ RN ×L×d , and d is the
+output of the conditional feature extraction module is utilized channel size. The conditional feature extraction module γ(·)
+in the designed noise estimation module to calculate the comprehensively combines the spatiotemporal global corre-
+attention weights, which provides a better global context prior lations and geographic dependency, as shown in the left of
+for spatiotemporal dependencies learning.                                Figure 3, which is formalized as:
+   1) Conditional Feature Extraction Module: The conditional H pri = γ(H, A) = MLP(ϕ (H) + ϕ (H) + ϕ (H, A)),
+                                                                                                        SA          TA        MP
+feature extraction module is dedicated to model conditional
+information when the diffusion model is applied to spa- ϕSA (H) = Norm(Attnspa (H) + H),
+tiotemporal imputation. According to the diffusion model ϕTA (H) = Norm(Attntem (H) + H),
+for imputation described above, θ takes the conditional in- ϕMP (H, A) = Norm(MPNN(H, A) + H),
+formation X and the noisy information X           e t as input. The                                                                    (5)
+previous studies, such as CSDI [18], regards the observed where Attn(·) represents the global attention, and the sub-
+values as conditional information, and takes the concatenation scripts spa and tem represent spatial attention and tem-
+of conditional information and perturbed values as the input, poral attention respectively. We use the dot-product multi-
+which are distinguished only by a binary mask. However, head self-attention in Transformer [23] to implement Attn(·).
+the trend of the time series in imputation target are unstable And MPNN(·) represents the spatial message passing neural
+due to the randomness of the perturbed values, which may network, which can be implemented by any graph neural
+cause the noisy sample to have an inconsistent trend with network. We adopt the graph convolution module from Graph
+the original time series (such as the X         e t in Figure 2), Wavenet [4], whose adjacency matrix includes a bidirectional
+                                                 1:L
+especially when the diffusion step t is close to T . Although distance-based matrix and an adaptively learnable matrix.
+CSDI utilizes two different Transformer layers to capture the               The extracted conditional feature H pri solves the problem
+temporal and feature dependencies, the mixture of conditional of constructing conditional information. It does not contain
+and noisy information increases the learning difficulty of the the added Gaussian noise, and includes temporal dependen-
+cies, spatial global correlations and geographic dependencies         attention weight in the same way:
+compared with observed values. To address the remaining
+                                                                       QS = H pri · WSQ , KS = H pri · WSK , VS = H tem · WSV . (8)
+challenge of utilizing conditional information, H pri serves
+as a coarse prior to guide the learning of spatiotemporal                The noise estimation module consists of Equation (6) -
+dependencies, which is introduced in the next section.                (8), which has the same attention and MPNN components
+   2) Noise Estimation Module: The noise estimation module            as the conditional feature extraction module with different
+is dedicated to the utilization of conditional information when       input and architecture. The conditional feature extraction
+the diffusion model is applied to spatiotemporal imputation.          module models spatiotemporal dependencies only from the
+Since the information in noisy sample may have a wide                 interpolated conditional information X in a single layer, so
+deviation from the real spatiotemporal distribution because of        it extracts information through a wide network architecture,
+the randomness of the Gaussian noise, it is difficult to learn        i.e., directly aggregates the spatiotemporal global correlation
+spatiotemporal dependencies directly from the mixture of con-         and geographic dependency. Since the noise estimation module
+ditional and noisy information. Our proposed noise estimation         needs to convert the noisy sample to standard Gaussian distri-
+module captures spatiotemporal global correlations and geo-           bution in multiple layers, it learns spatiotemporal dependencies
+graphical relationships by a specialized attention mechanism,         from the noisy samples with help of the conditional feature
+which reduce the difficulty of spatiotemporal dependencies            through a deep network architecture, i.e., extracts the temporal
+learning caused by the sampled noise.                                 correlation first and aggregates the temporal feature through
+   Specifically, the inputs of the noise estimation module            the spatial global correlation and geographic information.
+include two parts: the noisy information H in = Conv(X ||X     e t)      In addition, when the number of nodes in the spatiotemporal
+that consists of interpolation information X and noise sample         data is large, the computational cost of spatial global attention
+Xe t , and the prior information including the conditional feature    is high, and the time complexity of its similarity calculation
+H pri and adjacency matrix A. To comprehensively consider             and weighted summation are both O(N 2 d). Therefore, we map
+the spatiotemporal global correlation and geographic relation-        N nodes to k virtual nodes, where k < N . We rewrite the
+ship of the missing data, the temporal features H tem are             KS and VS in Equation (8) when attention is used for spatial
+first learned through a temporal dependency learning module           dependencies learning as:
+γT (·), and then the temporal features are aggregated through
+a spatial dependency learning module γS (·). The architecture                 KS = H pri · PSK WSK , VS = H tem · PSV WSV ,        (9)
+of the noise estimation module is shown as the right of Figure        where PSK , PSV  ∈R N ×d
+                                                                                                is the downsampling parameters. And
+3, which is formalized as follows:                                    the time complexity of the modified spatial attention is reduced
+H tem = γT (H in ) = Attntem (H in ),                                 to O(N kd).
+H spa = γS (H tem , A) = MLP(ϕSA (H tem ) + ϕMP (H tem , A)),            3) Auxiliary Information and Output: We add auxiliary
+                                                              (6)     information U = MLP(Utem , Uspa ) to both the conditional
+where Attntem (·), ϕSA (·) and ϕMP (·) are same as the compo-         feature extraction module and the noise estimation module to
+nents in Equation (5), which are used to capture spatiotemporal       help the imputation, where Utem is the sine-cosine temporal
+global attention and geographic similarity, and H tem , H spa ∈       encoding [23], and Uspa is learnable node embedding. We
+RN ×L×d are the outputs of temporal and spatial dependencies          expand and concatenate Utem ∈ RL×128 and Uspa ∈ RN ×16 ,
+learning modules.                                                     and obtain auxiliary information U ∈ RN ×L×d that can be
+   However, in Eq. (6), spatiotemporal dependencies learning          input to the model through an MLP layer.
+is performed on the mixture of conditional noisy information,            The noise estimation module stacks multiple layers, and the
+i.e. H in . When the diffusion step t approaches T , noise sample     output H spa of each layer is divided into residual connection
+Xe t would increase the difficulty of spatiotemporal dependen-        and skip connection after a gated activation unit. The residual
+cies learning. To reduce the impact of X     e t while convert it     connection is used as the input of the next layer, and the skip
+into Gaussian noise, we change the input of the attention             connections of each layer are added and through two layers of
+components Attntem (·) and Attnspa (·), which calculate the           1 × 1 convolution to obtain the output of the noise prediction
+attention weights by using the conditional feature H pri . In         model θ . The output only retains the value of imputation
+particular, take temporal attention Attntem (·) as an example,        target, and the loss is calculated by Equation (4).
+we rewrite the dot-product attention Attntem (QT , KT , VT ) =                              IV. E XPERIMENTS
+            Q KT
+softmax( T√d T ) · VT as Attntem (AT , VT ) = AT · VT , where            In this section, we first introduce the dataset, baselines,
+                 Q KT
+AT = softmax( T√d T ) is the attention weight. We calculate           evaluation metrics and settings of our experiment. Then, we
+the attention weight AT by the conditional feature H pri , i.e.,      evaluate our proposed framework PriSTI with a large amount
+we set the input QT , KT and VT as:                                   of experiments for spatiotemporal imputation to answer the
+                                                                      following research questions:
+ QT = H pri · WTQ , KT = H pri · WTK , VT = H in · WTV , (7)
+                                                                         • RQ1: Can PriSTI provide superior imputation perfor-
+where WTQ , WTK , WTV ∈ Rd×d are learnable projection pa-                  mance in various missing patterns compared to several
+rameters. The spatial attention Attnspa (AS , VS ) calculates the          state-of-the-art baselines?
+  • RQ2: How is the imputation performance for PriSTI for         the quantified uncertainty. (11)GP-VAE [30]: a method for
+    different missing rate of spatiotemporal data?                time series probabilistic imputation by combining VAE with
+  • RQ3: Does PriSTI benefit from the construction and            Gaussian process. (12)rGAIN: GAIN [14] with a bidirectional
+    utilization of the conditional information?                   recurrent encoder-decoder, which is a GAN-based method.
+  • RQ4: Does PriSTI extract the temporal and spatial de-         (13)BRITS [1]: a multivariate time series imputation method
+    pendencies from the observed spatiotemporal data?             based on bidirectional RNN. (14)GRIN [7]: a bidirectional
+  • RQ5: Can PriSTI impute the time series for the unob-          GRU based method with graph neural network for multivariate
+    served sensors only based on the geographic location?         time series imputation. (15)CSDI [18]: a probability imputa-
+                                                                  tion method based on conditional diffusion probability model,
+A. Dataset
+                                                                  which treats different nodes as multiple features of the time
+  We conduct experiments on three real-world datasets: an air     series, and using Transformer to capture feature dependencies.
+quality dataset AQI-36, and two traffic speed datasets METR-         In the experiment, the baselines MEAN, KNN, MICE, VAR,
+LA and PEMS-BAY. AQI-36 [2] contains hourly sampled               rGAIN, BRITS and GRIN are implemented by the code4
+PM2.5 observations from 36 stations in Beijing, covering          provided by the authors of GRIN [7]. We reproduced these
+a total of 12 months. METR-LA [3] contains traffic speed          baselines, and the results are consistent with their claims, so
+collected by 207 sensors in the highway of Los Angeles            we retained the results claimed in GRIN for the above base-
+County [24] in 4 months, and PEMS-BAY [3] contains traffic        lines. The implementation details of the remaining baselines
+speed collected by 325 sensors on highways in the San             have been introduced as above.
+Francisco Bay Area in 6 months. Both traffic datasets are
+sampled every 5 minutes. For the geographic information, the      C. Evaluation metrics
+adjacency matrix is obtained based on the geographic distances       We apply three evaluation metrics to measure the perfor-
+between monitoring stations or sensors followed the previous      mance of spatiotemporal imputation: Mean Absolute Error
+works [3]. We build the adjacency matrix for the three datasets   (MAE), Mean Squared Error (MSE) and Continuous Ranked
+using thresholded Gaussian kernel [25].                           Probability Score (CRPS) [31]. MAE and MSE reflect the
+                                                                  absolute error between the imputation values and the ground
+B. Baselines
+                                                                  truth, and CRPS evaluates the compatibility of the estimated
+   To evaluate the performance of our proposed method, we         probability distribution with the observed value. We introduce
+compare with classic models and state-of-the-art methods          the calculation details of CRPS as follows. For a missing
+for spatiotemporal imputation. The baselines include statis-      value x whose estimated probability distribution is D, CRPS
+tic methods (MEAN, DA, KNN, Lin-ITP), classic machine             measures the compatibility of D and x, which can be defined
+learning methods (MICE, VAR, Kalman), low-rank matrix             as the integral of the quantile loss Λα :
+factorization methods (TRMF, BATF), deep autoregressive                                   Z 1
+methods (BRITS, GRIN) and deep generative methods (V-                          −1
+                                                                      CRPS(D , x) =           2Λα (D−1 (α), x)dα,
+RIN, GP-VAE, rGAIN, CSDI). We briefly introduce the base-                                  0                                (10)
+line methods as follows:                                              Λα (D−1 (α), x) = (α − Ix<D−1 (α) )(x − D−1 (α)),
+   (1)MEAN: directly use the historical average value of each
+node to impute. (2)DA: impute missing values with the daily       where α ∈ [0, 1] is the quantile levels, D−1 (α) is the α-
+average of corresponding time steps. (3)KNN: calculate the        quantile of distribution D, I is the indicator function. Since
+average value of nearby nodes based on geographic distance to     our distribution of missing values is approximated by gener-
+impute. (4)Lin-ITP: linear interpolation of the time series for   ating 100 samples, we compute quantile losses for discretized
+each node, as implemented by torchcde1 . (5)KF: use Kalman        quantile levels with 0.05 ticks following [18] as:
+Filter to impute the time series for each node, as implemented                           19
+                                                                                         X
+by filterpy2 . (6)MICE [26]: multiple imputation method by         CRPS(D−1 , x) '             2Λi×0.05 (D−1 (i × 0.05), x)/19. (11)
+chain equations; (7)VAR: vector autoregressive single-step                               i=1
+predictor. (8)TRMF [27]: a temporal regularized matrix factor-    We compute CRPS for each estimated missing value and use
+ization method. (9)BATF [28]: a Bayesian augmented tensor         the average as the evaluation metric, which is formalized as:
+factorization model, which incorporates the generic forms of
+                                                                                                     CRPS(D−1 , x̃)
+                                                                                              P
+spatiotemporal domain knowledge. We implement TRMF and                      CRPS(D, X) e = x̃∈Xe                    .      (12)
+BATF using the code in the Transdim3 repository. The rank                                              |X|
+                                                                                                        e
+is set to 10, 40 and 50 on AQI-36, METR-LA and PEMS-              D. Experimental settings
+BAY, respectively. (10)V-RIN [29]: a method to improve
+deterministic imputation using the quantified uncertainty of         Dataset. We divide training/validation/test set following the
+VAE, whose probability imputation result is provided by           settings of previous work [2], [7]. For AQI-36, we select
+                                                                  Mar., Jun., Sep., and Dec. as the test set, the last 10% of
+ 1 https://github.com/patrick-kidger/torchcde                     the data in Feb., May, Aug., and Nov. as the validation set,
+ 2 https://github.com/rlabbe/filterpy
+ 3 https://github.com/xinychen/transdim                             4 https://github.com/Graph-Machine-Learning-Group/grin
+and the remaining data as the training set. For METR-LA            TABLE II: The hyperparameters of PriSTI for all datasets.
+and PEMS-BAY, we split the training/validation/test set by                     Description      AQI-36 METR-LA PEMS-BAY
+70%/10%/20%.
+                                                                              Batch size           16       16          16
+   Imputation target. For air quality dataset AQI-36, we adapt             Time length L           36       24          24
+the same evaluation strategy as the previous work provided                     Epochs             200      300          300
+by [2], which simulates the distribution of real missing data.              Learning rate        0.001    0.001       0.001
+For the traffic datasets METR-LA and PEMS-BAY, we use                 Layers of noise estimation    4        4           4
+                                                                           Channel size d          64       64          64
+the artificially injected missing strategy provided by [7] for        Number of attention heads    8         8           8
+evaluation, as shown in Figure 4, which includes two missing           Minimum noise level β1 0.0001      0.0001      0.0001
+patterns: (1) Block missing: based on randomly masking 5%             Maximum noise level βT      0.2       0.2         0.2
+of the observed data, mask observations ranging from 1 to                 Diffusion steps T       100       50          50
+                                                                      Number of virtual nodes k    16       64          64
+4 hours for each sensor with 0.15% probability; (2) Point
+missing: randomly mask 25% of observations. The missing
+rate of each dataset under different missing patterns has been
+marked in Table III. It is worth noting that in addition to          Hyperparameters of PriSTI. For the hyperparameters of
+the manually injected faults, each dataset also has original      PriSTI, the batch size is 16. The learning rate is decayed to
+missing data (13.24% in AQI-36, 8.10% in METR-LA and              0.0001 at 75% of the total epochs, and decayed to 0.00001
+0.02% in PEMS-BAY). All evaluations are performed only on         at 90% of the total epochs. The hyperparameter for diffusion
+the manually masked parts of the test set.                        model include a minimum noise level β1 and a maximum
+                                                                  noise level βT . We adopted the quadratic schedule for other
+                                                                  noise levels following [18], which is formalized as:
+                                                                                                               2
+                                                                                      T −tp         t−1 p
+                                                                              βt =             β1 +         βT     .       (13)
+                                                                                      T −1          T −1
+                                                                     The diffusion time embedding and temporal encoding are
+                                                                  implemented by the sine and cosine embeddings followed
+      Fig. 4: The illustration of some missing patterns.          previous works [18], [21]. We summary the hyperparameters
+                                                                  of PriSTI in Table II. All the experiments are run for 5 times.
+   Training strategies. As mentioned in Section III-A, on the     E. Results
+premise of known missing patterns in test data, we provide
+                                                                     1) Overall Performance (RQ1): We first evaluate the spa-
+three mask strategies. The details of these mask strategies are
+                                                                  tiotemporal imputation performance of PriSTI compared with
+described as follows:
+                                                                  other baselines. Since not all methods can provide the proba-
+  • Point strategy: take a random value m between [0, 100],       bility distribution of missing values, i.e. evaluated by the CRPS
+    randomly select m% of the data from X as the imputation       metric, we show the deterministic imputation result evaluated
+    target X,
+            e and the remaining unselected data is regarded
+                                                                  by MAE and MSE in Table III, and select V-RIN, GP-VAE,
+    as observed values in training process.                       CSDI and PriSTI to be evaluated by CRPS, which is shown
+  • Block strategy: For each node, a sequence with a length       in Table IV. The probability distribution of missing values of
+    in the range [L/2, L] is selected as the imputation target    these four methods are simulated by generating 100 samples,
+    with a probability from 0 to 15%. In addition, 5% of the      while their deterministic imputation result is the median of all
+    observed values are randomly selected and added to the        generated samples. Since CRPS fluctuates less across 5 times
+    imputation target.                                            experiments (the standard error is less than 0.001 for CSDI
+  • Hybrid strategy: For each training sample X, it has a 50%     and PriSTI), we only show the mean of 5 times experiments
+    probability to be masked by the point strategy, and the       in Table IV.
+    other 50% probability to be masked by the block strategy         It can be seen from Table III and Table IV that our pro-
+    or a historical missing pattern i.e., the missing patterns    posed method outperforms other baselines on various missing
+    of other samples in the training set.                         patterns in different datasets. We summarize our findings
+  We utilize different mask strategies for various missing        as follows: (1) The statistic methods and classic machine
+patterns and datasets to make the model simulate the corre-       learning methods performs poor on all the datasets. These
+sponding missing patterns as much as possible during training.    methods impute missing values based on assumptions such
+Since AQI-36 has much original missing in the training set,       as stability or seasonality of time series, which can not cover
+which is fewer in traffic datasets, during the training process   the complex temporal and spatial correlations in real-world
+of PriSTI, we adopt hybrid strategy with historical missing       datasets. The matrix factorization methods also perform not
+pattern on AQI-36, hybrid strategy with block strategy on         well due to the low-rank assumption of data. (2) Among
+block-missing of traffic datasets, and point strategy on point-   deep learning methods, GRIN, as an autoregressive state-of-
+missing of traffic datasets.                                      the-art multivariate time series imputation method, performs
+                              TABLE III: The results of MAE and MSE for spatiotemporal imputation.
+                           AQI-36                                     METR-LA                                            PEMS-BAY
+      Method
+                 Simulated failure (24.6%)         Block-missing (16.6%)      Point-missing (31.1%)     Block-missing (9.2%)     Point-missing (25.0%)
+                  MAE               MSE             MAE           MSE          MAE           MSE          MAE         MSE          MAE         MSE
+       Mean     53.48±0.00 4578.08±0.00 7.48±0.00 139.54±0.00 7.56±0.00                   142.22±0.00   5.46±0.00   87.56±0.00   5.42±0.00   86.59±0.00
+        DA      50.51±0.00 4416.10±0.00 14.53±0.00 445.08±0.00 14.57±0.00                 448.66±0.00   3.30±0.00   43.76±0.00   3.35±0.00   44.50±0.00
+       KNN      30.21±0.00 2892.31±0.00 7.79±0.00 124.61±0.00 7.88±0.00                   129.29±0.00   4.30±0.00   49.90±0.00   4.30±0.00   49.80±0.00
+      Lin-ITP   14.46±0.00 673.92±0.00 3.26±0.00 33.76±0.00 2.43±0.00                      14.75±0.00   1.54±0.00   14.14±0.00   0.76±0.00    1.74±0.00
+         KF     54.09±0.00   4942.26±0.00     16.75±0.00       534.69±0.00   16.66±0.00   529.96±0.00   5.64±0.00   93.19±0.00   5.68±0.00   93.32±0.00
+       MICE     30.37±0.09   2594.06±7.17      4.22±0.05        51.07±1.25    4.42±0.07   55.07±1.46    2.94±0.02   28.28±0.37   3.09±0.02   31.43±0.41
+        VAR     15.64±0.08   833.46±13.85      3.11±0.08        28.00±0.76    2.69±0.00   21.10±0.02    2.09±0.10   16.06±0.73   1.30±0.00    6.52±0.01
+       TRMF     15.46±0.06   1379.05±34.83     2.96±0.00        22.65±0.13    2.86±0.00   20.39±0.02    1.95±0.01   11.21±0.06   1.85±0.00   10.03±0.00
+       BATF     15.21±0.27    662.87±29.55     3.56±0.01        35.39±0.03    3.58±0.01   36.05±0.02    2.05±0.00   14.48±0.01   2.05±0.00   14.90±0.06
+       V-RIN    10.00±0.10   838.05±24.74         6.84±0.17 150.08±6.13 3.96±0.08 49.98±1.30 2.49±0.04 36.12±0.66 1.21±0.03 6.08±0.29
+      GP-VAE    25.71±0.30   2589.53±59.14        6.55±0.09 122.33±2.05 6.57±0.10 127.26±3.97 2.86±0.15 26.80±2.10 3.41±0.23 38.95±4.16
+      rGAIN     15.37±0.26    641.92±33.89        2.90±0.01 21.67±0.15 2.83±0.01 20.03±0.09 2.18±0.01 13.96±0.20 1.88±0.02 10.37±0.20
+      BRITS     14.50±0.35    622.36±65.16        2.34±0.01 17.00±0.14 2.34±0.00 16.46±0.05 1.70±0.01 10.50±0.07 1.47±0.00 7.94±0.03
+       GRIN     12.08±0.47    523.14±57.17        2.03±0.00 13.26±0.05 1.91±0.00 10.41±0.03 1.14±0.01 6.60±0.10 0.67±0.00 1.55±0.01
+       CSDI      9.51±0.10     352.46±7.50        1.98±0.00 12.62±0.60 1.79±0.00 8.96±0.08 0.86±0.00 4.39±0.02 0.57±0.00 1.12±0.03
+       PriSTI   9.03±0.07     310.39±7.03         1.86±0.00    10.70±0.02    1.72±0.00     8.24±0.05    0.78±0.00 3.31±0.01 0.55±0.00 1.03±0.00
+
+
+
+TABLE IV: The results of CRPS for spatiotemporal imputa-                         III (PriSTI, CSDI, GRIN and BRITS) to impute all the data
+tion.                                                                            in AQI-36, and then use the classic spatiotemporal forecasting
+                 AQI-36         METR-LA                 PEMS-BAY
+                                                                                 method Graph Wavenet [4] to make predictions on the imputed
+      Method                                                                     dataset. We divide the imputed dataset into training, valid
+                   SF         Block       Point       Block       Point
+                                                                                 and test sets as 70%/10%/20%, and use the data of the past
+      V-RIN       0.3154      0.1283      0.0781      0.0394     0.0191          12 time steps to predict the next 12 time steps. We use the
+     GP-VAE       0.3377      0.1118      0.0977      0.0436     0.0568
+                                                                                 MAE and RMSE (the square root of MSE) for evaluation. The
+      CSDI        0.1056      0.0260      0.0235      0.0127     0.0067
+                                                                                 prediction results is shown in Table V. Ori. represents the raw
+      PriSTI      0.0997      0.0244      0.0227      0.0093     0.0064          data without imputation. The results in Table V indicate that
+                                                                                 the prediction performance is affected by the data integrity, and
+   TABLE V: The prediction on AQI-36 after imputation.                           the prediction performance on the data imputed by different
+                                                                                 methods also conforms to the imputation performance of these
+      Metric     Ori.        BRITS        GRIN        CSDI      PriSTI
+                                                                                 methods in Table III. This demonstrates that our method can
+      MAE        36.97       34.61        33.77       30.20      29.34           also help the downstream tasks after imputation.
+      RMSE       60.37       56.66        54.06       46.98      45.08
+                                                                                    2) Sensitivity analysis (RQ2): It is obvious that the per-
+                                                                                 formance of model imputation is greatly affected by the
+better than other RNN-based methods (rGAIN and BRITS)                            distribution and quantity of observed data. For spatiotemporal
+due to the extraction of spatial correlations. However, the                      imputation, sparse and continuously missing data is not con-
+performance of GRIN still has a gap compared to the diffusion                    ducive to the model learning the spatiotemporal correlation.
+model-based methods (CSDI), which may be caused by the                           To test the imputation performance of PriSTI when the data
+inherent defect of error accumulation in autoregressive models.                  is extremely sparse, we evaluate the imputation ability of
+(3) For deep generative models, the VAE-based methods (V-                        PriSTI in the case of 10%-90% missing rate compared with the
+RIN and GP-VAE) can not outperform CSDI and PriSTI. Our                          three baselines with the best imputation performance (BRITS,
+proposed method PriSTI outperforms CSDI in various missing                       GRIN and CSDI). We evaluate in the block-missing and point-
+patterns of every datasets, which indicates that our design                      missing patterns of METR-LA, respectively. To simulate the
+of conditional information construction and spatiotemporal                       sparser data in different missing patterns, for the block missing
+correlation can improve the performance of diffusion model                       pattern, we increase the probability of consecutive missing
+for imputation task. In addition, for the traffic datasets, we find              whose lengths in the range [12, 48]; for the point missing
+that our method has a more obvious improvement than CSDI                         pattern, we randomly drop the observed values according to
+in the block-missing pattern compared with point-missing,                        the missing rate. We train one model for each method, and
+which indicates that the interpolated information may provide                    use the trained model to test with different missing rates for
+more effective conditional information than observed values                      different missing patterns. For BRITS and GRIN, their models
+especially when the missing is continuous at time.                               are trained on data that is randomly masked by 50% with the
+   In addition, we select the methods of the top 4 performance                   corresponding missing pattern. For CSDI and PriSTI, their
+rankings (i.e., the average ranking of MAE and MSE) in Table                     models are trained with the mask strategies consistent with
+                                                                                                                        TABLE VI: Ablation studies.
+               BRITS                                              BRITS
+       4.5     GRIN                                       4.0     GRIN
+       4.0     CSDI                                               CSDI                                                      AQI-36                   METR-LA
+               PriSTI                                     3.5     PriSTI                                     Method
+       3.5
+ MAE
+
+
+
+
+                                                    MAE
+                                                          3.0                                                           Simulated failure   Block-missing   Point-missing
+       3.0
+                                                          2.5                                                mix-STI       9.83±0.04         1.93±0.00       1.74±0.00
+       2.5
+       2.0                                                2.0                                                w/o CF        9.28±0.05         1.95±0.00       1.75±0.00
+         10%       30%       50%        70%   90%           10%       30%       50%        70%   90%
+                         Missing rate                                       Missing rate                     w/o spa      10.07±0.04         3.51±0.01       2.23±0.00
+                                                                                                             w/o tem      10.95±0.08         2.43±0.00       1.92±0.00
+   (a) MAE on METR-LA(Block)                              (b) MAE on METR-LA(Point)                         w/o MPNN       9.10±0.10         1.92±0.00       1.75±0.00
+                                                                                                             w/o Attn     9.15±0.08          1.91±0.00       1.74±0.00
+   Fig. 5: The imputation results of different missing rates.
+                                                                                                              PriSTI       9.03±0.07         1.86±0.00       1.72±0.00
+
+the original experimental settings.
+   The MAE of each method under different missing rates                                                dencies and missing patterns of the two traffic datasets are
+are shown in Figure 5. When the missing rate of METR-                                                  similar, we perform ablation study on datasets AQI-36 and
+LA reaches 90%, PriSTI improves the MAE performance of                                                 METR-LA, and their MAE results are shown in Table VI,
+other methods by 4.67%-34.11% in block-missing pattern and                                             from which we have the following observations: (1) According
+3.89%-43.99% in point-missing pattern. The result indicates                                            to the results of mix-STI, the enhanced conditional informa-
+that our method still has better imputation performance than                                           tion and the extraction of conditional feature is effective for
+other baselines at high missing rate, and has a greater improve-                                       spatiotemporal imputation. We believe that the interpolated
+ment than other methods when data is sparser. We believe                                               conditional information is effective for the continuous missing,
+that this is due to the interpolated conditional information                                           such as the simulated failure in AQI-36 and the block-missing
+we construct retains the spatiotemporal dependencies that are                                          in traffic datasets. And the results of w/o CF indicate that
+more in line with the real distribution than the added Gaussian                                        the construction and utilization of conditional feature improve
+noise as much as possible when the data is highly sparse.                                              the imputation performance for diffusion model, which can
+   3) Ablation study (RQ3 and RQ4): We design the ablation                                             demonstrate that the conditional feature extraction module
+study to evaluate the effectiveness of the conditional feature                                         and the attention weight calculation in the noise estimation
+extraction module and noise estimation module. We compare                                              module is beneficial for the spatiotemporal imputation of
+our method with the following variants:                                                                PriSTI, since they model the spatiotemporal global correlation
+   • mix-STI: the input of noise estimation module is the                                              with the less noisy information. 2) The results of w/o spa and
+     concatenation of the observed values X and sampled                                                w/o tem indicate that both temporal and spatial dependencies
+     noise X e T , and the interpolated conditional information X                                      are necessary for the imputation. This demonstrate that our
+     and conditional feature extraction module are not used.                                           proposed noise estimation module captures the spatiotemporal
+   • w/o CF: remove conditional features in Equation (7) and                                           dependencies based on the conditional feature, which will
+     (8), i.e., the conditional feature extraction module is not                                       also be validated qualitatively in Section IV-E4. 3) From the
+     used, and all the Q, K, and V are the concatenation of                                            results of w/o MPNN and w/o Attn, the components of the
+     interpolated conditional information X and sampled noise                                          spatial global attention and message passing neural network
+     Xe T when calculating the attention weights.                                                      have similar effects on imputation results, but using only one
+   • w/o spa: remove the spatial dependencies learning module                                          of them is not as effective as using both, which indicates
+     γS in Equation (6).                                                                               that spatial global correlation and geographic information are
+   • w/o tem: remove the temporal dependencies learning                                                both necessary for the spatial dependencies. Whether the lack
+     module γT in Equation (6).                                                                        of geographic information as input or the lack of captured
+   • w/o MPNN: remove the component of message passing                                                 implicit spatial correlations, the imputation performance of the
+     neural network ϕMP in the spatial dependencies learning                                           model would be affected. We believe that the combination of
+     module γS .                                                                                       explicit spatial relationships and implicit spatial correlations
+   • w/o Attn: remove the component of spatial global atten-                                           can extract useful spatial dependencies in real-world datasets.
+     tion ϕSA in the spatial dependencies learning γS .                                                   4) Case study (RQ4): We plot the imputation result at the
+   The variants mix-STI and w/o CF are used to evaluate                                                same time of some nodes in AQI-36 and the block-missing pat-
+the effectiveness of the construction and utilization of the                                           tern of METR-LA to qualitatively analyze the spatiotemporal
+conditional information, where w/o CF utilizes the interpolated                                        imputation performance of our method, as shown in Figure
+information X while mix-STI does not. The remaining variants                                           6. Each of the subfigure represents a sensor, the black cross
+are used to evaluate the spatiotemporal dependencies learning                                          represents the observed value, and the dots of other colors
+of PriSTI. w/o spa and w/o tem are used to prove the                                                   represent the ground truth of the part to be imputed. The green
+necessity of learning temporal and spatial dependencies in                                             area is the part between the 0.05 and 0.95 quantiles of the
+spatiotemporal imputation, and w/o MPNN and w/o Attn are                                               estimated probability distribution, and the green solid line is
+used to evaluate the effectiveness of spatial global correlation                                       the median, that is, the deterministic imputation result.
+and geographic dependency. Since the spatiotemporal depen-                                                We select 5 sensors in AQI-36 and METR-LA respectively,
+                                                                   Fig. 7: The imputation for unobserved sensors in AQI-36.
+           (a) AQI-36                 (b) METR-LA (Block)          The orange dotted line represents the ground truth, the green
+                                                                   solid line represents the deterministic imputation result, and
+Fig. 6: The visualization of the probabilistic imputation in       the green shadow represents the quantile between 0.05 to 0.95.
+AQI-36 and block-missing pattern of METR-LA. Each subfig-
+ure represents a sensor, and the time windows of all sensors
+are aligned. The black crosses represent observations, and dots    ground truth, the green solid line is the median of the generated
+of various colors represent the ground truth of missing values.    samples, and the green shadow is the quantiles between 0.05
+The solid green line is the deterministic imputation result, and   and 0.95. We use MAE to quantitatively evaluate the results,
+the green shadow represents the quantile between 0.05 to 0.95.     the MAE of station 14 is 10.23, and the MAE of station 31
+                                                                   is 15.20. Since among all baselines only GRIN can impute
+                                                                   by geographic information, the MAE compared to the same
+and display their geographic location on the map. Taking
+                                                                   experiments in GRIN is also shown in Figure 7, and PriSTI
+METR-LA as the example, it can be observed from Figure
+                                                                   has a better imputation performance on the unobserved nodes.
+6 that sensor 188 and 194 have almost no missing values
+                                                                   This demonstrates the effectiveness of PriSTI in exploiting
+in the current time window, while their surrounding sensors
+                                                                   spatial relationship for imputation. Assuming that the detected
+have continuous missing values, and sensor 192 even has
+                                                                   spatiotemporal data are sufficiently dependent on spatial ge-
+no observed values, which means its temporal information is
+                                                                   ographic location, our proposed method may be capable of
+totally unavailable. However, the distribution of our generated
+                                                                   reconstructing the time series for a given location within the
+samples still covers most observations, and the imputation
+                                                                   study area, even if no sensors are deployed at that location.
+results conform to the time trend of different nodes. This
+indicates that on the one hand, our method can capture the            6) Hyperparameter analysis and time costs: We conduct
+temporal dependencies by the given observations for imputa-        analysis and experiments on some key hyperparameters in
+tion, and on the other hand, when the given observations are       PriSTI to illustrate the setting of hyperparameters and the
+limited, our method can utilize spatial dependencies to impute     sensitivity of the model to these parameters. Taking METR-
+according to the geographical proximity or nodes with similar      LA as example, we analyze the three key hyperparameters:
+temporal pattern. For example, for the traffic system, the         the channel size of hidden state d, maximum noise level βT
+time series corresponding to sensors with close geographical       and number of virtual nodes k, as shown in Figure 8. Among
+distance are more likely to have similar trends.                   them, d and k affect the amount of information learned by the
+   5) Imputation for sensor failure (RQ5): We impute the           model. βT affects the level of sampled noise, and too large or
+spatiotemporal data in a more extreme case: some sensors fail      too too small value is not conducive to the learning of noise
+completely, i.e., they cannot provide any observations. The        prediction model. According to the results in Figure 8, we set
+available information is only their location, so we can only       0.2 to βT which is the optimal value. For d and k, although
+impute by the observations from other sensors. This task is        the performance is better with larger value, we set both d and
+often studied in the research related to Kriging [32], which       k to 64 considering the efficiency.
+requires the model to reconstruct a time series for a given           In addition, we select several deep learning methods with
+location based on geographic location and observations from        the higher imputation performance ranking to compare their
+other sensors.                                                     efficiency with PriSTI on dataset AQI-36 and METR-LA. The
+   We perform the experiment of sensor failure on AQI-36.          total training time and inference time of different methods
+According to [7], we select the air quality monitoring station     are shown in Figure 9. The experiments are conducted on
+with the highest (station 14) and lowest (station 31) connectiv-   AMD EPYC 7371 CPU, NVIDIA RTX 3090. It can be seen
+ity. Based on the original experimental settings unchanged, all    that the efficiency gap between methods on datasets with
+observations of these two nodes are masked during the training     less nodes (AQI-36) is not large, but the training time cost
+process. The results of the imputation for unobserved sensors      of generative methods CSDI and PriSTI on datasets with
+are shown in Figure 7, where the orange dotted line is the         more nodes (METR-LA) is higher. Due to the construction of
+   2.02                                                     1.92                                              1.93                         GAIN [14] imputes data conditioned on observation values
+   1.98                                                     1.90                                              1.91                         by the generator, and utilizes the discriminator to distinguish
+   1.94
+ MAE
+
+
+
+
+                                                                                                            MAE
+                                                         MAE
+                                                                                                              1.89
+   1.90                                                     1.88                                              1.87                         the observed and imputed part. SSGAN [41] proposes a semi-
+   1.86                                                     1.86                                              1.8516                       supervised GAN to drive the generator to estimate missing
+                             16       32        64              0.1 0.2 0.3 0.4                                                 32    64
+   (a) Channel size d                                    (b) Maximum                             noise (c) Number of virtual               values using observed information and data labels.
+                                                         level βT                                      nodes k                                However, these methods are still RNN-based autoregressive
+                               Fig. 8: The sensitivity study of key parameters.                                                            methods, which are inevitably affected by the problem of
+                                                                                                                                           error accumulation, i.e., the current missing value is imputed
+                                                                                            50     BRITS                                   by the inaccurate historical estimated values in a sequential
+                                     BRITS
+                             1000                                                                  GRIN
+
+
+                                                                     Inference time (sec)
+                                     GRIN                                                   40
+       Training time (min)
+
+
+
+
+                              800    CSDI                                                          CSDI
+                                                                                                   PriSTI
+                                                                                                                                           manner. To address this problem, Liu et al. [6] proposes
+                                     PriSTI                                                 30
+                              600
+                                                                                            20
+                                                                                                                                           NAOMI, developing a non-autoregressive decoder that recur-
+                              400
+                              200                                                           10                                             sively updates the hidden state, and using generative adversar-
+                                0                                                            0                                             ial training to impute. Fortuin et al. [30] propose a multivariate
+                                      AQI-36              METR-LA                                   AQI-36                  METR-LA
+                                               Dataset                                                            Dataset
+                                                                                                                                           time series imputation method utilizing the VAE architecture
+                                    (a) Training time                                             (b) Inference time
+                                                                                                                                           with a Gaussian process prior in the latent space to capture
+         Fig. 9: The time costs of PriSTI and other baselines.                                                                             temporal dynamics. Some other works capture spatiotemporal
+                                                                                                                                           dependencies through the attention mechanism [37], [42], [43],
+conditional information, PriSTI has 25.7% more training time                                                                               which not only consider the temporal dependencies but also
+and 17.9% more inference time on METR-LA than CSDI.                                                                                        exploit the geographic locations [37] and correlations between
+                                                                                                                                           different time series [43].
+                                                         V. R ELATED W ORK                                                                    Recently, a diffusion model-based generative imputation
+   Since the spatiotemporal data can be imputed along tempo-                                                                               framework CSDI [18] shows the performance advantages of
+ral or spatial dimension, there are a large amount of literature                                                                           deep generative models in multivariate time series imputation
+for missing value imputation in spatiotemporal data. For the                                                                               tasks. The Diffusion Probabilistic Models (DPM) [15]–[17],
+time series imputation, the early studies imputed missing val-                                                                             as deep generative models, have achieved great performance
+ues by statistical methods such as local interpolation [33], [34],                                                                         than other generative methods in several fields such as image
+which reconstructs the missing value by fitting a smooth curve                                                                             synthesis [16], [20], audio generation [21], [44], and graph
+to the observations. Some methods also impute missing values                                                                               generation [45], [46]. In terms of imputation tasks, there are
+based on the historical time series through EM algorithm [10],                                                                             existing methods for 3D point cloud completion [47] and
+[11] or the combination of ARIMA and Kalman Filter [8],                                                                                    multivariate time series imputation [18] through conditional
+[9]. There are also some early studies filling in missing values                                                                           DPM. CSDI imputes the missing data through score-based
+through spatial relationship or neighboring sequence, such as                                                                              diffusion models conditioned on observed data, exploiting
+KNN [12], [13] and Kriging [32]. In addition, the low-rank                                                                                 temporal and feature correlations by a two dimensional at-
+matrix factorization [27], [28], [35], [36] is also a feasible                                                                             tention mechanism. However, CSDI takes the concatenation
+approach for spatiotemporal imputation, which exploits the                                                                                 of observed values and noisy information as the input when
+intrinsic spatial and temporal patterns based on the prior                                                                                 training, increasing the difficulty of the attention mechanism’s
+knowledge. For instance, TRMF [27] incorporates the structure                                                                              learning. Different from existing diffusion model-based impu-
+of temporal dependencies into a temporal regularized ma-                                                                                   tation methods, our proposed method construct the prior and
+trix factorization framework. BATF [28] incorporates domain                                                                                imputes spatiotemporal data based on the extracted conditional
+knowledge from transportation systems into an augmented                                                                                    feature and geographic information.
+tensor factorization model for traffic data modeling.
+   In recent years, there have been many studies on spa-                                                                                                         VI. C ONCLUSION
+tiotemporal data imputation through deep learning methods                                                                                     We propose PriSTI, a conditional diffusion framework for
+[6], [37]. Most deep learning imputation methods focus on                                                                                  spatiotemporal imputation, which imputes missing values with
+the multivariate time series and use RNN as the core to                                                                                    help of the extracted conditional feature to calculate temporal
+model temporal relationships [1], [7], [38], [39]. The RNN-                                                                                and spatial global correlations. Our proposed framework cap-
+based approach for imputation is first proposed by GRU-D                                                                                   tures spatiotemporal dependencies by comprehensively con-
+[38] and is widely used in deep autoregressive imputation                                                                                  sidering spatiotemporal global correlation and geographic de-
+methods. Among the RNN-based methods, BRITS [1] imputes                                                                                    pendency. PriSTI achieves more accurate imputation results
+the missing values on the hidden state through a bidirectional                                                                             than state-of-the-art baselines in various missing patterns of
+RNN and considers the correlation between features. GRIN [7]                                                                               spatiotemporal data in different fields, and also handles the
+introduces graph neural networks based on BRITS to exploit                                                                                 case of high missing rates and sensor failure. In future work,
+the inductive bias of historical spatial patterns for imputation.                                                                          we will consider improving the scalability and computation ef-
+In addition to directly using RNN to estimate the hidden state                                                                             ficiency of existing frameworks on larger scale spatiotemporal
+of missing parts, there are also a number of methods using                                                                                 datasets, and how to impute by longer temporal dependencies
+GAN to generate missing data [14], [40], [41]. For instance,                                                                               with refined conditional information.
+                          ACKNOWLEDGMENT                                           [25] D. I. Shuman, S. K. Narang, P. Frossard, A. Ortega, and P. Van-
+                                                                                        dergheynst, “The emerging field of signal processing on graphs: Ex-
+                                                                                        tending high-dimensional data analysis to networks and other irregular
+  We thank anonymous reviewers for their helpful comments.                              domains,” IEEE signal processing magazine, vol. 30, no. 3, pp. 83–98,
+This research is supported by the National Natural Science                              2013.
+Foundation of China (62272023).                                                    [26] I. R. White, P. Royston, and A. M. Wood, “Multiple imputation
+                                                                                        using chained equations: issues and guidance for practice,” Statistics
+                                                                                        in medicine, vol. 30, no. 4, pp. 377–399, 2011.
+                               R EFERENCES                                         [27] H.-F. Yu, N. Rao, and I. S. Dhillon, “Temporal regularized matrix
+                                                                                        factorization for high-dimensional time series prediction,” NeurIPS,
+                                                                                        vol. 29, 2016.
+ [1] W. Cao, D. Wang, J. Li, H. Zhou, L. Li, and Y. Li, “Brits: Bidirectional      [28] X. Chen, Z. He, Y. Chen, Y. Lu, and J. Wang, “Missing traffic data
+     recurrent imputation for time series,” NeurIPS, vol. 31, 2018.                     imputation and pattern discovery with a bayesian augmented tensor
+ [2] X. Yi, Y. Zheng, J. Zhang, and T. Li, “St-mvl: filling missing values in           factorization model,” Transportation Research Part C: Emerging Tech-
+     geo-sensory time series data,” in IJCAI, 2016.                                     nologies, vol. 104, pp. 66–77, 2019.
+ [3] Y. Li, R. Yu, C. Shahabi, and Y. Liu, “Diffusion convolutional recurrent      [29] A. W. Mulyadi, E. Jun, and H.-I. Suk, “Uncertainty-aware variational-
+     neural network: Data-driven traffic forecasting,” in ICLR, 2018.                   recurrent imputation network for clinical time series,” IEEE Transactions
+ [4] Z. Wu, S. Pan, G. Long, J. Jiang, and C. Zhang, “Graph wavenet for                 on Cybernetics, 2021.
+     deep spatial-temporal graph modeling.” in IJCAI, 2019.                        [30] V. Fortuin, D. Baranchuk, G. Rätsch, and S. Mandt, “Gp-vae: Deep
+ [5] P. Bauer, A. Thorpe, and G. Brunet, “The quiet revolution of numerical             probabilistic time series imputation,” in AISTATS. PMLR, 2020, pp.
+     weather prediction,” Nature, vol. 525, no. 7567, pp. 47–55, 2015.                  1651–1661.
+ [6] Y. Liu, R. Yu, S. Zheng, E. Zhan, and Y. Yue, “Naomi: Non-                    [31] J. E. Matheson and R. L. Winkler, “Scoring rules for continuous
+     autoregressive multiresolution sequence imputation,” NeurIPS, vol. 32,             probability distributions,” Management science, vol. 22, no. 10, pp.
+     2019.                                                                              1087–1096, 1976.
+ [7] A. Cini, I. Marisca, and C. Alippi, “Filling the g ap s: Multivariate time    [32] M. L. Stein, Interpolation of spatial data: some theory for kriging.
+     series imputation by graph neural networks,” in ICLR, 2022.                        Springer Science & Business Media, 1999.
+ [8] C. F. Ansley and R. Kohn, “On the estimation of arima models with             [33] D. M. Kreindler and C. J. Lumsden, “The effects of the irregular
+     missing values,” in Time series analysis of irregularly observed data.             sample and missing data in time series analysis.” Nonlinear dynamics,
+     Springer, 1984, pp. 9–37.                                                          psychology, and life sciences, 2006.
+ [9] A. C. Harvey, “Forecasting, structural time series models and the kalman      [34] E. Acuna and C. Rodriguez, “The treatment of missing values and
+     filter,” 1990.                                                                     its effect on classifier accuracy,” in Classification, clustering, and data
+[10] R. H. Shumway and D. S. Stoffer, “An approach to time series smoothing             mining applications. Springer, 2004, pp. 639–647.
+     and forecasting using the em algorithm,” Journal of time series analysis,     [35] R. Salakhutdinov and A. Mnih, “Bayesian probabilistic matrix factor-
+     vol. 3, no. 4, pp. 253–264, 1982.                                                  ization using markov chain monte carlo,” in ICML, 2008, pp. 880–887.
+[11] F. V. Nelwamondo, S. Mohamed, and T. Marwala, “Missing data:                  [36] X. Chen and L. Sun, “Bayesian temporal factorization for multidimen-
+     A comparison of neural network and expectation maximization tech-                  sional time series prediction,” IEEE Transactions on Pattern Analysis
+     niques,” Current Science, pp. 1514–1521, 2007.                                     and Machine Intelligence, 2021.
+                                                                                   [37] J. Ma, Z. Shou, A. Zareian, H. Mansour, A. Vetro, and S.-F. Chang,
+[12] H. Trevor, T. Robert, and F. Jerome, “The elements of statistical learning:
+                                                                                        “Cdsa: cross-dimensional self-attention for multivariate, geo-tagged time
+     data mining, inference, and prediction,” 2009.
+                                                                                        series imputation,” arXiv preprint arXiv:1905.09904, 2019.
+[13] L. Beretta and A. Santaniello, “Nearest neighbor imputation algorithms:
+                                                                                   [38] Z. Che, S. Purushotham, K. Cho, D. Sontag, and Y. Liu, “Recurrent
+     a critical evaluation,” BMC medical informatics and decision making,
+                                                                                        neural networks for multivariate time series with missing values,”
+     vol. 16, no. 3, pp. 197–208, 2016.
+                                                                                        Scientific reports, vol. 8, no. 1, pp. 1–12, 2018.
+[14] J. Yoon, J. Jordon, and M. Schaar, “Gain: Missing data imputation using       [39] J. Yoon, W. R. Zame, and M. van der Schaar, “Estimating missing data in
+     generative adversarial nets,” in ICML. PMLR, 2018, pp. 5689–5698.                  temporal data streams using multi-directional recurrent neural networks,”
+[15] J. Sohl-Dickstein, E. Weiss, N. Maheswaranathan, and S. Ganguli, “Deep             IEEE Transactions on Biomedical Engineering, vol. 66, no. 5, pp. 1477–
+     unsupervised learning using nonequilibrium thermodynamics,” in ICML.               1490, 2018.
+     PMLR, 2015, pp. 2256–2265.                                                    [40] Y. Luo, X. Cai, Y. Zhang, J. Xu et al., “Multivariate time series
+[16] J. Ho, A. Jain, and P. Abbeel, “Denoising diffusion probabilistic models,”         imputation with generative adversarial networks,” NeurIPS, vol. 31,
+     NeurIPS, vol. 33, pp. 6840–6851, 2020.                                             2018.
+[17] Y. Song, J. Sohl-Dickstein, D. P. Kingma, A. Kumar, S. Ermon, and             [41] X. Miao, Y. Wu, J. Wang, Y. Gao, X. Mao, and J. Yin, “Generative semi-
+     B. Poole, “Score-based generative modeling through stochastic differ-              supervised learning for multivariate time series imputation,” in AAAI,
+     ential equations,” arXiv preprint arXiv:2011.13456, 2020.                          vol. 35, no. 10, 2021, pp. 8983–8991.
+[18] Y. Tashiro, J. Song, Y. Song, and S. Ermon, “Csdi: Conditional                [42] S. N. Shukla and B. M. Marlin, “Multi-time attention networks for
+     score-based diffusion models for probabilistic time series imputation,”            irregularly sampled time series,” in ICLR, 2021.
+     NeurIPS, vol. 34, pp. 24 804–24 816, 2021.                                    [43] W. Du, D. Côté, and Y. Liu, “Saits: Self-attention-based imputation for
+[19] J. Sohl-Dickstein, E. Weiss, N. Maheswaranathan, and S. Ganguli, “Deep             time series,” arXiv preprint arXiv:2202.08516, 2022.
+     unsupervised learning using nonequilibrium thermodynamics,” in ICML,          [44] K. Goel, A. Gu, C. Donahue, and C. Ré, “It’s raw! audio generation
+     vol. 37, 07–09 Jul 2015, pp. 2256–2265.                                            with state-space models,” ICML, 2022.
+[20] R. Rombach, A. Blattmann, D. Lorenz, P. Esser, and B. Ommer, “High-           [45] H. Huang, L. Sun, B. Du, Y. Fu, and W. Lv, “Graphgdp: Generative
+     resolution image synthesis with latent diffusion models,” in ICCV, 2022,           diffusion processes for permutation invariant graph generation,” arXiv
+     pp. 10 684–10 695.                                                                 preprint arXiv:2212.01842, 2022.
+[21] Z. Kong, W. Ping, J. Huang, K. Zhao, and B. Catanzaro, “Diffwave: A           [46] H. Huang, L. Sun, B. Du, and W. Lv, “Conditional diffusion based on
+     versatile diffusion model for audio synthesis,” in ICLR, 2021.                     discrete graph structures for molecular graph generation,” arXiv preprint
+[22] J. Choi, H. Choi, J. Hwang, and N. Park, “Graph neural controlled                  arXiv:2301.00427, 2023.
+     differential equations for traffic forecasting,” in AAAI, vol. 36, no. 6,     [47] Z. Lyu, Z. Kong, X. Xu, L. Pan, and D. Lin, “A conditional point
+     2022, pp. 6367–6374.                                                               diffusion-refinement paradigm for 3d point cloud completion,” in ICLR,
+[23] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez,            2022.
+     Ł. Kaiser, and I. Polosukhin, “Attention is all you need,” NeurIPS,
+     vol. 30, 2017.
+[24] H. V. Jagadish, J. Gehrke, A. Labrinidis, Y. Papakonstantinou, J. M.
+     Patel, R. Ramakrishnan, and C. Shahabi, “Big data and its technical
+     challenges,” Communications of the ACM, vol. 57, no. 7, pp. 86–94,
+     2014.
+

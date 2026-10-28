@@ -1,0 +1,1069 @@
+                                                    ImputeFormer: Low Rankness-Induced Transformers for
+                                                          Generalizable Spatiotemporal Imputation
+                                                                             Tong Nie1 , Guoyang Qin1 , Wei Ma2 , Yuewen Mei1 , Jian Sun1,†
+                                                                                      1 Tongji University, 2 The Hong Kong Polytechnic University
+
+                                                                             nietong@tongji.edu.cn, 2015qgy@tongji.edu.cn, wei.w.ma@polyu.edu.hk,
+                                                                                       meiyuewen@tongji.edu.cn, sunjian@tongji.edu.cn
+
+                                         ABSTRACT                                                                               weather, energy supply, and sensor service time can adversely affect
+                                                                                                                                the quality of monitoring data [5]. Given these factors, data missing
+arXiv:2312.01728v3 [cs.LG] 29 May 2024
+
+
+
+
+                                         Missing data is a pervasive issue in both scientific and engineering
+                                         tasks, especially for the modeling of spatiotemporal data. This prob-                  rates can be quite high. For example, the air quality measurements in
+                                         lem attracts many studies to contribute to data-driven solutions.                      the Urban Air project [48] contain about 30% invalid records due to
+                                         Existing imputation solutions mainly include low-rank models and                       station malfunction. Similarly, subsets of Uber Movement data, such
+                                         deep learning models. The former assumes general structural pri-                       as New York City, have an approximate 85% of missing records. This
+                                         ors but has limited model capacity. The latter possesses salient                       problem encourages researchers to develop advanced models that
+                                         features of expressivity but lacks prior knowledge of the underly-                     can exploit limited observations to impute missing values. Extensive
+                                         ing spatiotemporal structures. Leveraging the strengths of both two                    research has contributed to data-driven methods for this purpose,
+                                         paradigms, we demonstrate a low rankness-induced Transformer                           especially in the field of spatiotemporal data [5, 6, 28, 30, 40, 44].
+                                         to achieve a balance between strong inductive bias and high model                         Generally, there are two research paradigms for imputing miss-
+                                         expressivity. The exploitation of the inherent structures of spa-                      ing data. The first paradigm uses low-rank and low-dimensional
+                                         tiotemporal data enables our model to learn balanced signal-noise                      analytical models, such as [4, 6, 20, 28, 40], which assumes the
+                                         representations, making it generalizable for a variety of imputation                   data has a well-structured matrix or tensor form. These models
+                                         problems. We demonstrate its superiority in terms of accuracy, effi-                   utilize the algebraic properties of the assumed structure, such as
+                                         ciency, and versatility in heterogeneous datasets, including traffic                   low-rankness, low nuclear norm, and spectrum sparsity (we use the
+                                         flow, solar energy, smart meters, and air quality. Promising empiri-                   term “low-rank” as a proxy), to impute missing values [25]. While
+                                         cal results provide strong conviction that incorporating time series                   simple low-rank models like matrix factorization and tensor com-
+                                         primitives, such as low-rankness, can substantially facilitate the                     pletion can effectively handle incomplete data, they may struggle
+                                         development of a generalizable model to approach a wide range of                       with capturing complex patterns, such as nonlinearity and nonsta-
+                                         spatiotemporal imputation problems. The model implementation is                        tionarity. With strong inductive bias, these models can excessively
+                                         available at: https://github.com/tongnie/ImputeFormer.                                 smooth the reconstructed data, filtering out informative signals,
+                                                                                                                                and generating oversmoothing reconstructions in some cases [27].
+                                         CCS CONCEPTS                                                                              The second paradigm uses deep learning-based imputation mod-
+                                                                                                                                els. These models learn the dynamics of the data-generating process
+                                         • Information systems → Spatial-temporal systems.
+                                                                                                                                and demonstrate improved performance [1, 2, 7, 10, 19, 26]. How-
+                                                                                                                                ever, despite the success of these models on various benchmarks,
+                                         KEYWORDS
+                                                                                                                                there are still costs and difficulties that need further attention. First,
+                                         Missing Data, Data Imputation, Transformers, Low-Rank Modeling,                        such data-intensive methods require a substantial amount of train-
+                                         Spatiotemporal Data, Time Series.                                                      ing expenses due to the complex model structures in deep learning,
+                                         ACM Reference Format:                                                                  such as probabilistic diffusion and bidirectional recurrence [1, 36].
+                                         Tong Nie, Guoyang Qin, Wei Ma, Yuewen Mei, and Jian Sun. 2024. Im-                     This can consume significant computational memory and resources,
+                                         puteFormer: Low Rankness-Induced Transformers for Generalizable Spa-                   making them less efficient for real-time deployment. Second, empir-
+                                         tiotemporal Imputation. In Proceedings of the 30th ACM SIGKDD Conference               ical loss-based learning methods, without the guidance of physics or
+                                         on Knowledge Discovery and Data Mining (KDD ’24), August 25–29, 2024,                  data structures, are prone to overfitting and perform poorly when
+                                         Barcelona, Spain. ACM, New York, NY, USA, 12 pages. https://doi.org/xx
+                                                                                                                                applied to tasks fall outside of the distribution of training data [47].
+                                                                                                                                   With the shift of focus in the field of deep imputation from RNNs
+                                         1    INTRODUCTION                                                                      and diffusion models to Transformers [10, 24, 26], Transformer-
+                                         Missing data is a common challenge in detection systems, especially                    related architectures have gained significant attention due to their
+                                         in high-resolution monitoring systems. Factors such as inclement                       potential to provide efficient generative output and high expressiv-
+                                         † Jian Sun is the corresponding author.
+                                                                                                                                ity, enabling more effective imputations compared to autoregression-
+                                                                                                                                based models. Additionally, Transformers are considered founda-
+                                                                   This work is licensed under a Creative Commons Attribution   tional architectures for general time series forecasting [11]. How-
+                                                                  International 4.0 License.
+                                                                                                                                ever, the effectiveness of applying Transformers to general data
+                                         KDD ’24, August 25–29, 2024, Barcelona, Spain.                                         imputation tasks requires further investigation. Modern deep learn-
+                                         © 2024 Copyright held by the owner/author(s).                                          ing techniques associated with these architectures, such as self-
+                                         ACM ISBN xx.                                                                           attention and residual connections, can unintentionally preserve
+                                         https://doi.org/xx
+KDD ’24, August 25–29, 2024, Barcelona, Spain.                                                                                                     Tong Nie et al.
+
+
+                                                             b. Paradigm 1: Low-rank/-dim imputation
+
+                                                              Sharp
+                                                                                              w/ structural priors
+                                                                                              low expressivity
+                                                                                                                     d. Low rankness-induced deep learning
+ a.
+              Spatiotemporal matrix                                                                                                  Ours: ImputeFormer
+
+      Sharp                                                   Smooth       Reconstructed     Signal        Noise          Sharp
+
+
+                                                                                                                          Balanced
+
+
+                                                             c. Paradigm 2: Deep learning imputation
+      Smooth       Ground truth              Incomplete                                                                                    Reconstructed
+                                                                                              w/o structural priors       Smooth
+                                                               Sharp                                                                   w/ structural priors
+                                                                                              high expressivity
+                  Singular values                                                                                                      high expressivity
+                                                                                                                                       (+model priors)
+
+               Signal        Noise      Signal       Noise
+
+                                                               Smooth      Reconstructed     Signal        Noise
+
+Figure 1: (a) The distribution of singular values in spatiotemporal data is long-tailed. The existence of missing data can increase
+its rank (or singular values). (b) Low-rank models can filter out informative signals and generate a smooth reconstruction,
+resulting in truncating too much energy in the left part of its spectrum. (c) Deep models can preserve high-frequency noise and
+generate sharp imputations, maintaining too much energy for the right part of the singular spectrum. With the generality of
+low-rank models and the expressivity of deep models, ImputeFormer achieves a signal-noise balance for accurate imputation.
+
+
+high-frequency noise in data as informative signals [34]. This can                  (1) We are among the first to empower Transformers with low-
+lead the model to learn high-rank representations that violate the                      rankness inductive bias to achieve a balance between signal
+natural distribution of data. Furthermore, the existence of missing                     and noise for general spatiotemporal data imputation;
+data can introduce spurious correlations between “tokens,” posing                   (2) Compared to state-of-the-art benchmark models, we demon-
+challenges to these architectures. Considering the above-mentioned                      strate the advantages of ImputeFormer in accuracy, effi-
+concerns, incorporating a low-rank inductive bias into the Trans-                       ciency, and versatility in diverse datasets, such as traffic
+former framework seems to provide a chance to improve both the                          flow, solar energy, electricity consumption, and air quality;
+effectiveness and efficiency in spatiotemporal imputation.                          (3) Comprehensive case studies reveal the model’s interpretabil-
+    In summary, matrix- and tensor-based models offer useful priors                     ity and provide insights into the deep imputation paradigm.
+for spatiotemporal data, such as low-rankness and sparsity. How-
+ever, their ability to represent data is limited (see Fig. 1(b)). On            2     PRELIMINARY
+the other hand, deep learning models, particularly Transformers,                Notations. This section first introduces some basic notations fol-
+excel at learning representations but lack prior knowledge of data              lowing [26]. In a continuously working sensor system with 𝑁 static
+generation (see Fig. 1(c)). As the demand for a versatile and adapt-            detectors at some measurement positions, spatiotemporal data with
+able model that can handle various imputation problems in reality               context information can be obtained: (1) X𝑡 :𝑡 +𝑇 ∈ R𝑁 ×𝑇 : The ob-
+increases, such as cross-domain datasets, different observation con-            served data matrix containing missing values collected by all sen-
+ditions, highly sparse measurements, and different input patterns,              sors over a time interval T = {𝑡, . . . , 𝑡 + 𝑇 }, where 𝑇 represents the
+it becomes apparent that existing advanced solutions, typically                 observation period; (2) Y𝑡 :𝑡 +𝑇 ∈ R𝑁 ×𝑇 : The ground truth data ma-
+evaluated on limited tasks with simple settings, may not be general-
+                                                                                trix used for evaluation; (3) U𝑡 :𝑡 +𝑇 ∈ R𝑇 ×𝑑u : Exogenous variables
+izable. Hence, there is a temptation to merge these two paradigms
+                                                                                describe time series, such as the time of day, day of week, and week
+and utilize their respective strengths to investigate an alternative
+                                                                                of month information; (4) V ∈ R𝑁 ×𝑑v : Meta information of sensors,
+paradigm that can effectively handle complex imputation scenarios.
+                                                                                such as detector ID and location of installation.
+    To this end, in this paper we leverage the structural priors of low-
+                                                                                Problem Formulation. The multivariate time series imputation
+rankness to generalize the canonical Transformer (see Fig. 1(d)) in
+                                                                                problem defines an inductive learning and inference process:
+general spatiotemporal imputation tasks. Our approach, referred to
+as Imputation Transformers (ImputeFormer), imposes low-rankness                                                ∑︁
+                                                                                     Learning Θ b = arg min          ℓ (NN({x𝑡 , u𝑡 , m𝑡 }, V|Θ), x𝑡 ) ,
+and achieves attention factorization equivalently by introducing                                           Θ
+                                                                                                               𝑡∈T                                             (1)
+a projected attention mechanism on the temporal dimension and
+                                                                                     Inference b                                      b ∀{𝑡 ′ . . . 𝑡 ′ + 𝑇 },
+                                                                                                  x𝑡 ′ = NN({x𝑡 ′ , u𝑡 ′ , m𝑡 ′ }, V| Θ),
+an embedded attention on the spatial dimension. Additionally, we
+propose a Fourier sparsity loss to regularize the solution’s spectrum.
+                                                                                where NN(·|Θ) is the neural network model parameterized by Θ,
+By inheriting the merits of both low-rank and deep learning models,
+                                                                                and the indicator m𝑡 denotes the locations of the masked values
+it has achieved state-of-the-art imputation performance on various
+                                                                                for training and the locations of the observed values for inference.
+benchmarks. Our main contributions are summarized as follows:
+                                                                                After training the model on observed data, the imputation model
+                                                                                can act in a different time span than the training set.
+ImputeFormer: Low Rankness-Induced Transformers for Generalizable Spatiotemporal Imputation                                                                  KDD ’24, August 25–29, 2024, Barcelona, Spain.
+
+
+                                                                                                                                                      Low-Rank Pattern in Spatial Attention Map
+                                                                                                  L× Spatial-Temporal Layers
+                                                                              Hidden States
+ Redundancy and Dominance in Time Series
+                                                                                LayerNorm
+                                                                                                                                Spatial Attention
+
+
+
+
+                                                      Temporal Interaction
+
+
+
+
+                                                                                                      Spatial interaction
+                                                                               FeedForward
+                                                                                                                                   LayerNorm
+
+                                                                                LayerNorm
+                                                                                                                                  FeedForward          Fourier Sparsity in Both Space and Time
+
+                                                                             Temporal Attention
+                                                                                                                                   LayerNorm
+
+
+
+
+                                                                                                  Concat                            Readout
+
+                                                                                                                                         Imputation
+                                                                  Input          Positional   Adaptive
+                                                                   Emb.             Enc.        Emb.
+
+Figure 2: Low-rankness in time series and the induced ImputeFormer. (a) Redundancy in time series: PEMS08 data can be
+reasonably reconstructed using only five dominant patterns. (b) Low-rank spatial attention map: the singular values of the
+multivariate attention map show a long-tailed distribution and most of them are small values. (c) Fourier sparsity in both space
+and time axes: both the spatial and temporal signals possess a sparse Fourier spectrum, with most amplitudes close to zero.
+
+
+3    RELATED WORK                                                                                                           imputation task with an observed reconstruction task, and applied
+Generally, there exist two series of studies on multivariate time                                                           a diagonally-masked self-attention to hierarchically reconstruct
+series imputation, i.e., 1) low-dimensional/rank models and 2) deep                                                         sparse data. SPIN [26] achieved SOTA imputation performance by
+imputation models. We particularly discuss existing Transformer-                                                            conducting a sparse cross-attention and a temporal self-attention on
+based solutions to clarify the connections between our models.                                                              all observed spatiotemporal points. However, the high complexity
+Low-Dimensional/Rank Imputation. Early methods addressed                                                                    of cross-attention hinders its application in larger graphs.
+the data imputation problem by exploring statistical interpolation
+                                                                                                                            4     LOW RANKNESS-INDUCED TRANSFORMER
+tools, such as MICE [37]. Recently, low-rank matrix factorization
+[20, 46] and tensor completion [4–6, 28, 30] have emerged as nu-                                                            This section elaborates the ImputeFormer model. The major dif-
+merically efficient techniques for spatiotemporal imputation. To in-                                                        ference between our model and the canonical Transformer is the
+corporate series-related features, TRMF [46] imposed autoregressive                                                         integration of low-rank factorization. Unlike GNNs, ImputeFormer
+regularization on the temporal manifold. TiDER [20] decomposed                                                              does not require a predefined graph due to the global adaptive
+the time series into trend, seasonality and bias components under                                                           interaction between series. It also bypasses the use of intricate tem-
+the factorization framework. Despite being conceptually intuitive                                                           poral techniques, such as bidirectional recurrent aggregation, sparse
+and concise, limited capacity hinder their practical effectiveness.                                                         cross-attention, and attention masking. Furthermore, it achieves
+Deep Learning Imputation. Recent advances in neural time series                                                             linear complexity with respect to spatial and temporal dimensions.
+analysis open a new horizon to improve imputation performance.
+Generally, deep imputation methods learn to reconstruct the distri-                                                         4.1     Architectural Overview
+bution of observed data or aggregate pointwise information pro-                                                             The overall structure of the proposed ImputeFormer is shown in
+gressively [12]. Representative methods include GRU-D [2], GRUI                                                             Fig. 2. The input embedding layer projects sparse observations
+[22], BRITS [1], GAIN [45], E2GAN [23] NAOMI [21], CSDI [36], and                                                           to hidden states in an additional dimension and introduces both
+PriSTI [19]. To exploit the multivariate nature of spatiotemporal                                                           fixed and learnable embedding into the inputs. Following a time-
+data, graph neural networks (GNNs) have been adopted to model                                                               and-graph template [8], TemporalInteraction and SpatialInteraction
+sensor-wise correlations for more complicated missing patterns.                                                             perform global message passing alternatively at all spatiotemporal
+For example, MDGCN [15] and GACN [44] applied GNNs with RNNs                                                                coordinates. Finally, a MLP readout is adopted to output the final
+for traffic data imputation. IGNNK [42], STAR [14], and STCAGCN [31]                                                        imputation. This process can be summarized as follows:
+further tackle the kriging problem, which is a special data impu-
+tation scenario. As a SOTA model and an architectural template                                                                       (0)
+                                                                                                                                  Z𝑡 :𝑡 +𝑇 =InputEmb(X𝑡 :𝑡 +𝑇 , U𝑡 :𝑡 +𝑇 , V),
+for GNN-RNNs, GRIN [7] based on message-passing GRUs that pro-
+                                                                                                                                     (ℓ+1)                                  (ℓ )
+gressively performed a two-stage forward and backward recurrent                                                                   Z𝑡 :𝑡 +𝑇 =TemporalInteraction(Z𝑡 :𝑡 +𝑇 ),
+                                                                                                                                                                                                       (2)
+message aggregation with predefined relational biases.                                                                               (ℓ+1)                                (ℓ+1)
+                                                                                                                                  Z𝑡 :𝑡 +𝑇 =SpatialInteraction(Z𝑡 :𝑡 +𝑇 ), ∀ℓ ∈ {0, . . . 𝐿},
+Transformers for Time Series Imputation. Transformers [38]
+can aggregate abundant information from arbitrary input elements,                                                                  b𝑡 :𝑡 +𝑇 =Readout(Z (𝐿+1) ).
+                                                                                                                                   X                  𝑡 :𝑡 +𝑇
+becoming a natural choice for sequential data imputation. In partic-
+ular, CDSA [24] developed a cross-channel attention that utilizes cor-                                                         The canonical Transformer block [38] can be adopted to gather
+relations in different dimensions. SAITS [10] combined the masked                                                           spatial-temporal information for imputation. However, we argue
+                                                                                                                            that directly applying it to the imputation problem is questionable,
+KDD ’24, August 25–29, 2024, Barcelona, Spain.                                                                                                          Tong Nie et al.
+
+
+and there exist three key concerns: (1) Spurious correlations: Short-           4.3      Temporal Projected Attention
+term series within a window can be noisy and indistinguishable.                 As is evident in Fig. 2, time series are supposed to be redundant
+Modeling relational structures using sparse input can cause spuri-              in the time domain, that is, most of the information can be recon-
+ous and misleading correlations. (2) High-rank estimations: Time                structed using only a few dominant modes. However, as the hidden
+series are typically low-rank in nature [16]. Full-attention compu-             dimension 𝐷 ′ is practically much larger than the sequence length
+                                                                                                               ′      ′
+tation on raw data can be overcorrelated and generate high-rank                 𝑇 , the attention score R𝑇 ×𝐷 × R𝐷 ×𝑇 → R𝑇 ×𝑇 can be a high-rank
+attention maps. (3) Scalability issue: All pairwise attention on large          matrix, which is both adverse and inefficient to reconstruct incom-
+graphs is memory intensive and computationally inefficient. To ad-              plete hidden spaces. To address this concern, we propose a new
+dress these issues, we start from time series primitives and enhance            projected attention mechanism to impose a low-rank constraint
+the Transformer using these structural priors.                                  on the attentive process and efficiently model pairwise temporal
+                                                                                interactions between time points in linear complexity.
+4.2     Spatiotemporal Input Embedding                                              To utilize this structural bias, we first project the initial features
+Input Embedding. We adopt a dimension expansion strategy [43]                   to dense representations by attending to a low-dimensional vector.
+to preserve the information density of the incomplete time series.              Specifically, we first randomly initialize a learnable vector that is
+In practice, we expand an additional dimension of the input and                 shared by all nodes with the gradient tractable as the projector
+                                                                                                ′
+project it into a hidden state along this new dimension:                        Pproj ∈ R𝐶 ×𝐷 , where 𝐶 < 𝑇 is the projected dimension. In order to
+                 (0)                                                            represent the temporal message in a compact form, we then project
+              Z𝑡 :𝑡 +𝑇 = MLP(Unsqueeze(X𝑡 :𝑡 +𝑇 , dim=-1),                (3)                                      ′
+                                                                                the hidden states Z𝑖,(ℓ ) ∈ R𝑇 ×𝐷 (subscripts are omitted for brevity)
+                                              (0)
+where Unsqueeze(·) : R𝑁 ×𝑇 → R𝑁 ×𝑇 ×1 , and Z𝑡 :𝑡 +𝑇 ∈ R𝑁 ×𝑇 ×𝐷                 to the projected space by attending to the query projector:
+is the initial hidden representation. With this, we can aggregate mes-                        𝑖,(ℓ )            (ℓ )
+                                                                                             Zproj = SelfAtten(Pproj, Z𝑖,(ℓ ) , Z𝑖,(ℓ ) )),
+                                                                                             e
+sage from other time points by learning data-dependent weights:
+                                           𝑖,(ℓ )   𝑖,(ℓ )                                                              (ℓ )     T 𝑖,(ℓ ),T
+                                                                                                                  © Pproj WQ WK Z
+                         𝑖,(ℓ+1)                                                                                                                                   (7)
+                       Z𝑡 :𝑡 +𝑇 = Fℓ (Z𝑡 :𝑡 +𝑇 )Z𝑡 :𝑡 +𝑇 ,                (4)                                                                  ª 𝑖,(ℓ )
+                                                                                                        = Softmax ­        √                   ®Z       WV ,
+where Fℓ (·) : R𝑇 ×𝐷 → R𝑇 ×𝑇 represents a data-driven function at                                                            𝐷′
+                                                                                                                  «                            ¬
+the ℓ-th layer, such as self-attention. The rationale of this strategy                       𝑖,(ℓ )             ′
+is discussed in A.1.2.                                                                Zproj ∈ R𝐶 ×𝐷 is the projected value, WQ, WK, WV ∈
+                                                                                where e
+Time Stamp Encoding. Time stamp encoding is adopted to handle                   R 𝐷 ′ ×𝐷 ′  are linear weights. In particular, since the projector Pproj is
+the order-agnostic nature of Transformers [38]. As the input series             decoupled from the spatial dimension, the resulted attention map
+                                                                                               (ℓ )                 √
+covers a relatively short range, we only consider the time-of-day               Softmax(Pproj WQ WTK Z𝑖,(ℓ ),T / 𝐷 ′ ) ∈ R𝐶 ×𝑇 can be interpreted as
+information. We adopt the sinusoidal positional encoding in [38]                an indicator of how the incomplete information flow can be com-
+to inject the time-of-day information of each time series:                      pressed into a compact representation with smaller dimension, that
+        𝑝 𝑡sine = sin(𝑝𝑡 ∗ 2𝜋/𝛿 𝐷 ), 𝑝 𝑡cosine = cos(𝑝𝑡 ∗ 2𝜋/𝛿 𝐷 ),             is, an aggregation of available messages. More expositions on the
+                                                                        (5)   projector will be provided in Section 5.6.
+             u𝑡 = 𝑝 𝑡sine ∥𝑝 𝑡cosine ,                                               𝑖,(ℓ )
+                                                                                    Zproj stores the principal temporal patterns within the input
+                                                                                    e
+where 𝑝𝑡 is the index of 𝑡-th time-of-day point in the series, and
+                                                                                data. Then, we can recover the complete series with this compact
+𝛿 𝐷 is the day-unit time mapping. We concatenate psine and pcosine
+                                                                                representation by dispersing the projected information to all other
+as the final time stamp encoding U𝑡 :𝑡 +𝑇 ∈ R𝑇 ×2 .
+                                                                                full-length series by using the projector as a key dictionary:
+Node Embedding. Previous work has demonstrated the impor-
+                                                                                               𝑖,(ℓ )                          (ℓ )   𝑖,(ℓ )
+tance of node identification in distinguishing different sensors for                         Zhat = SelfAtten(Z𝑖,(ℓ ) , Pproj, e
+                                                                                                                               Zproj )),
+spatiotemporal forecasting [8, 17, 29, 33]. Here we also recommend
+                                                                                                             𝑖,(ℓ ) W WT P (ℓ ),T
+                                                                                                          ©Z
+the use of learnable node embedding for imputation task. On the                                                      Q K proj ª 𝑖,(ℓ )         (8)
+one hand, it benefits the adaptation of local components [8] in                               = Softmax ­            √            ®eZproj WV,
+                                                                                                                      𝐷′
+graph-based data structure. On the other hand, we highlight that                                          «                       ¬
+node embedding can be treated as an abstract and low-dimensional                then the above process is integrated into the Transformer encoder:
+representation of the incomplete series. To implement, we assign                                                            𝑖,(ℓ )
+each series a randomly initialized parameter e𝑖 ∈ R𝐷𝑠 . We then                              Z𝑖,(ℓ ) = LayerNorm(Z𝑖,(ℓ ) + Zhat ),
+                                                                                             b
+                                                                                                                                                                   (9)
+split the hidden dimension of the static node embedding equally                                              Z𝑖,(ℓ ) + FeedForward(b
+                                                                                        Z𝑖,(ℓ+1) = LayerNorm(b                     Z𝑖,(ℓ ) )),
+by the length of the time window as a multi-head node embedding                                                     ′
+and unfold it to form a low-dimensional and time-varying repre-                 where Z𝑖,(ℓ+1) ∈ R𝑇 ×𝐷 is the imputation by the ℓ-th temporal
+sentation: E𝑖𝑡 :𝑡 +𝑇 ∈ R𝑇 ×𝐷𝑠 /𝑇 . Implicit interactions between node           interaction layer. Since the projector in Eqs. (7) and (8) can be
+embedding, input data, and modular components are involved in                   obtained by end-to-end learning and is independent of the order in
+the end-to-end gradient descent process. Finally, the spatiotemporal            series, it has the property of data-dependent model in Eq. (4). To
+input embedding for each node can be formulated as follows:                     indicate how the above process learns the low-rank representation
+                                                                                of temporal attention, we develop the following remark.
+             𝑖,(1)                 𝑖,(0)
+           Z𝑡 :𝑡 +𝑇 = Concat(Z𝑡 :𝑡 +𝑇 ; U𝑡 :𝑡 +𝑇 ; E𝑖𝑡 :𝑡 +𝑇 , dim=-1),   (6)
+                                                                                  Remark (Difference between projected attention and
+where Z𝑡 :𝑡 +𝑇 ∈ R𝑇 × (𝐷+𝐷𝑠 /𝑇 +2) is input to the following modules.
+       𝑖,(1)
+                                                                                canonical self-attention). Given the query-key-value matrix
+ImputeFormer: Low Rankness-Induced Transformers for Generalizable Spatiotemporal Imputation                            KDD ’24, August 25–29, 2024, Barcelona, Spain.
+
+                  ′
+Q, K, V ∈ R𝑇 ×𝐷 , the canonical self-attention [38] in the temporal                  spatiotemporal embedding set E = [ē1 ∥ē2 ∥ · · · ∥ē𝑁 ] ∈ R𝑁 ×𝐷𝑠 /𝑇 ,
+axis can be expressed compactly as: SelfAtten(Q, K, V) = 𝜎 (QKT )V                   with ē𝑖 being the static node embedding averaging over the tempo-
+with the rank 𝑟 ≤ min{𝑇 , 𝐷 ′ }. For comparison, the two-step attentive              ral heads {𝑡 : 𝑡 + 𝑇 } from Eq. (6).
+                                                                                                                                                          ′
+process in Eqs. (7) and (8) are equivalent to the expanded form:                        Given the graph representation over a period Z ∈ R𝑁 ×𝑇 ×𝐷 ,
+                                                                                     the complexity of obtaining a full spatial attention matrix costs
+             Z = SelfAtten(Q, P, SelfAtten(P, K, V)),
+                                                                                     O (𝑁 2𝑇 𝐷 ′ ). To alleviate scalability concerns on large graphs, we
+             b
+                = 𝜎 (QPT )SelfAtten(P, K, V),                                        adopt the normalization trick in [35] to reparameterize Eq. (10).
+                                      1                                              Observe that the main bottleneck in Eq. (10) happens in the mul-
+                = 𝜎 (QPT )𝜎 (PKT )V ≈ 2 Q(PT P)KT V.                                                                       (ℓ )    (ℓ )
+                                     𝑁                                               tiplication of two large matrix Q𝑒 and K𝑒 , we can reduce the
+                                              ′                                      complexity using the associative property of matrix multiplication
+Recall that the projector P ∈ R𝐶 ×𝐷 can have a small projection
+                                                                                     if we can decouple the softmax function. To this end, we apply the
+dimension 𝐶, it can be viewed as a channel-wise matrix factorization
+                                                                                     softmax on separate side of the Q-K matrix and approximate A as:
+to reduce redundancy within each time series. The rank of the projected
+                                                                                                                           (ℓ )       (ℓ )
+attention matrix is 𝑟 ≤ min{𝐶, 𝐷 ′ }, which is theoretically lower than                                      A (ℓ ) ≈ 𝜎2 ( Q        K𝑒 ) T,
+                                                                                                                           e𝑒 )𝜎1 ( e                           (11)
+the original rank. The projected attention guarantees expressivity by
+                                                                                     where 𝜎 (·) is the abbreviation for softmax, and the subscript de-
+maintaining a large hidden dimension 𝐷 ′ , while at the same time
+                                                                                     notes the dimension that we perform normalization. The scaled
+admitting a low-rank solution using a small projection dimension 𝐶.
+                                                                                     Q-K functions Q  e𝑒(ℓ ) = Q𝑒(ℓ ) /∥Q𝑒(ℓ ) ∥ 𝐹 , e (ℓ ) (ℓ ) (ℓ )
+                                                                                                                                     K𝑒 = K𝑒 /∥K𝑒 ∥ 𝐹 are
+The rank-reduced temporal attention matrix exploits the low-rankness
+of data in the temporal dimension, which is different from the low-                  used to ensure numerical stability. On top of Eq. (11), the complete
+rank adaptation of model parameters developed recently [34].                         embedded attention can be reformulated as:
+                                                                                                (ℓ )              (ℓ )     e𝑒(ℓ ) )𝜎1 ( e (ℓ )   (ℓ )
+                                                                                              Z𝑡 = LayerNorm(Z𝑡 + 𝜎2 ( Q
+                                                                                              e                                         K𝑒 ) T Z𝑡 ),
+   The “projection-reconstruction" process in Eqs. (7) and (8) re-                                                                                     
+semble the low-rank factorization process X = UVT . Inflow in Eq.                                                 (ℓ )     e𝑒(ℓ ) ) 𝜎1 ( e
+                                                                                                     = LayerNorm(Z𝑡 + 𝜎2 ( Q
+                                                                                                                                            (ℓ )   (ℓ )
+                                                                                                                                         K𝑒 ) T Z𝑡 ),           (12)
+(7) controls the amount of message used to form a dense represen-
+                                                                                              (ℓ+1)                 (ℓ )             (ℓ )
+tation in a lower-dimensional space. Outflow in Eq. (8) determines                       Z𝑡                       Z𝑡 + FeedForward(e
+                                                                                                      = LayerNorm(e                Z𝑡 )).
+how hidden states can be reconstructed using only a few projected                                                                  (ℓ )         (ℓ )
+coordinates. This mechanism also brings about efficiency benefits.                      By computing the multiplication of 𝜎1 ( eK𝑒 ) T and Z𝑡 at first,
+The canonical self-attention costs O (𝑇 2 ) time complexity. The com-                the above process admits a O (𝑁 𝐷 emb ) time complexity, which
+plexity of the projected attention is O (𝑇𝐶), which scales linearly                  scales linearly with respect to the number of sensors. Since E is
+(see Section A.1.3) and is efficient for longer sequences. In addition,              decoupled from temporal information, it is robust to missing values
+low-rank attention preserves the dominating correlational struc-                     and reliable to infer a correlation map for global imputation. The
+                                                                                                                            ′             ′
+tures and eliminates spurious correlations. The cleaned correlations                 full attention has the size R𝑁 × (𝑇 ×𝐷 ) × R (𝑇 ×𝐷 ) ×𝑁 → R𝑁 ×𝑁 ,
+                                                                                     while the embedded attention has R   𝑁 ×𝐷 emb × R emb ×𝑁 → R𝑁 ×𝑁 .
+                                                                                                                                        𝐷
+allow the model to focus on the most relevant data as a reference.
+                                                                                     In this sense, the attention map in Eq. (10) act as a factorized low-
+4.4    Spatial Embedded Attention                                                    rank approximation of full attention. We highlight this property by
+                                                                                     comparing the two formulations in the following analysis.
+The availability of observed temporal information is not sufficient
+for fine-grained imputation. In some cases, specific spatial events,                     Remark (Difference between embedded attention and canon-
+                                                                                                                                                     ′
+such as traffic congestion, can lead to non-local patterns and un-                   ical self-attention). Given a hidden state Z ∈ R𝑁 ×𝑇 ×𝐷 , the
+usual records. Therefore, it is reasonable to exploit the multivariate               self-attention can be computed on the folded matrix Z ∈ R   𝑁 × (𝑇 𝐷′ )
+relationships between series as a complement. A straightforward                                                            T T
+                                                                                     as SelfAtten(Z, Z, Z) = 𝜎 (ZW𝑄 W𝐾 Z )ZW𝑉 . The resulting rank
+way to address this problem is to apply a Transformer block in spa-                  of the attention matrix obeys 𝑟 ≤ min{𝑁 ,𝑇 𝐷 ′ }. While the embed-
+tial dimension [17, 44]. Nevertheless, the three concerns discussed                  ded attention has SelfAtten(E, E, Z) = 𝜎 (EW𝐸 )𝜎 (EW𝐸 ) T ZW𝑉 . If
+in Section 4.1 prevent the direct use of this technique.                             we ignore the possible rank-increasing effect of softmax, the above
+   Consequently, we design an embedded attention as an alternative                   calculation generates the output with rank 𝑟 ≤ min{𝑁 , 𝐷 emb }. Since
+to spatial attention. We highlight that the node embedding in Eq. (6)                the dimension of the node embedding 𝐷 emb is much smaller than the
+signifies not only the identity of series, but also a dense abstract of              model dimension 𝐷 ′ , the rank of the embedded attention map has a
+each individual. We then establish a correlation map using this low-                 lower bound of rank than the full attention. In addition, the model
+dimensional agent. Formally, we assume that the message passing                      still has a large feedforward dimension 𝐷 ′ to ensure capacity.
+happens on a fully connected dense graph, and the edge weights
+are estimated by the pairwise correlating of node embedding:                         4.5       Fourier Imputation Loss
+                  (ℓ )                   (ℓ )                                        As imputation model is typically optimized in a self-supervised
+                Q𝑒       = Linear(E), K𝑒          = Linear(E),
+                                                                                     manner, previous studies proposed adopting accumulated and hi-
+                                       (ℓ )       (ℓ )T
+                                                     !
+                                     Q𝑒 K𝑒                               (10)        erarchical loss [7, 10, 26] to improve the supervision of layerwise
+                A (ℓ ) = Softmax       √                  ,
+                                        𝐷′                                           imputation. However, we argue that such designs are not necessary
+                                                                                     and may generate overfitting. Instead, we propose a novel Fourier
+where A (ℓ ) ∈ R𝑁 ×𝑁 denotes the pairwise correlation score of all                   imputation loss (FIL) combined with a simple supervision loss as
+               (ℓ ) (ℓ )
+sensors, and Q𝑒 , K𝑒 ∈ R𝑁 ×𝐷 emb are linearly projected from the                     task-specific biases to achieve effective training and generalization.
+KDD ’24, August 25–29, 2024, Barcelona, Spain.                                                                                            Tong Nie et al.
+
+
+Self-Supervised Masked Learning. To create supervised sam-                         Finally, the total loss function is formulated as:
+ples, we randomly whiten a proportion of incomplete observations
+                                                                                                        L = Lrecon + 𝜆LFIL,                         (15)
+(𝑝 whiten ) during model training. This operation ensures the gen-
+eralizability of the imputation model (see Section 5.5). We use a              where 𝜆 is a weight hyperparameter. It is worth commenting that
+masking indicator Mwhiten to denote these locations where the                  the two loss functions complement each other: Lrecon prompts
+masked values are marked as ones and others as zeros. Note that                the model to reconstruct the masked observations as precisely as
+the supervision loss is only calculated on these manually whitened             possible in the space-time domain and LFIL generalizes on unob-
+points, and models are forbidden to have access to the masked                  served points with regularization on the spectrum. This makes
+missing points used for evaluation. Therefore, the reconstruction              ImputeFormer work effectively in highly sparse observations.
+loss of our model is a ℓ1 loss on the final imputation X:
+                                                       b
+                         1   ∑︁                                                5     EMPIRICAL EVALUATIONS
+               Lrecon =         ∥Mwhiten ⊙ ( Xb − Y)∥ 1,         (13)
+                        𝑁𝑇                                                     In this section, we evaluate our model on several well-known spa-
+where Y is the label used for training.                                        tiotemporal benchmarks, comparing it with state-of-the-art base-
+Fourier Sparsity Regularization. As discussed above, we can                    lines, and testing its generality on different scenarios. Then compre-
+obtain a reasonable imputation by constraining the rank of the esti-           hensive analysis and case studies are provided. A brief summary of
+mated spatiotemporal tensor in the time domain. However, directly              the adopted datasets is shown in Tab. 1. Detailed descriptions of ex-
+optimizing the rank of the tensor or matrix is challenging [18], as it         perimental settings are provided in Section A.2. PyTorch implemen-
+includes some non-trivial or non-differentiable computations, such             tations are available at https://github.com/tongnie/ImputeFormer.
+as truncated singular value decomposition (SVD). And the SVD of a
+𝑁 × 𝑇 matrix costs O (min{𝑁 2𝑇 , 𝑁𝑇 2 }) complexity, which can be-                          Table 1: Statistics of benchmark datasets.
+come a bottleneck when integrated with deep models. Fortunately,
+                                                                                   Datasets             Type            Steps     Nodes      Interval
+we can simplify this process using the following lemma.
+                                                                                   METR-LA          Traffic speed       34,272     207        5 min
+   Lemma (Eqivalence between convolution nuclear norm                              PEMS-BAY         Traffic speed       52,128     325        5 min
+                                                                                   PEMS03          Traffic volume       26,208     358        5 min
+and Fourier ℓ1 norm [3, 16]). Given a smooth or periodic time series               PEMS04          Traffic volume       16,992     307        5 min
+x ∈ R𝑇 , its circulant (convolution) matrix C(x) ∈ R𝑇 ×𝑇 reflects the              PEMS07          Traffic volume       28,224     883        5 min
+Tucker low-rankness, depicted by the convolutional nuclear norm.                   PEMS08          Traffic volume       17,856     170        5 min
+This property can be revealed by using the Discrete Fourier Transform              SOLAR          Power production      52,560     137       10 min
+                                                                                   CER-EN        Energy consumption      8,868     435       30 min
+(DFT). Let the DFT matrix be U ∈ C𝑇 ×𝑇 , then the DFT is achieved by:
+                                                                                   AQI              Air pollutant       8,760      437       60 min
+           DFT(x) =Ux = U(C(x) [:, 0]) = (UC(x)) [:, 0].                           AQI36            Air pollutant       8,760       36       60 min
+
+As DFT diagonalizes the circulant matrix by C(x) = UH diag(𝜎1, . . . , 𝜎𝑇 )U
+and U is a unitary matrix with the first column being ones, we have:
+           (UC(x)) [:, 0] = (diag(𝜎1, 𝜎2, . . . , 𝜎𝑇 )U) [:, 0],               5.1     Results on Traffic Benchmarks
+                                                                               The imputation results on traffic speed and volume data are given
+                              = [𝜎1, 𝜎2, . . . , 𝜎𝑇 ] T .
+                                                                               in Tab. 2. As can be seen, ImputeFormer consistently achieves the
+Therefore, we have ∥DFT(x)∥ 0 = ∥ [𝜎1, 𝜎2, . . . , 𝜎𝑇 ] T ∥ 0 = rank(C(x)),    best performance in all traffic benchmarks. Two strong competitors
+and ∥DFT(x) ∥ 1 = ∥C(x)∥ ∗ .                                                   GRIN and SPIN show promising results in traffic speed data, which
+                                                                               align with the results of their respective papers [7, 26]. However,
+   This lemma means that we can efficiently obtain the singular
+                                                                               their performance is inferior on volume datasets and is surpassed
+values through DFT. The ℓ0 norm is exactly the matrix rank and
+                                                                               by simple baselines such as ST-Transformer and Bi-MPGRU. Com-
+the ℓ1 norm is equal to the nuclear norm ∥C(x)∥ ∗ . Since ∥C(x)∥ ∗
+                                                                               pared to deep models, pure low-rank methods, such as matrix fac-
+serves as a convex surrogate of the rank of x in an approximate
+                                                                               torization and tensor completion, are less effective due to limited
+sense [16], we can equivalently achieve this goal by optimizing the
+                                                                               capacity. As for missing patterns, the structured block missing is
+Fourier ℓ1 norm. Considering the above equivalence, we can develop
+                                                                               more challenging than the point missing pattern. For instance, the
+a sparsity-constrained loss function in the frequency domain:
+                                                                               vanilla Transformer is competitive in the point missing case, while
+            X̄ = Mmissing ⊙ X
+                            b + (1 − Mmissing ) ⊙ Y,                           it is ineffective in block missing case. Generally, ImputeFormer
+                  1 ∑︁                                           (14)          outperforms others by a large margin in this tricky scenario.
+         LFIL =          ∥Flatten(FFT( X̄, dim = [0, 1])) ∥ 1,
+                 𝑁𝑇
+where FFT(·) is the Fast Fourier Transform (FFT), Flatten(·) :                 5.2     Results on Environmental and Energy Data
+R𝑁 ×𝑇 → R𝑁𝑇 rearranges the tensor form and ∥ · ∥ 1 is the vector ℓ1            By exploiting the underlying low-rank structures, ImputeFormer
+norm. Since the spatiotemporal matrix can be regarded as a special             can serve as a general imputer in a variety of spatiotemporal data.
+RGB image from a global viewpoint, it also features a sparse Fourier           To demonstrate its versatility, we perform experiments on other
+spectrum in the space dimension [16]. We apply the FFT on both                 spatiotemporal data, including energy and environmental data. Re-
+the space and time axes and then flatten it into a long vector. LFIL           sults are given in Tab. 3. It is observed that ImputeFormer exhibits
+is in fact a unsupervised loss that encourages the imputed values              superiority in other spatiotemporal datasets beyond traffic data.
+to be naturally compatible with the observed values globally.                  In particular, the correlation of solar stations cannot be described
+ImputeFormer: Low Rankness-Induced Transformers for Generalizable Spatiotemporal Imputation                           KDD ’24, August 25–29, 2024, Barcelona, Spain.
+
+
+          Table 2: Results (in terms of MAE) on METR-LA, PEMS-BAY, PEMS03, PEMS04, PEMS07 and PEMS08 traffic benchmarks.
+                                                   Point missing                                                       Block missing
+  Models               PEMS-BAY      METR-LA       PEMS03 PEMS04        PEMS07    PEMS08       PEMS-BAY   METR-LA     PEMS03 PEMS04          PEMS07      PEMS08
+  Average                5.45          7.52         85.30     103.61    122.35     89.51          5.48      7.43       85.56     103.82       123.05      89.42
+  MICE [37]              2.82          2.89         20.07     28.60      37.11     30.26          2.36      2.73       21.90      32.45       37.20       26.66
+  TRMF [46]              2.10          3.51         18.80     24.34      29.06     20.27          2.09      3.36       18.71      24.47       29.42       19.80
+  LRTC-AR [4]            0.94          2.14         15.52     22.11      27.60     19.33          4.05      5.35       17.59      24.08       27.82       19.95
+  Bi-MPGRU               0.72          2.00         11.23     15.84      15.66     11.90          1.41      2.33       13.87      19.81       21.12       15.89
+  rGAIN [45]             1.90          2.81         13.32     22.86      24.41     16.33          2.21      2.95       14.85      23.26       26.69       27.12
+  BRITS [1]              1.84          2.42         12.74     20.00      23.97     15.78          1.91      2.40       12.93      19.80       23.26       16.37
+  SAITS [10]             1.33          2.25         12.40     20.23      22.81     15.12          1.58      2.32       12.43      20.35       22.82       16.80
+  Transformer [38]       0.76          2.18         12.04     16.76      16.86     12.58          1.69      3.58       24.07      29.63       33.14       25.61
+  ST-Transformer         0.75          2.19         11.44     16.22      15.84     12.10          1.71      3.58       23.55      29.17       32.14       24.67
+  TIDER [20]             1.43          2.68         15.02     22.17      21.38     18.46          2.46      4.95       21.12      23.74       28.66       21.00
+  TimesNet [41]          1.47          2.93         14.99     20.40      22.00     16.53          2.73      4.79       44.85      51.05       60.90       45.78
+  GRIN [7]               0.68          1.91         10.31     16.25      11.90     12.33          1.20      2.08       12.28      23.23       16.04       19.69
+  SPIN [26]              0.79          1.93         12.85     18.96      17.61     15.02          1.13      2.02       14.68      19.85       16.99       16.81
+                         0.64          1.80         8.23      14.92      11.38     11.01         0.95       1.86        9.02     16.83        13.82       12.50
+  ImputeFormer
+                        5.9% ↓        5.8% ↓       20.2% ↓ 5.8% ↓       4.4% ↓    7.5% ↓        15.9% ↓    7.9% ↓     26.5% ↓ 15.0% ↓        13.8% ↓     21.3% ↓
+
+
+by physical distance and can be inferred from the data. After com-                   on supervised points, FIL generalizes on the unobserved points and
+paring the performance of SAITS, Transformer, ST-Transformer,                        effectively reduces the estimation errors.
+and ImputeFormer, it can be concluded that direct attention compu-
+tations on both temporal and spatial dimensions are less beneficial                               Table 4: Ablations studies on ImputeFormer.
+than the low-rank attention. Furthermore, the spatial correlation of                                           Component               PEMS08          METR-LA
+                                                                                           Variation
+energy production is less pronounced. Canonical attention on the                                           Spatial    Temporal      Point Block Point Block
+spatial axis can be redundant and generate spurious correlations.                     ImputeFormer Attention Attention 11.24 12.86                   1.80    1.88
+The use of embedded attention in our model can alleviate this issue.
+                                                                                                          Attention     MLP         16.95   17.11    2.39    2.28
+                                                                                              Replace       MLP       Attention     12.84   17.42    2.20    2.92
+Table 3: Results (in terms of MAE) on AQI, Solar, and CER-EN                                                MLP         MLP         34.72   34.41    5.80    5.79
+benchmarks. For Solar data, we compare the performances                                                   Attention      w/o        17.06   17.13    2.39    2.28
+of baselines that are independent of the predefined graphs.                                    w/o
+                                                                                                             w/o      Attention     12.87   17.44    2.21    2.93
+                          SOLAR              CER-EN          Simulated faults                                   w/o FIL             11.63   13.35    1.85    1.93
+                      Point     Block     Point     Block                               Loss function
+ Models                                                      AQI36      AQI                                 Hierarchical loss       11.35   13.07    1.84    1.92
+                     missing   missing   missing   missing
+ Average        7.60    7.56              0.583     0.596   61.81       43.78                                               T-S     11.26   13.16    1.80    1.87
+                                                                                                           Order
+ MICE           1.59    1.58              0.535     0.555   38.90       29.12           Architecture                        S-T     11.30   13.13    1.80    1.88
+ TRMF           2.44    2.35              0.557     0.559   41.91       27.67                                    Joint ST           17.50   20.00    1.94    2.58
+ Bi-MPGRU      N.A.    N.A.               0.247     0.349   12.02       15.41
+ rGAIN          1.52    1.64              0.418     0.440   15.69       22.13
+ BRITS          1.28    1.34              0.351     0.366   14.74       20.72
+ SAITS          0.98    1.25              0.341     0.368   19.79       21.09
+ Transformer    2.19    3.58              0.254     0.353   14.99       17.04
+ ST-Transformer 2.17    3.57              0.251     0.351   13.27       18.55
+ TIDER          2.84    3.87              0.336     0.377   32.85       18.11
+ TimesNet       2.93    4.73              0.328     0.460   32.30       28.99
+ GRIN          N.A.    N.A.              0.235      0.341   12.08       14.51
+ SPIN          N.A.    N.A.              OOM        OOM     11.89       14.31
+               0.51    0.89               0.236     0.296  11.58       13.40
+ ImputeFormer
+              48.0% ↓ 28.8% ↓            0.4% ↑    13.2% ↓ 2.6% ↓      6.4% ↓                 Figure 3: Comparison of computational efficiency.
+
+
+
+5.3    Ablation Study                                                                5.4       Model Efficiency
+To justify the rationale of model designs, we conduct ablation stud-                 We evaluate the computational efficiency of different architectures
+ies on the model structure. Results are shown in Tab. 4. Several                     in Fig. 3. Intuitively, ImputeFormer exhibits high training efficiency.
+intriguing findings can be observed: (1) After removing any of the                   Due to the low-rank design philosophy, ImputeFormer is approxi-
+temporal and spatial attention modules, the performance degen-                       mately 15 times faster than the state-of-the-art Transformer base-
+erates substantially; especially, the spatial interaction contributes                line (SPIN). It is also cost-effective in GPU memory consumption.
+to the inference of block missing patterns significantly, while the
+temporal modules are crucial for point missing scenarios. (2) The in-                5.5       Robustness and Versatility Analysis
+corporation of MLP benefits little for the imputation, which validates               Inference under Different Missing Rates. Deep imputation mod-
+our argument in Section A.1.2. (3) Compared to hierarchical loss                     els are subject to the distribution shift problem between training
+KDD ’24, August 25–29, 2024, Barcelona, Spain.                                                                                                                                                                                                Tong Nie et al.
+
+
+and testing datasets. A desirable characteristic is that a model can                                           Table 6: Results on PEMS08 data with sparse observations
+deal with different missing patterns during inference. Therefore, we                                           (Training from scratch).
+consider a challenging scenario in which a model is trained with a                                                                                                                                            Missing rate
+fixed missing rate but evaluated on different scenarios with varying                                                Models                                                 60%                              70%         80%                           90%
+                                                                                                                    BRITS                                                 18.60                            19.75       21.44                         24.17
+missing rates. This constructs a zero-shot transfer evaluation. It is
+                                                                                                                    SAITS                                                 17.53                            18.24       19.39                         21.27
+noteworthy in Tab. 5 that both ImputeFormer and SPIN are more                                                       ST-Transformer                                        13.67                            14.32       15.86                         23.98
+robust than other baselines in these scenarios. RNNs and vanilla                                                    GRIN                                                  14.04                            15.01       17.26                         25.47
+Transformers can overfit the training data with a fixed data missing                                                SPIN                                                  13.64                            14.30       15.19                         17.13
+pattern, thereby showing inferior generalization ability.                                                           ImputeFormer                                          12.57                            13.17       13.98                         15.94
+
+
+Table 5: Inference under varying missing rate with a single                                                    Table 7: Results on PEMS03 with various masking strategies.
+trained model (Zero-shot).                                                                                        Point missing                                                           Masking Probability
+                                              PEMS08                                      METR-LA                 Models                                                  25%            50%        75%                                       Combined
+                                            Missing rate                                 Missing rate             Bi-MPGRU                                               11.30          11.52      12.20                                        11.48
+              Models                                                                                              BRITS                                                  13.06          13.86      16.06                                        13.70
+                                     50%        75%                       95%     50%        75%        95%       SAITS                                                  12.42          16.13      21.63                                        12.61
+              BRITS                 17.21      22.01                     52.78    2.61       3.04       5.11      ST-Transformer                                         11.19          11.43      12.22                                        11.39
+              SAITS                 16.03      31.32                     83.79    2.44       3.37       6.80
+                                                                                                                  GRIN                                                    9.55           9.74      10.39                                        9.72
+              ST-Transformer        11.65      13.11                     39.95    2.32       2.72       5.16
+                                                                                                                  SPIN                                                   11.08          11.21      13.85                                        12.04
+              GRIN                  13.25      16.06                     42.61    2.06       2.39       4.07
+              SPIN                  15.13      15.51                     18.30    2.11       2.34       3.03      ImputeFormer                                           7.66           8.16       11.44                                        8.45
+              ImputeFormer          11.52      12.18                     17.35    1.96       2.17       2.79      Block missing                                                          Masking Probability
+                                                                                                                  Models                                                  25%            50%       75%                                        Combined
+                                                                                                                  Bi-MPGRU                                               13.32          13.36     13.96                                         13.33
+Inference with Varying Sequence Length. In reality, the imputa-                                                   BRITS                                                  12.26          13.01     15.58                                         12.63
+tion model can face time series with different lengths and sampling                                               SAITS                                                  12.35          15.73     20.14                                         12.32
+                                                                                                                  ST-Transformer                                         23.51          23.76     23.90                                         23.26
+frequencies. We can adopt a well-trained model to perform infer-                                                  GRIN                                                   11.94          12.05     12.68                                         11.99
+ence on varying sequence length. Results are shown in Fig. 4. It                                                  SPIN                                                   13.10          13.68     13.84                                         13.97
+is obvious that ImputeFormer can readily generalize to sequences                                                  ImputeFormer                                           8.89           9.23      16.96                                         8.80
+with different lengths and more robust than other models.
+
+                                                                                                               evaluate the impact of the masking rate in training data, we further
+                                                                                                               consider four different masking strategies during model training:
+                                                                                                               the masking rates are set to 0.25, 0.5, 0.75, and a combination of them
+ Inference Error
+
+
+
+
+                                                       Inference Error
+
+
+
+
+                                                                                                               [0.25, 0.5, 0.75] respectively. As shown in Tab. 7, most models per-
+                                                                                                               form best when the masking rate is close to the missing rate in the
+                                                                                                               point missing scenario (e.g., 25%). However, when the missing rate
+                                                                                                               is unclear due to randomness within the failure generation process,
+                                                                                                               such as the block missing, the combination strategy is more advan-
+                          Input Length                                               Input Length              tageous. For example, Transformers including ST-Transformer,
+                       (a) PEMS08                                                (b) METR-LA                   SAITS, and ImputeFormer can benefit from this strategy. More im-
+Figure 4: Inference under different lengths of input sequence                                                  portantly, such a hybrid masking method enables the model to work
+with a single trained model (zero-shot).                                                                       successfully on varying observation rates during inference.
+
+Dealing with Highly Sparse Observation. To evaluate the per-                                                                                             PEMS08-Point                                                        PEMS08-Block
+                                                                                                                                     13.25       ImputeFormer                                              19       ImputeFormer
+formance on highly sparse data, we further train and test models                                                                     13.00                                                                 18
+                                                                                                                                     12.75
+                                                                                                                  Imputation Error
+
+
+
+
+                                                                                                                                                                                        Imputation Error
+
+
+
+
+with lower observation rates. Results are shown in Tab. 6. Generally                                                                                                                                       17
+                                                                                                                                     12.50
+speaking, both Transformer- and RNN-based models are suscepti-                                                                       12.25                                                                 16
+                                                                                                                                     12.00
+ble to sparse training data. Due to the low-rank constraints on the                                                                                                                                        15
+                                                                                                                                     11.75
+attention matrix and loss function, our model is more robust with                                                                    11.50                                                                 14
+
+highly sparse data. Since the attention map in SPIN is calculated                                                                    11.25                                                                 13
+                                                                                                                                             0   0.005     0.01   0.05     0.1    0.2                           0    0.005    0.01     0.05    0.1     0.2
+only at the observed points, it is more stable than other baselines.                                                                                         lambda                                                                lambda
+
+But our model consistently achieves lower imputation errors.                                                                   (a) PEMS08, point missing                                            (b) PEMS08, block missing
+Random Masking in Training. Random masking strategy is                                                                                                      Figure 5: Impact of 𝜆 in FIL.
+used to create supervised samples for model training. Therefore,
+the distribution of masking samples of training data and missing                                               Impact of Fourier Imputation Loss. We study the impact of
+observations of testing data should be close to ensure good per-                                               hyperparameter 𝜆 in Eq. (15). Fig. 5 displays the imputation error
+formance [31]. However, it can be difficult to know exactly the                                                under different 𝜆 values. The imputation model can benefit from the
+missing patterns or missing rates in advance in many scenarios.                                                FIL design, and a too large penalty on the sparsity of the spectrum
+Therefore, a proper masking strategy is of vital importance. To                                                can lead to a smooth and inaccurate reconstruction.
+ImputeFormer: Low Rankness-Induced Transformers for Generalizable Spatiotemporal Imputation                                                                                                                                                                                                                                                                                                                                                                                                               KDD ’24, August 25–29, 2024, Barcelona, Spain.
+
+                                                                                                                                                                                                                                                                                                                                                                                                                              W  6 1 (  9 L V X D O L ] D W L R Q  R I  1 R G H  ( P E H G G L Q J
+5.6                                                                                          Case Studies: Interpretability                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       & R P S O H W H  + L G G H Q  6 W D W H V
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               , Q F R P S O H W H  + L G G H Q  6 W D W H V
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                6 L Q J X O D U  9 D O X H
+This section studies the interpretability using data examples.                                                                                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               3 U R M H F W H G  + L G G H Q  6 W D W H V
+                                                                                                                                                                                                                                                                                                                                                                                                                      
+Spectrum Analysis. To corroborate the hypothesis that our model                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                          & R R U G L Q D W H  
+                                                                                                                                                                                                                                                                                                                                                                                                                      
+has the merits of both deep learning and low-rank methods, we                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                                                                                                                      
+analyze the singular value (SV) spectrum of the imputations. Fig.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               R I  6 L Q J X O D U  9 D O X H
+6 shows the cumulative SV distribution of different competing                                                                                                                                                                                                                                                                                                                                                         
+
+models. ImputeFormer has a close SV cumulative distribution to                                                                                                                                                                                                                                                                                                                                    Figure 10: Singular values of
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                                                                                                                                                                         & R R U G L Q D W H  
+complete data, and the first 85 SVs can account for 80% of the energy.                                                                                                                                                                                                                                                                                                                            different hidden states in the
+                                                                                                                                                                                                                                                                                                                                                                   Figure 9: The t-SNE visualiza-
+There exist two additional interesting observations: (1) deep learn-                                                                                                                                                                                                                                                                                                                              temporal attention layer.
+                                                                                                                                                                                                                                                                                                                                                                   tion of node embedding.
+ing models without explicit low-rank modeling such as canonical
+Transformers downplay the role of the first few dominant SVs; (2)
+pure low-rank models such as MF generate an oversmoothing result                                                                                                                                                                                                                                                                                                   complete states. Inflows show that only a fraction of the message is
+that too much energy is constrained to the first part of spectrum.                                                                                                                                                                                                                                                                                                 directed towards the projector, while different attention heads can
+Thus, we can ascribe the desirable performance of our model to the                                                                                                                                                                                                                                                                                                 provide varying levels of information density. Meanwhile, outflows
+good balance of significant signals and high-frequency noise.                                                                                                                                                                                                                                                                                                      indicate that a small number of temporal modes can reconstruct
+                                                                                                                                                                                                                                                                                                                                                                   useful neural representations for imputation. This can be analogous
+                                                                                                         & ' )  R I  6 L Q J X O D U  9 D O X H                                                                                                                                                                                                                 to the low-rank reconstruction process, which serves as an inductive
+                                                                                                                                                                                                                               
+     1 R U P D O L ] H G  & X P X O D W L Y H  6 L Q J X O D U  9 D O X H
+
+
+
+
+                                                                                                                                                                                                                                                                                              & R P S O H W H  ' D W D
+                                                                                                                                                                                                                               
+                                                                                                                                                                                                                                                                                                 , Q F R P S O H W H  ' D W D
+                                                                                                                                                                                                                                                                                                                                                                 bias for time series with low information density. We further examine
+                                                                                                                                                                                                                                                                                              1 R G H  ( P E H G G L Q J
+                                                                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                               
+                                                                                                                                                                                                                                                                                                                                                                   the SV distribution of different hidden states in the last temporal
+                                                                                                                                                                                             6 L Q J X O D U  9 D O X H
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                     6 L Q J X O D U  9 D O X H
+                                                                                                                                                                                                                                                                                                                              
+
+                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                   attention layer. As evidenced by Fig. 10, after flow through the
+                                                                                                                                                                                                                                                                                                                                 
+
+                                                                                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                                                                                                   projected attention layer, the hidden states have lower SVs than the
+                                                                                                                                                    0 D W U L [ ) D F W R U L ] D W L R Q
+                                                                                                                                                 7 U D Q V I R U P H U                                                                                                                                                                                     incomplete inputs and are closer to the complete representations.
+                                                                                                                                                    , P S X W H ) R U P H U
+                                                                                                                                                 * U R X Q G 7 U X W K                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                    R I  6 L Q J X O D U  9 D O X H                                                                                                                         Inflow at Different Attention Heads                                                                                                         Outflow at Different Attention Heads
+                                                                                                             6 L Q J X O D U  9 D O X H  , Q G H [                                                                                                                                                                                                                                  Projected Attention at Head 0 Projected Attention at Head 1                                                                              Projected Attention at Head 0 Projected Attention at Head 1
+                                                                                                                                                                                                                                                                                                                                                                    # of Coordinate
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             # of Coordinate
+Figure 6: Cumulative distribu- Figure 7: Singular spectrum of
+tion of singular values.       data and node embedding.
+                                                                                                                                                                                                                                                                                                                                                                                      Projected Attention at Head 2 Projected Attention at Head 3                                                                              Projected Attention at Head 2 Projected Attention at Head 3
+                                                                                                                                                                                                                                                                                                                                                                    # of Coordinate
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             # of Coordinate
+Interpretations on Spatial Embedding. To illustrate the role of
+node embedding, we analyze the SV spectrum of the PEMS08 data                                                                                                                                                                                                                                                                                                                                                              # of Step                                                      # of Step                                                                        # of Step                             # of Step
+
+in Fig. 7. The complete data show a prominent low-rank property,                                                                                                                                                                                                                                                                                                   Figure 11: Inflow and outflow in the projected attention layer.
+but the SVs of incomplete data dramatically expand. In contrast,
+the node embedding also displays a similar low-rank distribution,
+which can act as a dense surrogate for each sensor. Furthermore,                                                                                                                                                                                                                                                                                                   6                           CONCLUSION
+we analyze the multivariate attention map obtained by correlating                                                                                                                                                                                                                                                                                                  This paper demonstrates a low rankness-induced Transformer
+the node embedding in Fig. 8. It is evident that as the embedded at-                                                                                                                                                                                                                                                                                               model termed ImputeFormer to address the missing spatiotemporal
+tention layers become deeper, the learned attention maps approach                                                                                                                                                                                                                                                                                                  data imputation problem. Taking advantage of the low-rank fac-
+the actual ones. However, incomplete data produce noisy correlations                                                                                                                                                                                                                                                                                               torization, we design projected temporal attention and embedded
+with little informative pattern. Fig. 9 displays the t-SNE visualization                                                                                                                                                                                                                                                                                           spatial attention to incorporate structural priors into the Trans-
+of each node embedding with two projected coordinates in PEMS08.                                                                                                                                                                                                                                                                                                   former model. Furthermore, a Fourier sparsity loss is developed to
+The embeddings tend to form clusters, and different clusters are                                                                                                                                                                                                                                                                                                   regularize the solution’s spectrum. The evaluation results on vari-
+apart from others. This phenomenon is in accordance with highway                                                                                                                                                                                                                                                                                                   ous benchmarks indicate that ImputeFormer not only consistently
+traffic sensor systems that proximal sensors share similar readings.                                                                                                                                                                                                                                                                                               achieves state-of-the-art imputation accuracy, but also exhibits high
+                                                                                                                                                                                                                                                                                                                                                                   computational efficiency, generalizability across various datasets,
+                                                                                Attention Map at 1-st EA Layer Attention Map at 3-rd EA Layer                                               Attention Map of Complete Data                                              Attention Map of Sparse Data
+                                                                                                                                                                                                                                                                                                                                                                   versatility for different scenarios, and interpretability. Therefore,
+                                                                                                                                                                                                                                                                                                                                                                   we believe that it has the potential to advance research on spa-
+of Sensor
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                   tiotemporal data for general imputation tasks. Future work can
+                                                                                                                                                                                                                                                                                                                                                                   adopt it to achieve time series representation learning task and
+#
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                   explore the multipurpose pretraining problem for time series.
+                                                                                             #   of Sensor                                     #        of Sensor                                                                #     of Sensor                                   #       of Sensor
+
+                                                                                  Figure 8: Multivariate attention maps of PEMS08 data.                                                                                                                                                                                                                            ACKNOWLEDGMENTS
+                                                                                                                                                                                                                                                                                                                                                                   The work was supported by research grants from the National Nat-
+Interpretations on Temporal Projector. To illustrate the mecha-                                                                                                                                                                                                                                                                                                    ural Science Foundation of China (52125208), National Key R&D
+nism of the temporal projected attention in Eqs. (7) and (8), inflow                                                                                                                                                                                                                                                                                               Programs of China (2022YFB2602100), the China National Postdoc-
+and outflow attention maps are shown in Figs. 11. It can be seen                                                                                                                                                                                                                                                                                                   toral Program for Innovative Talents (BX20220231), the China Post-
+that these matrices quantify how the information of incomplete                                                                                                                                                                                                                                                                                                     doctoral Science Foundation (2022M712409), and the Science and
+states flows into compact representations and then is recovered to                                                                                                                                                                                                                                                                                                 Technology Commission of Shanghai Municipality (22dz1203200).
+KDD ’24, August 25–29, 2024, Barcelona, Spain.                                                                                                                        Tong Nie et al.
+
+
+REFERENCES                                                                                        norm assumption. Advances in neural information processing systems 32 (2019).
+ [1] Wei Cao, Dong Wang, Jian Li, Hao Zhou, Lei Li, and Yitan Li. 2018. Brits:               [26] Ivan Marisca, Andrea Cini, and Cesare Alippi. 2022. Learning to reconstruct
+     Bidirectional recurrent imputation for time series. Advances in neural information           missing data from spatiotemporal graphs with sparse observations. Advances in
+     processing systems 31 (2018).                                                                Neural Information Processing Systems 35 (2022), 32069–32082.
+ [2] Zhengping Che, Sanjay Purushotham, Kyunghyun Cho, David Sontag, and Yan                 [27] Nazeer Muhammad, Nargis Bibi, Adnan Jahangir, and Zahid Mahmood. 2018.
+     Liu. 2018. Recurrent neural networks for multivariate time series with missing               Image denoising with norm weighted fusion estimators. Pattern Analysis and
+     values. Scientific reports 8, 1 (2018), 6085.                                                Applications 21 (2018), 1013–1022.
+ [3] Xinyu Chen, Zhanhong Cheng, Nicolas Saunier, and Lijun Sun. 2022. Laplacian             [28] Tong Nie, Guoyang Qin, and Jian Sun. 2022. Truncated tensor Schatten p-norm
+     convolutional representation for traffic time series imputation. arXiv preprint              based approach for spatiotemporal traffic data imputation with complicated
+     arXiv:2212.01529 (2022).                                                                     missing patterns. Transportation research part C: emerging technologies 141 (2022),
+ [4] Xinyu Chen, Mengying Lei, Nicolas Saunier, and Lijun Sun. 2021. Low-rank                     103737.
+     autoregressive tensor completion for spatiotemporal traffic data imputation. IEEE       [29] Tong Nie, Guoyang Qin, Lijun Sun, Wei Ma, Yu Mei, and Jian Sun. 2023. Contex-
+     Transactions on Intelligent Transportation Systems 23, 8 (2021), 12301–12310.                tualizing MLP-Mixers Spatiotemporally for Urban Data Forecast at Scale. arXiv
+ [5] Xinyu Chen and Lijun Sun. 2021. Bayesian temporal factorization for multi-                   preprint arXiv:2307.01482 (2023).
+     dimensional time series prediction. IEEE Transactions on Pattern Analysis and           [30] Tong Nie, Guoyang Qin, Yunpeng Wang, and Jian Sun. 2023. Correlating sparse
+     Machine Intelligence 44, 9 (2021), 4659–4673.                                                sensing for large-scale traffic speed estimation: A Laplacian-enhanced low-rank
+ [6] Xinyu Chen, Jinming Yang, and Lijun Sun. 2020. A nonconvex low-rank tensor                   tensor kriging approach. Transportation Research Part C: Emerging Technologies
+     completion model for spatiotemporal traffic data imputation. Transportation                  152 (2023), 104190.
+     Research Part C: Emerging Technologies 117 (2020), 102673.                              [31] Tong Nie, Guoyang Qin, Yunpeng Wang, and Jian Sun. 2023. Towards better traffic
+ [7] Andrea Cini, Ivan Marisca, and Cesare Alippi. 2021. Filling the g_ap_s: Mul-                 volume estimation: Jointly addressing the underdetermination and nonequilib-
+     tivariate time series imputation by graph neural networks. arXiv preprint                    rium problems with correlation-adaptive GNNs. Transportation Research Part C:
+     arXiv:2108.00298 (2021).                                                                     Emerging Technologies 157 (2023), 104402.
+ [8] Andrea Cini, Ivan Marisca, Daniele Zambon, and Cesare Alippi. 2024. Taming              [32] Yuqi Nie, Nam H Nguyen, Phanwadee Sinthong, and Jayant Kalagnanam. 2022.
+     local effects in graph-based spatiotemporal forecasting. Advances in Neural                  A time series is worth 64 words: Long-term forecasting with transformers. arXiv
+     Information Processing Systems 36 (2024).                                                    preprint arXiv:2211.14730 (2022).
+ [9] Commission for Energy Regulation (CER). 2012. CER Smart Metering Project -              [33] Zezhi Shao, Zhao Zhang, Fei Wang, Wei Wei, and Yongjun Xu. 2022. Spatial-
+     Electricity Customer Behaviour Trial, 2009-2010. Dataset. https://www.ucd.ie/                Temporal Identity: A Simple yet Effective Baseline for Multivariate Time Series
+     issda/data/commissionforenergyregulationcer/ SN: 0012-00.                                    Forecasting. In Proceedings of the 31st ACM International Conference on Informa-
+[10] Wenjie Du, David Côté, and Yan Liu. 2023. Saits: Self-attention-based imputation             tion & Knowledge Management. 4454–4458.
+     for time series. Expert Systems with Applications 219 (2023), 119619.                   [34] Pratyusha Sharma, Jordan T Ash, and Dipendra Misra. 2023. The Truth is in
+[11] Azul Garza and Max Mergenthaler-Canseco. 2023. TimeGPT-1. arXiv preprint                     There: Improving Reasoning in Language Models with Layer-Selective Rank
+     arXiv:2310.03589 (2023).                                                                     Reduction. arXiv preprint arXiv:2312.13558 (2023).
+[12] Ming Jin, Huan Yee Koh, Qingsong Wen, Daniele Zambon, Cesare Alippi, Geof-              [35] Zhuoran Shen, Mingyuan Zhang, Haiyu Zhao, Shuai Yi, and Hongsheng Li.
+     frey I Webb, Irwin King, and Shirui Pan. 2023. A survey on graph neural networks             2021. Efficient attention: Attention with linear complexities. In Proceedings of the
+     for time series: Forecasting, classification, imputation, and anomaly detection.             IEEE/CVF winter conference on applications of computer vision. 3531–3539.
+     arXiv preprint arXiv:2307.03759 (2023).                                                 [36] Yusuke Tashiro, Jiaming Song, Yang Song, and Stefano Ermon. 2021. Csdi: Con-
+[13] Yaguang Li, Rose Yu, Cyrus Shahabi, and Yan Liu. 2017. Diffusion convolu-                    ditional score-based diffusion models for probabilistic time series imputation.
+     tional recurrent neural network: Data-driven traffic forecasting. arXiv preprint             Advances in Neural Information Processing Systems 34 (2021).
+     arXiv:1707.01926 (2017).                                                                [37] Stef Van Buuren and Karin Groothuis-Oudshoorn. 2011. mice: Multivariate
+[14] Wei Liang, Yuhui Li, Kun Xie, Dafang Zhang, Kuan-Ching Li, Alireza Souri, and                imputation by chained equations in R. Journal of statistical software 45 (2011),
+     Keqin Li. 2023. Spatial-Temporal Aware Inductive Graph Neural Network for                    1–67.
+     C-ITS Data Recovery. IEEE Transactions on Intelligent Transportation Systems 24,        [38] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones,
+     8 (2023), 8431–8442.                                                                         Aidan N. Gomez, Lukasz Kaiser, and Illia Polosukhin. 2017. Attention is All
+[15] Yuebing Liang, Zhan Zhao, and Lijun Sun. 2022. Memory-augmented dynamic                      you Need. In Advances in Neural Information Processing Systems.
+     graph convolution networks for traffic data imputation with diverse missing pat-        [39] Sinong Wang, Belinda Z Li, Madian Khabsa, Han Fang, and Hao Ma. 2020. Lin-
+     terns. Transportation Research Part C: Emerging Technologies 143 (2022), 103826.             former: Self-attention with linear complexity. arXiv preprint arXiv:2006.04768
+[16] Guangcan Liu and Wayne Zhang. 2022. Recovery of future data via convolution                  (2020).
+     nuclear norm minimization. IEEE Transactions on Information Theory 69, 1 (2022),        [40] Xudong Wang, Yuankai Wu, Dingyi Zhuang, and Lijun Sun. 2023. Low-rank
+     650–665.                                                                                     Hankel tensor completion for traffic speed estimation. IEEE Transactions on
+[17] Hangchen Liu, Zheng Dong, Renhe Jiang, Jiewen Deng, Jinliang Deng, Quan-                     Intelligent Transportation Systems 24, 5 (2023), 4862–4871.
+     jun Chen, and Xuan Song. 2023. Spatio-temporal adaptive embedding makes                 [41] Haixu Wu, Tengge Hu, Yong Liu, Hang Zhou, Jianmin Wang, and Mingsheng
+     vanilla transformer sota for traffic forecasting. In Proceedings of the 32nd ACM             Long. 2022. Timesnet: Temporal 2d-variation modeling for general time series
+     International Conference on Information and Knowledge Management. 4125–4129.                 analysis. arXiv preprint arXiv:2210.02186 (2022).
+[18] Ji Liu, Przemyslaw Musialski, Peter Wonka, and Jieping Ye. 2012. Tensor comple-         [42] Yuankai Wu, Dingyi Zhuang, Aurelie Labbe, and Lijun Sun. 2021. Inductive
+     tion for estimating missing values in visual data. IEEE transactions on pattern              graph neural networks for spatiotemporal kriging. In Proceedings of the AAAI
+     analysis and machine intelligence 35, 1 (2012), 208–220.                                     Conference on Artificial Intelligence, Vol. 35. 4478–4485.
+[19] Mingzhe Liu, Han Huang, Hao Feng, Leilei Sun, Bowen Du, and Yanjie Fu. 2023.            [43] Zonghan Wu, Shirui Pan, Guodong Long, Jing Jiang, Xiaojun Chang, and Chengqi
+     PriSTI: A Conditional Diffusion Framework for Spatiotemporal Imputation. arXiv               Zhang. 2020. Connecting the Dots: Multivariate Time Series Forecasting with
+     preprint arXiv:2302.09746 (2023).                                                            Graph Neural Networks. In Proceedings of the 26th ACM SIGKDD International
+[20] Shuai Liu, Xiucheng Li, Gao Cong, Yile Chen, and Yue Jiang. 2022. Multivariate               Conference on Knowledge Discovery and Data Mining. 753–763.
+     Time-series Imputation with Disentangled Temporal Representations. In The               [44] Yongchao Ye, Shiyao Zhang, and James JQ Yu. 2021. Spatial-temporal traffic
+     Eleventh International Conference on Learning Representations.                               data imputation via graph attention convolutional network. In International
+[21] Yukai Liu, Rose Yu, Stephan Zheng, Eric Zhan, and Yisong Yue. 2019. Naomi:                   Conference on Artificial Neural Networks. Springer, 241–252.
+     Non-autoregressive multiresolution sequence imputation. Advances in neural              [45] Jinsung Yoon, James Jordon, and Mihaela Schaar. 2018. Gain: Missing data impu-
+     information processing systems 32 (2019).                                                    tation using generative adversarial nets. In International conference on machine
+[22] Yonghong Luo, Xiangrui Cai, Ying Zhang, Jun Xu, et al. 2018. Multivariate time               learning. PMLR, 5689–5698.
+     series imputation with generative adversarial networks. Advances in neural              [46] Hsiang-Fu Yu, Nikhil Rao, and Inderjit S Dhillon. 2016. Temporal regularized
+     information processing systems 31 (2018).                                                    matrix factorization for high-dimensional time series prediction. Advances in
+[23] Yonghong Luo, Ying Zhang, Xiangrui Cai, and Xiaojie Yuan. 2019. E2gan: End-                  neural information processing systems 29 (2016).
+     to-end generative adversarial network for multivariate time series imputation.          [47] Ruiyang Zhang, Yang Liu, and Hao Sun. 2020. Physics-guided convolutional neu-
+     In Proceedings of the 28th international joint conference on artificial intelligence.        ral network (PhyCNN) for data-driven seismic response modeling. Engineering
+     AAAI Press Palo Alto, CA, USA, 3094–3100.                                                    Structures 215 (2020), 110704.
+[24] Jiawei Ma, Zheng Shou, Alireza Zareian, Hassan Mansour, Anthony Vetro, and              [48] Yu Zheng, Xiuwen Yi, Ming Li, Ruiyuan Li, Zhangqing Shan, Eric Chang, and
+     Shih-Fu Chang. 2019. CDSA: cross-dimensional self-attention for multivariate,                Tianrui Li. 2015. Forecasting fine-grained air quality based on big data. In Pro-
+     geo-tagged time series imputation. arXiv preprint arXiv:1905.09904 (2019).                   ceedings of the 21th ACM SIGKDD international conference on knowledge discovery
+[25] Wei Ma and George H Chen. 2019. Missing not at random in matrix completion:                  and data mining. 2267–2276.
+     The effectiveness of estimating missingness probabilities under a low nuclear
+ImputeFormer: Low Rankness-Induced Transformers for Generalizable Spatiotemporal Imputation                            KDD ’24, August 25–29, 2024, Barcelona, Spain.
+
+
+A APPENDIX                                                                               each time step, thus overfitting the missing patterns in the training
+                                                                                         data. Therefore, we suggest not to use linear mappings on the time
+A.1 Additional Discussions
+                                                                                         axis to account for the varying missing time points.
+A.1.1 Architectural Comparison. We provide an illustration to show
+the structural difference between different paradigms in Fig. 12.                        A.1.3 Low-Rankness in Self-Attention. Wang et al. [39] studied
+                                                                                         the observation that the self-attention matrix in Transformer is
+                            Time                                 Space                   low-rank and proposed a linear attention. Our proposed temporal
+     (a) Bi-MPGRU                                           Proximity-based GCN
+                                                                                         projected attention model shares a similar idea as this work but
+                       Bi-Directional RNN                       Imputation               has different mechanisms and formulations. We indicate the differ-
+                          Imputation
+                                                                                         ences in the following exposition. Given Q, K, V ∈ R𝑇 ×𝐷 , and the
+       Hidden States
+
+
+
+
+                                                                                         projector P ∈ R𝐶 ×𝐷 , temporal projected attention is formulated as:
+                                                                                                SelfAtten(Q, P, SelfAtten(P, K, V)),
+                                                             Predefined Graph                    = 𝜎 (QPT )SelfAtten(P, K, V) = 𝜎 (QPT ) 𝜎 (PKT ) V,            (17)
+                                                                                                                                | {z } | {z }
+                                                                                                                                       𝑇 ×𝐶      𝐶 ×𝑇
+                           Time Step                               Sensor
+
+     (b) ST-Transformer                                                                  while the linear attention [39] assigns two learnable matrices E, F ∈
+                                                              Spatial Attention
+                       Temporal Attention                       Imputation
+                                                                                         R𝐶 ×𝑇 and has the following form:
+                          Imputation
+                                                                                                   SelfAtten(Q, EK, FV)), = 𝜎 ( QKT ET )FV.                     (18)
+       Hidden States
+
+
+
+
+                                                                                                                               |{z} |{z}
+                                                                                                                                     𝑇 ×𝑇     𝑇 ×𝐶
+
+                                                                                            As for complexity, we can compute Eq. (17) in the order: 𝜎 (QPT ) >
+                                                                                         𝜎 (PKT ) > 𝜎 (PKT )V > 𝜎 (QPT )𝜎 (PKT )V, which admits 𝑂 (4𝑇 𝐷𝐶)
+                                                                                         complexity. Similarly, Eq. (18) has the same complexity. Although
+                           Time Step                               Sensor
+                                                                                         of the same complexity, our model has an explicit and symmetric
+     (c) ImputeFormer
+                                                                Imputation               formulation that brings improved model expressivity. The advan-
+                          Imputation
+                                                                                         tages are threefold: (1) explicit low-rank factorization: Linformer
+                                                                                         [39] does not directly achieve a low-rank factorization of the atten-
+       Hidden States
+
+
+
+
+                           Projector
+                                        Proj.                               Emb. Attn.   tion matrix. It first computes the full attention matrix QKT with
+                                                Node Emb.
+
+
+
+
+                                        Attn.
+                                                                                         size 𝑇 × 𝑇 and then compresses it to 𝑇 × 𝐶. Instead, ImputeFormer
+                                                                                         directly factorizes the full attention matrix from 𝑇 ×𝑇 to 𝑇 ×𝐶, 𝐶 ×𝑇 ,
+                                                                                         which is beneficial for dealing with redundancy and missingness
+                                                                                         in the attention matrix; (2) pattern adaptation: Linformer sets the
+                           Time Step                               Sensor
+                                                                                         compression matrix E, F ∈ R𝐶 ×𝑇 completely learnable, which is
+Figure 12: (a) MPGRU adopts Bi-RNNs to gather available                                  agnostic to the missing patterns of Q, K, and V. These static pa-
+readings from consecutive time points and GCNs to collect                                rameters cannot account for the varying missing patterns. Instead,
+neighborhood data on predefined graphs. (b) Transformers                                 we obtain the 𝑇 × 𝐶 factor matrix through the query QPT , which
+compute all pairwise correlations of the raw data in both                                is pattern-adaptive; (3) increased capacity: Linformer has 𝑇 × 𝐶
+spatial and temporal axes. (c) ImputeFormer utilizes projected                           learnable parameters, while ours has 𝐶 × 𝐷 parameters, which has
+attention along the temporal axis and embedded attention                                 a larger model capacity while having the same time complexity.
+based on the node representation in the spatial axis.
+                                                                                         A.2     Reproducibility
+A.1.2 Effective Input Embedding. Unlike images or languages, time                        A.2.1 Implementations. We build our model and baselines based on
+series have low semantic densities [32]. Therefore, many forecasting                     the SPIN repository (https://github.com/Graph-Machine-Learning-
+models flatten and abstract the input series to reduce information                       Group/spin). All experiments were performed on a single NVIDIA
+redundancy [29, 33]. Specifically, given the input X𝑡 :𝑡 +𝑇 ∈ R𝑁 ×𝑇 ,                    RTX A6000 GPU (48 GB). For the hyperparameters of ImputeFormer,
+each series can be processed by a MLP shared by all series: z𝑖,(0) =                     we set the hidden size to 256, the input projection size to 32, the
+MLP(x𝑖 ), where MLP(·) : R𝑇 → R𝐷 . However, we claim that this                           node embedding size to 64, the projected size to 6, the number of
+technique is not suitable for imputation. If we express it as follows:                   attention layers to 3, and the sequence length to 24 for all data.
+                                         !                                               We also keep the same training, validation and evaluation split as
+                      𝑇
+                     ∑︁                                                                  [7, 26] and report the metrics on the masked evaluation points.
+          𝑥𝑡 +ℎ = 𝜎     𝑤𝑘,ℎ 𝑥𝑡 +𝑘 + 𝑏𝑘,ℎ , ℎ ∈ {0, . . . ,𝑇 },    (16)
+                               𝑘=0                                                       A.2.2 Dataset Descriptions. We adopt heterogeneous spatiotempo-
+it is evident that the linear weights only depends on the relative                       ral benchmark datasets to evaluate the imputation performance.
+position in the sequence and are agnostic to the data flow. Since                        Traffic Speed Data. Our experiments include two commonly used
+missing data points and intervals can occur at arbitrary locations in                    traffic speed datasets, named METR-LA and PEMS-BAY. METR-LA con-
+the series, fixed weights can learn spurious relationships between                       tains spot speed data from 207 loop sensors over a period of 4
+KDD ’24, August 25–29, 2024, Barcelona, Spain.                                                                                                                                                                                                                                                                                                                                                               Tong Nie et al.
+
+
+                                                      3 ( 0 6    Z L W K      S R L Q W  P L V V L Q J                                                                                    3 ( 0 6    Z L W K      S R L Q W  P L V V L Q J                                                                                 0 ( 7 5  / $  Z L W K      S R L Q W  P L V V L Q J
+                                                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                   
+                                                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                   
+  9 R O X P H
+
+
+
+
+                                                                                                                                                     9 R O X P H
+
+
+
+
+                                                                                                                                                                                                                                                                                                   6 S H H G
+                                                                                                                                                                                                                                                                                                                 
+                                                                                                                          * U R X Q G 7 U X W K                                                                                                                         * U R X Q G 7 U X W K                                                                                                                        * U R X Q G 7 U X W K
+                                                                                                                       , P S X W D W L R Q                                                                                                                        , P S X W D W L R Q                                                                                                                        , P S X W D W L R Q
+                                                                                                                          2 E V H U Y D W L R Q                                                                                                                         2 E V H U Y D W L R Q                                                                                                                        2 E V H U Y D W L R Q
+                           ' D \       ' D \               ' D \            ' D \           ' D \        ' D \             ' D \                             ' D \      ' D \            ' D \            ' D \             ' D \       ' D \             ' D \                          ' D \      ' D \            ' D \            ' D \             ' D \         ' D \             ' D \  
+                                                                     6 H Q V R U  1 R                                                                                                                        6 H Q V R U  1 R                                                                                                                       6 H Q V R U  1 R   
+                          (a) PEMS08, 75% point missing                                                                                                                     (b) PEMS08, 95% point missing                                                                                                             (c) METR-LA, 75% point missing
+                                                 0 ( 7 5  / $  Z L W K      S R L Q W  P L V V L Q J                                                                                    3 ( 0 6    Z L W K        E O R F N  P L V V L Q J                                                                            3 ( 0 6  % $ <  Z L W K        E O R F N  P L V V L Q J
+                   
+                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                           * U R X Q G 7 U X W K
+                                                                                                                                                                                                                         , P S X W D W L R Q                                                                   
+                                                                                                                                                                                                                        2 E V H U Y D W L R Q
+
+
+
+
+                                                                                                                                                     9 R O X P H
+    6 S H H G
+
+
+
+
+                                                                                                                                                                                                                                                                                                   6 S H H G
+                                                                                                                                                                                                                                                                                                               
+                                                                                                                         * U R X Q G 7 U X W K                                                                                                                                                                                                                        * U R X Q G 7 U X W K
+                                                                                                                       , P S X W D W L R Q                                                                                                                                                                                                                     , P S X W D W L R Q
+                                                                                                                         2 E V H U Y D W L R Q                                                                                                                                                                                                                        2 E V H U Y D W L R Q
+                          ' D \       ' D \               ' D \           ' D \            ' D \        ' D \             ' D \                              ' D \      ' D \            ' D \            ' D \             ' D \       ' D \             ' D \                          ' D \      ' D \            ' D \            ' D \             ' D \         ' D \             ' D \  
+                                                                   6 H Q V R U  1 R                                                                                                                         6 H Q V R U  1 R                                                                                                                      6 H Q V R U  1 R    
+                         (d) METR-LA, 95% point missing                                                                                                                     (e) PEMS03, 10% block missing                                                                                                             (f) PEMS-BAY, 10% block missing
+                        Figure 13: Visualization examples of imputation for traffic speed and volume data under different missing patterns.
+
+
+months from Mar 2012 to Jun 2012, located at the Los Angeles                                                                                                                                                                        For deep imputation models, we select several competitive baselines:
+County highway network. PEMS-BAY records 6 months of speed                                                                                                                                                                          (1) SPIN [26]: sparse spatiotemporal attention model with state-of-
+data from 325 static sensors in the San Francisco South Bay Area.                                                                                                                                                                   the-art imputation performance; (2) GRIN [7]: message-passing-
+Traffic Volume Data. We adopt four traffic volume data, including                                                                                                                                                                   based bidirectional RNN model with competitive performance; (3)
+PEMS03, PEMS04, PEMS07, and PEMS08. They contain the highway                                                                                                                                                                        SAITS [10]: Temporal Transformer model with diagonally masked
+traffic volume record collected by the Caltrans Performance Mea-                                                                                                                                                                    attention; (4) BRITS [1]: bidirectional RNN model for imputation; (5)
+surement System (PeMS) and aggregated into 5-minute intervals.                                                                                                                                                                      rGAIN [45]: GAIN model with bidirectional recurrent encoder and
+Energy and Environmental Data. Four energy and environmen-                                                                                                                                                                          decoder; (6) Transformer/ST-Transformer [38]: canonical Trans-
+tal data are selected to evaluate the generality of models, including:                                                                                                                                                              former with self-attention in temporal or spatial-temporal dimen-
+(1) Solar: solar power production records from 137 synthetic PV                                                                                                                                                                     sions; (7) TiDER [20]: matrix factorization with disentangled neural
+farms in Alabama state in 2006, which are sampled every 10 minutes;                                                                                                                                                                 representations; (8) TimesNet [41]: 2D convolution-based general
+(2) CER-EN: smart meters measuring energy consumption from the                                                                                                                                                                      time series analysis model; (9) BiMPGRU: a bidirectional RNN-based
+Irish Commission for Energy Regulation Smart Metering Project                                                                                                                                                                       GCN model, which is similar to DCRNN [13].
+[9]. Following the setting in [7], we select 435 time series aggre-                                                                                                                                                                 Ablation Studies. Particularly, we examine the following vari-
+gated at 30 minutes for evaluation. (3) AQI: PM2.5 pollutant records                                                                                                                                                                ations: (a) Temporal blocks: we replace the temporal interaction
+collected by 437 air quality monitoring stations in 43 Chinese cities                                                                                                                                                               module with MLP or directly remove it; (b) Spatial blocks: we replace
+from May 2014 to April 2015 with the aggregation interval of 1 hour.                                                                                                                                                                the spatial interaction module with MLP or directly remove it; (c)
+Note that AQI data contains nearly 26% missing data. (4) AQI36: a                                                                                                                                                                   Loss function: We remove the FIL or replace it with a hierarchical
+subset of AQI data which contains 36 sensors in Beijing distinct.                                                                                                                                                                   loss used in [10, 26]; (d) Architecture: we evaluate the impacts of
+                                                                                                                                                                                                                                    the order of spatial-temporal blocks and the joint attention strategy.
+A.2.3 Experimental Settings and Baseline Methods. This section                                                                                                                                                                      We adopt two data to evaluate and other settings remain the same.
+describes the detailed information on experimental setups.                                                                                                                                                                          Evaluation Metrics. To evaluate the model, we simulate different
+Missing patterns. For traffic, Solar and CER-EN, we consider two                                                                                                                                                                    observation conditions by removing parts of the raw data to con-
+scenarios discussed in [7, 26]: (1) Point missing: randomly remove                                                                                                                                                                  struct incomplete samples based on different missing rates (𝑝 missing ).
+observed points with 25% probability; (2) Block missing: randomly                                                                                                                                                                   Evaluation metrics are then calculated for these simulated missing
+drop 5% of the available data and at the same time simulate a sensor                                                                                                                                                                points. We use a masking indicator Mmissing to denote these loca-
+failure lasting for L ∼ U (12, 48) steps with 0.15% probability.                                                                                                                                                                    tions in which the unobserved (missing) values are marked as ones,
+We keep the above missing rates the same as in the previous work                                                                                                                                                                    observed as zeros. Note that the masked points for evaluation are
+[7, 26]. In addition, we also evaluated the performance under sparser                                                                                                                                                               not available for the models during all stages. The mean absolute
+conditions. For example, the block missing with 10% probability                                                                                                                                                                     error (MAE) is adopted to report the results.
+corresponds to a total missing rate of ≈ 90 ∼ 95%. Note that matrix
+or tensor models can only handle in-sample imputation, where the                                                                                                                                                                    A.3                         Imputation Visualization
+observed training data and the test data are in the same time period.                                                                                                                                                               We provide several visualization examples in Fig. 13. As evidenced,
+However, deep models can work in out-of-sample scenarios [7]                                                                                                                                                                        ImputeFormer can generate reasonable imputations by learning
+where the training and test sequences are disjoint. We adopt the                                                                                                                                                                    the inherent structures of spatiotemporal data. Previous studies
+out-of-sample tests for deep models and in-sample tests for others.                                                                                                                                                                 have discovered that low-rank models can cause oversmoothing
+Baseline Methods. We compare our model with SOTA deep-                                                                                                                                                                              estimation [4, 30]. Due to the representation power of deep architec-
+learning and low-rank imputation methods. For statistical and opti-                                                                                                                                                                 tures, our model can provide a detailed reconstruction. In particular,
+mization models, we consider: (1) Observation average (Average);                                                                                                                                                                    although only limited temporal information is available in the block
+(2) Temporal regularized matrix factorization (TRMF) [46]; (3) Low-                                                                                                                                                                 missing case, it can resort to the node embedding as the query to
+rank autoregressive tensor completion (LRTC-AR) [4]; (4) MICE [37].                                                                                                                                                                 spatial relations, thereby generating an effective imputation.
+

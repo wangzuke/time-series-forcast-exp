@@ -1,0 +1,631 @@
+                             Proceedings of the Thirty-Second International Joint Conference on Artificial Intelligence (IJCAI-23)
+
+
+
+
+          Prediction with Incomplete Data under Agnostic Mask Distribution Shift∗
+             Yichen Zhu1 , Jian Yuan1 , Bo Jiang†1 , Tao Lin2 , Haiming Jin1 , Xinbing Wang1
+                                              and Chenghu Zhou1
+                                        1
+                                          Shanghai Jiao Tong University
+                                     2
+                                       Communication University of China
+        {zyc ieee, yuanjian, bjiang}@sjtu.edu.cn, lintao@cuc.edu.cn, {jinhaiming, xwang8}@sjtu.edu.cn,
+                                            zhouchsjtu@gmail.com
+
+                              Abstract                                             lem of prediction with incomplete data in the presence of dis-
+                                                                                   tribution shift. We focus on the scenario where the underlying
+         Data with missing values is ubiquitous in many ap-                        joint distribution of complete features and label is invariant,
+         plications. Recent years have witnessed increasing                        but the missing pattern, i.e., mask distribution may be differ-
+         attention on prediction with only incomplete data                         ent between training and testing. Such mask distribution shift
+         consisting of observed features and a mask that in-                       may result from different sensor deployment, data manage-
+         dicates the missing pattern. Existing methods as-                         ment, etc. For example, DiDi Traffic Speed [DiDiChuxing,
+         sume that the training and testing distributions are                      2018] is a naturally incomplete dataset throughout one year.
+         the same, which may be violated in real-world sce-                        The traffic network is almost unchanged, so we may reason-
+         narios. In this paper, we consider prediction with                        ably assume the speed distribution is relatively stable. The
+         incomplete data in the presence of distribution shift.                    average missing rate from Jan to Jun is 37% but drops to 23%
+         We focus on the case where the underlying joint                           from Jul to Dec, possibly because more and higher-quality
+         distribution of complete features and label is invari-                    sensors are deployed. Moreover, different from the transfer
+         ant, but the missing pattern, i.e., mask distribution                     learning formulation [Pan and Yang, 2010], we assume the
+         may shift agnostically between training and testing.                      mask distribution shift is agnostic, since testing distribution
+         To achieve generalization, we leverage the observa-                       is usually unavailable during training in practice.
+         tion that for each mask, there is an invariant optimal
+                                                                                      Many methods for missing data can be used to predict with
+         predictor. To avoid the exponential explosion when
+                                                                                   incomplete feature. Morvan et al. [2020] propose NeuMiss
+         learning them separately, we approximate the op-
+                                                                                   for linear regression with incomplete Gaussian feature. Mor-
+         timal predictors jointly using a double parameteri-
+                                                                                   van et al. [2021] then extend NeuMiss to nonlinear case by
+         zation technique. This has the undesirable side ef-
+                                                                                   training it jointly with an MLP. Some missing data imputation
+         fect of allowing the learned predictors to rely on
+                                                                                   methods [Yoon et al., 2018; Li et al., 2019; Ma et al., 2019;
+         the intra-mask correlation and that between fea-
+                                                                                   Mattei and Frellsen, 2019; Li and Marlin, 2020] can also be
+         tures and mask. We perform decorrelation to mini-
+                                                                                   used by treating the label as missing feature. However, none
+         mize this effect. Combining the techniques above,
+                                                                                   of these methods consider distribution shift. Their models
+         we propose a novel prediction method called Sta-
+                                                                                   learn the information of mask distribution and thus can hardly
+         bleMiss. Extensive experiments on both synthetic
+                                                                                   generalize under mask distribution shift.
+         and real-world datasets show that StableMiss is ro-
+         bust and outperforms state-of-the-art methods un-                            Several methods have been proposed for prediction un-
+         der agnostic mask distribution shift.                                     der agnostic feature distribution shift [Shen et al., 2018;
+                                                                                   Kuang et al., 2018; Kuang et al., 2020; Shen et al., 2020;
+                                                                                   Zhang et al., 2021; Xu et al., 2022]. It is assumed that the
+1       Introduction                                                               conditional label distribution given complete feature is in-
+                                                                                   variant. They learn this invariant conditional distribution to
+Data with missing values is ubiquitous in many applications
+                                                                                   achieve generalization. However, they are designed for com-
+due to sensor malfunction, incomplete sensing coverage, etc.
+                                                                                   plete data. In our setting, the conditional label distribution
+Recent years have witnessed increasing attention on predic-
+                                                                                   given trivially-imputed complete feature is not invariant, so
+tion with only incomplete feature, which consists of ob-
+                                                                                   these methods cannot be applied to incomplete data.
+served feature values and a mask that indicates which fea-
+tures are observed. Existing methods [Morvan et al., 2020;                            We observe that the conditional label distribution given ob-
+Morvan et al., 2021] assume that the training and testing dis-                     served feature values and mask is invariant between training
+tributions are the same. However, this assumption can be vio-                      and testing. As a result, there is an invariant optimal predictor
+lated in real-world scenarios. In this paper, we study the prob-                   for each mask respectively. Learning these optimal predictors
+                                                                                   can generalize under agnostic mask distribution shift. Since
+    ∗
+        Extended version: https://arxiv.org/abs/2305.11197.                        the number of optimal predictors increases exponentially with
+    †
+        Corresponding author.                                                      feature dimension [Morvan et al., 2020], we approximate
+
+
+
+                                                                            4720
+                        Proceedings of the Thirty-Second International Joint Conference on Artificial Intelligence (IJCAI-23)
+
+
+
+the optimal predictors jointly using a double parameteriza-                   loss, which is zero when the features are decorrelated. Then
+tion technique, i.e., we first parameterize the optimal predic-               weighted Logistic regression is carried out with the learned
+tors and then further parameterize the mapping from mask to                   weights. Based on CRLR, DGBR [Kuang et al., 2018] also
+the parameters of the optimal predictors. However, such pa-                   extracts nonlinear representations of features with deep auto-
+rameterization has the undesirable side effect that the learned               encoder. DWR [Kuang et al., 2020] learns a set of sample
+model may depend on the intra-mask correlation and the cor-                   weights by minimizing the sum of covariance between pairs
+relation between features and mask, since the training loss                   of features and then carries out weighted linear regression.
+depends on these correlations. This may defy the generaliz-                   SRDO [Shen et al., 2020] first constructs a new dataset by
+ability of the learned model, as such correlations will change                sampling each feature independently from the training set to
+under mask distribution shift. Inspired by Xu et al. [2022],                  decorrelate among features and then learns sample weights
+we decorrelate features and mask to make the learned model                    by density ratio estimation [Sugiyama et al., 2012]. Weighted
+independent of their correlations and help it well approximate                linear regression is also used with the learned weights. Sta-
+the optimal predictors. Combining all the techniques above,                   bleNet [Zhang et al., 2021] adopts Random Fourier Features
+we have our StableMiss that can achieve generalization under                  to measure nonlinear correlations among features. It itera-
+agnostic mask distribution shift.                                             tively optimizes a weighted regression model and a set of
+    The contributions of this paper are summarized as follows.                sample weights by minimizing the prediction error and the
+• This paper proposes StableMiss, a novel method for pre-                     nonlinear correlations, respectively. Xu et al. [2022] propose
+   diction with incomplete data that is robust to agnostic mask               a general framework with DWR and SRDO as specific imple-
+   distribution shift. To the best of our knowledge, this is the              mentations and gives theoretical analysis on the framework.
+   first method that considers agnostic mask distribution shift.              However, all these methods are designed for complete data
+                                                                              and cannot be applied to incomplete data.
+• Extensive experiments are conducted on both synthetic and
+                                                                                 Compared to the existing methods, StableMiss can not only
+   real-world datasets. The results show that StableMiss is
+                                                                              predict with incomplete feature but also generalize under ag-
+   robust and outperforms the state-of-the-art methods under
+                                                                              nostic mask distribution shift.
+   agnostic mask distribution shift.
+
+2   Related Work                                                              3     Problem Formulation
+Prediction with Incomplete Data. Prediction with incom-                       3.1    Preliminary
+plete feature has attracted increasing attention recently. Mor-
+van et al. [2020] derive the analytical expression of the op-                 We use capital and lowercase letters, e.g., X and x, to denote
+timal predictor for linear regression with incomplete Gaus-                   random variable and its realization, respectively. We use sub-
+sian feature and proposes the NeuMiss network to approx-                      scripts to index the entries of a vector, e.g., xi is the i-th entry
+imate the optimal predictor. Morvan et al. [2021] then ex-                    of x. Let x ∈ Rn and y ∈ Rd denote the feature and label,
+tend NeuMiss to nonlinear case by training it jointly with a                  respectively. In the presence of missing data, we consider the
+Multi-Layer Perceptron (MLP). Besides these methods na-                       case where x is partially observed and y is fully observed dur-
+tively proposed for prediction, some missing data imputa-                     ing training. A binary mask m ∈ {0, 1}n indicates which en-
+tion methods can also be used by treating the label as miss-                  tries of x are observed: mi = 1 if xi is observed, and mi = 0
+ing feature. GAIN [Yoon et al., 2018] is an adaptation of                     if xi is missing. The complementary mask m is defined by
+GAN [Goodfellow et al., 2014], where the generator im-                        mi = 1 − mi , ∀i. With a slight abuse of notation, we re-
+putes missing entries, which the discriminator tries to distin-               gard m and m as the index sets of the observed and missing
+guish from observed entries with partial information about                    entries, so that the observed and missing feature values are
+the mask. MisGAN [Li et al., 2019] learns the complete data                   xm = {xi | i ∈ m} and xm = {xi | i ∈ m}, respectively.
+distribution from incomplete data and uses it to supervise im-                We consider the case where the mask m is known, since it is
+putation. Partial VAE [Ma et al., 2019], MIWAE [Mattei and                    common to know which features are observed within incom-
+Frellsen, 2019] and P-BiGAN [Li and Marlin, 2020] extend                      plete feature. The incomplete feature is given by (xm , m).
+VAE [Kingma and Welling, 2014], IWAE [Burda et al., 2016]                     We consider the case where label generation process depends
+and BiGAN [Donahue et al., 2017] respectively to learn the                    on the feature but not the mask, i.e., p(y | x, m) = p(y | x).
+prior and posterior distributions of incomplete feature given                 We do not make assumptions on p(x).
+its latent representation and mask. However, all these meth-                     Following Little and Rubin [1986], we model the gener-
+ods assume that the training and testing distributions are the                ative process of incomplete feature as follows. A complete
+same. They can hardly generalize under distribution shift.                    feature sample x is first drawn from the complete feature dis-
+                                                                              tribution p(x). Given x, a mask sample m is then drawn from
+Prediction under Agnostic Feature Distribution Shift.                         the conditional mask distribution p(m | x). The resulted in-
+Several methods have been proposed for prediction under ag-                   complete feature (xm , m) follows the distribution
+nostic feature distribution shift. They typically assume that
+the conditional label distribution given complete feature is
+                                                                                                          Z
+invariant. Then they learn this invariant conditional distribu-                             p(xm , m) = p(x)p(m | x)dxm .
+tion to achieve generalization by decorrelating the features.
+CRLR [Shen et al., 2018] learns a weight for each sample re-                  We focus on the Missing Completely At Random (MCAR)
+spectively by minimizing the so-called confounder balancing                   case and Missing At Random (MAR) case [Little and Rubin,
+
+
+
+                                                                       4721
+                        Proceedings of the Thirty-Second International Joint Conference on Artificial Intelligence (IJCAI-23)
+
+
+
+1986]. Under MCAR, the mask M is independent of the un-                       x    m                      g                        ŷ
+derlying complete feature X, i.e., p(m | x) = p(m), ∀m, x;
+under MAR, M only depends on the observed feature values                                                                   Loss          w(       ,      )
+XM , i.e., p(m | x) = p(m | xm ), ∀m, x.
+                                                                                  m                      φθ                        y
+3.2    Problem Statement
+The problem is to predict with incomplete feature under ag-                        Figure 1: Prediction framework with sample reweighting.
+nostic mask distribution shift. Given a training set D =
+     (i)
+{(xm(i) , m(i) , y(i) )}N
+                        i=1 , consisting of N samples from the
+                                                                              the number of optimal predictors increases exponentially with
+training distribution ptr (x, m, y), the goal is to learn a pre-
+                                                                              feature dimension, it is infeasible to learn them separately.
+diction function g(xm , m) for agnostic testing distribution
+pte (x, m, y), where the input to g is only incomplete fea-                      Note that the optimal predictor can be thought of as a func-
+ture. We seek the prediction function g to minimize the mean                  tion of the observed feature xm parameterized by ϕ, where
+squared loss                                                                  ϕ is a function of m, i.e., g(xm , m) = gϕ(m) (xm ). Learn-
+                                                                              ing all the 2n optimal predictors then corresponds to learning
+         ℓ(g) = E(X,M,Y)∼pte ∥Y − g(XM , M)∥22 .                              the 2n different values of ϕ(m). The function ϕ(m) cor-
+                                                                              responding to the optimal g is very complicated in general.
+Ideally, the optimal g is given by the conditional expectation:               To address the exponential explosion problem, we adopt the
+          g(xm , m) = EY∼pte     [Y | xm , m].                                common technique of approximating it by a simpler function
+                          Y|x ,m   m                                          ϕθ (m) parameterized by θ, which can be implemented by a
+How we learn it approximately from training data will be in-                  neural network with parameter θ. Since we will also imple-
+troduced in the next section.                                                 ment g by a neural network, we use the zero-imputed feature
+   Note that the testing error can be arbitrarily large without               instead of xm to uniformize the input size. The final form of
+any prior knowledge about the testing distribution. We con-                   our predictor is thus
+sider the case where only the mask distribution may change                                       g(xm , m) = gϕθ (m) (x ⊙ m),
+between training and testing. More specifically, we make the
+following assumption on the testing distribution.                             where ⊙ is element-wise multiplication and θ is the parame-
+Assumption 1. The joint distribution of complete feature and                  ter we need to learn. The framework is shown in Figure 1.
+label is invariant between training and testing:                                 We illustratePthe above framework by a simple example.
+                                                                                                n
+                                                                              Suppose Y = i=1 αi Xi , where Xi ’s are mutually indepen-
+                    pte (x, y) = ptr (x, y).                                  dent except that X1 = X2 . The optimal predictor is
+  The mask distribution shift still remains agnostic under the                                                         n
+                                                                                                                       X
+above assumption. Different from the transfer learning for-                               E[Y | xm , m] = ϕ0 +                  ϕi · (x ⊙ m)i ,
+mulation [Pan and Yang, 2010], the testing distribution is un-                                                          i=1
+available during the training process.
+                                                                              where
+                                                                                                                                  n
+4     Methodology                                                                                                                 X
+                                                                                  ϕ0 = m̄1 m̄2 (α1 EX1 + α2 EX2 ) +                      m̄i αi EXi ,
+4.1    Prediction Framework                                                                                                        i=3                  (1)
+Our method relies critically on the following simple result,                      ϕ1 = (α1 + α2 m̄2 )m1 , ϕ2 = (α2 + α1 m̄1 )m2 ,
+the proof of which is given in the extended version.
+                                                                                  ϕi = αi mi , for i = 3, . . . , n.
+Theorem 1. Under Assumption 1, the conditional label dis-
+tribution given observed feature values and mask is invariant                 Note that, if xi is missing, the value of ϕi actually does
+between training and testing in MCAR or MAR:                                  not matter, as it is multiplied by (x ⊙ m)i = xi mi = 0.
+                                                                              Here the function g is linear in x ⊙ m with the parameter
+             pte (y | xm , m) = ptr (y | xm , m).                             ϕ(m) = (ϕ0 (m), . . . , ϕn (m)) being quadratic in m. We
+                                                                                                                        (n+1)×(n+1)×(n+1)
+As a consequence,                                                                                 P ϕ(m) by θ ∈ R
+                                                                              can easily parameterize                                     ,
+                                                                              where ϕk (m) =           θ   m  m
+                                                                                                    i,j ijk i j  . The   corresponding g is
+    EY∼pte
+        Y|x ,m
+               [Y | xm , m] = EY∼ptr
+                                  Y|x ,m
+                                         [Y | xm , m].                        then
+            m                                m                                                               X
+                                                                                        gϕθ (m) (x ⊙ m) =       θijk xk mi mj mk ,      (2)
+   Theorem 1 holds since MCAR and MAR guarantee that the
+                                                                                                                   i,j,k
+missing feature XM is independent of of mask M given the
+observed feature XM . It shows that the ideal optimal predic-                 where x0 = m0 = 1. Here approximation is not necessary
+tor is invariant between training and testing. If we can learn                as the optimal ϕ(m) is simple enough. In general, however,
+it under the training distribution, it will automatically gener-              ϕ(m) may be very complex and approximation is necessary.
+alize to the agnostic testing distribution. However, as noted                 For example, when the Xi ’s are not independent, the ϕ(m)
+in Morvan et al. [2021], it is essentially an aggregation of                  for the linear model can be an n-th order polynomial in m
+2n optimal predictors, one for each specific mask m. Since                    with 2n parameters.
+
+
+
+                                                                       4722
+                          Proceedings of the Thirty-Second International Joint Conference on Artificial Intelligence (IJCAI-23)
+
+
+
+   Note that the architecture of NeuMiss [Morvan et al., 2020]                  The learned weighting function will be normalized to make
+fits into our framework, although it does not explicitly con-                   p̃w well-defined. Under p̃w , the conditional label distribu-
+sider mask distribution shift. NeuMiss uses a specific g and                    tion p(y | xm , m) does not change. Inspired by Zhang et
+ϕθ that are carefully designed to approximate the analytical                    al. [2021], we measure the correlation empirically by partial
+form of the optimal predictor for a linear label generation pro-                cross-covariance matrix with Random Fourier Feature [Strobl
+cess with Gaussian feature. Our framework is more flexible                      et al., 2019]. We adapt it to the case of incomplete data as fol-
+and applies to more general settings, as shown in Section 5.                    lows.
+                                                                                   The partial cross-covariance matrix of Xk and Xl , denoted
+4.2   Decorrelation                                                             by Σ′Xk ,Xl ;w , is computed with only samples in which Xk
+The use of ϕθ (m) solves the exponential explosion problem,                     and Xl are both observed:
+but it introduces another. As noted in prior work [Shen et                                                  kl
+                                                                                                         N                      N     k           ⊤
+al., 2018; Kuang et al., 2018; Kuang et al., 2020; Shen et al.,                                    1     X                     1 X
+                                                                                Σ′Xk ,Xl ;w =
+                                                                                                                      (i)                     (j)
+                                                                                                              w i u(Xk    ) −         w j u(Xk    )
+2020; Zhang et al., 2021; Xu et al., 2022], the learned value                                   N kl − 1 i=1                  N k j=1
+of θ can be affected by the correlation between the variables                                                                        Nl               
+that we condition on in the optimal predictor, i.e., X and M                                                               (i)     1 X           (j)
+                                                                                                                     wi v(Xl ) −           wj v(Xl )        ,
+in our case. This defies our original goal, as a learned value of                                                                  N l j=1
+θ that performs well on the training distribution may not do
+so on the testing distribution, where the correlation changes.                  where N kl is the number of samples in which Xk and Xl are
+We explain this problem in details below.                                       both observed, N k and N l are the number of samples with
+                                                                                                                                (i)
+   We assume E[Y | xm , m] is realizable, i.e., there exists a                  observed Xk and Xl , respectively, wi = w(xm(i) , m(i) ), and
+parameter θ ∗ corresponding to the parameter of optimal pre-                    u, v are function vectors with elements drawn from the space
+dictor ϕ. In the above example, this assumption is satisfied                    of Random Fourier Feature [Strobl et al., 2019], the defini-
+by the form of g in Equation (2), and θ ∗ corresponds to the                    tion of which is given in the extended version. Similarly,
+function ϕ as given by Equation (1). In practice, we use neu-                   Σ′Xk ,Ml ;w is computed with only samples in which Xk is ob-
+ral networks for g to approximately satisfy this assumption,                    served, and Σ′Mk ,Ml ;w is computed with all the N samples.
+which shows good empirical results in Section 5.                                See the extended version for their detailed forms.
+   Consider the population loss. θ ∗ minimizes training loss                       When decorrelating the entries of X and those of M, we
+      ℓtr (θ) = E(X,M,Y)∼ptr ∥Y − gϕθ (M) (XM , M)∥22 .                         optimize sample weight w ∈ RN       + by minimizing the correla-
+Since parameter θ ∗ corresponds to the parameter of optimal                     tion of all pairs of Xi and Xj and all pairs of Mi and Mj :
+predictor, it also minimizes the above loss under testing distri-
+                                                                                             X                           X
+                                                                                    min             ∥Σ′Xk ,Xl ;w ∥2F +        ∥Σ′Mk ,Ml ;w ∥2F
+bution pte , i.e., θ ∗ generalizes under mask distribution shift.                   w∈R+
+                                                                                             1≤k<l≤n                        1≤k<l≤n
+   Suppose θ̂ is the parameter learned from training distribu-
+                                                                                                    Std(w)
+tion, i.e. ℓtr (θ̂) = ℓtr (θ ∗ ). θ̂ can be different from θ ∗ , but                         +γ       PN     ,
+they perform equally well on the training distribution. In fact,                                  1/N i=1 wi
+    gϕθ̂ (M) (XM , M) = gϕθ∗ (M) (XM , M), ptr -a.s.. (3)                       where Std(w) is standard deviation of the wi ’s. The last regu-
+                                                                                larization term is used to prevent assigning very large weights
+   However, θ̂ and θ ∗ may not perform equally well on testing                  to a small proportion of samples. Hyper-parameter γ is coef-
+distribution ptr , as formally stated in Theorem 2, the proof of                ficient
+                                                                                     P for the regularization term. Under MAR, we further
+which is given in the extended version.                                         add 1≤k,l≤n ∥Σ′Xk ,Ml ;w ∥2F into the objective to decorrelate
+Theorem 2. In the realizable case, there exists a problem                       between X and M.
+instance, in which there exists a θ̂ other than θ ∗ such that                      With the learned weighting function, we can conduct re-
+Equation (3) holds ptr -a.s. but not pte -a.s..                                 gression under the weighted distribution p̃w :
+   Such θ̂ is undesirable, since it cannot generalize as well as                                min Ep̃w [(Y − gϕθ (M) (XM , M))2 ].
+ ∗                                                                                                θ
+θ . To address this problem, decorrelation among X and M
+may help. We explain the reason with an example below.                          In the ideal case, the entries of X and those of M are mu-
+   Consider the example in Section 4.1. If the entries of X                     tually independent under p̃w . Then the learned θ will not
+and the entries of M are mutually independent, the only solu-                   be affected by the correlation and can generalize under mask
+                                                                                distribution shift. In practice, we can equivalently conduct
+tion for θ̂ is the θ ∗ corresponding to Equation (1). The proof
+                                                                                weighted regression under the training distribution:
+is given in the extended version. Thus we can perform decor-
+relation to help obtain the desired parameter θ ∗ .                                    min Eptr [w(XM , M)(Y − gϕθ (M) (XM , M))2 ].
+                                                                                         θ
+   Under MCAR, we decorrelate the entries of X and those of
+M respectively; under MAR, we further decorrelate between                       How decorrelation is combined with the prediction frame-
+X and M. In this paper, we follow Zhang et al. [2021] to                        work is shown in Figure 1.
+decorrelate by sample reweighting. Specifically, we learn a
+weighting function w(xm , m) by minimizing the correlation                      5     Experiment
+under distribution p̃w , where                                                  5.1    Datasets
+             p̃w (x, m, y) = w(xm , m)ptr (x, m, y).                            We evaluate StableMiss on synthetic and real-world datasets.
+
+
+
+                                                                         4723
+                          Proceedings of the Thirty-Second International Joint Conference on Artificial Intelligence (IJCAI-23)
+
+
+
+                                                                              Testing Missing Level
+         Method
+                                  10%           20%            30%           40%           50%            60%           70%         80%       90%
+             Partial VAE      1541.52       1244.90        1172.68         961.18      793.32∗         898.04       1075.69       1087.19   1112.42
+             MIWAE            1331.95       1029.18        1047.14         910.77      743.63∗         841.89        820.39        844.80    844.17
+             P-BiGAN          1382.71       1123.64        1041.63         923.53      713.85∗         856.39        845.39        867.93    979.45
+Gap to       NeuMiss           714.19        520.26         523.10         432.99      293.14∗         574.80        601.74        646.53    679.99
+Optimal      DWR              1485.42       1170.15        1142.32       1033.32       893.64∗         962.61         969.56       966.85    963.52
+             SRDO             1385.00       1116.82        1080.93        988.86       843.85∗         919.26         899.21       903.82    866.09
+             StableNet        1256.32        967.22         989.67        878.97       743.25∗         818.16         807.50       750.89    788.56
+             StableMiss         431.16        342.70        309.09         278.97      282.75∗         319.58         405.60       412.03    467.98
+         Optimal                904.87      1096.36        1108.73       1224.50       1324.00        1375.16       1518.59       1626.74   1705.54
+
+Table 1: Performance on Gaussian-Mix feature with MAR mask when trained under 50% missing level. The values for Optimal are the
+RMSE, while the other values are the gap between the RMSE of the corresponding method and that of Optimal with the same experimental
+setup. Bold and underline represent the best and second best along each column, respectively. Superscript ∗ indicates when training and
+testing missing levels are the same. These marks will also be used in the other tables.
+
+
+   Gaussian. Following Morvan et al. [2021], we generate                        Missing patterns examples are given in the extended version.
+feature X from multivariate Gaussian distribution. The mean                        MCAR-Ind. We generate mask M that is independent of
+values are drawn from standard Gaussian distribution, and the                   feature X, and the entries of mask are mutually independent.
+covariance matrix is generated by Σ = BB⊤ + D, where the                        For each sample, its sample missing rate rs has 80% to be r
+entries of B ∈ Rn×0.7n are drawn from standard Gaussian                         and 2.5% to be one of the other 8 levels respectively. Each
+distribution and D ∈ Rn×n is diagonal with values uniformly                     entry is independently missing with probability rs .
+drawn from [10−2 , 10−1 ]. The feature dimension n = 50.                           MCAR. We generate mask M that is independent of fea-
+   Gaussian-Ind. The feature generation is the same as Gaus-                    ture X, but the entries of mask can be dependent. The sample
+sian, except that we make the entries of X mutually indepen-                    missing rate rs is determined in the same way as MCAR-Ind.
+dent by using a diagonal covariance matrix.                                     In each sample, following Li and Marlin [2020], we generate
+   Gaussian-Mix. We generate feature X from the more gen-                       a window of length ⌊n · rs ⌋ at a random position, where the
+eral Gaussian mixture model with 3 components, each gener-                      ⌊n · rs ⌋ consecutive features in the window are missing.
+ated in the same way as Gaussian. The proportion of the i-th                       MAR. Following Morvan et al. [2020; 2021], we generate
+component πi is uniformly drawn from [0, 1) and normalized                      feature-dependent mask, and the entries of mask can also be
+        P3                                                                      dependent. First, randomly selected 10% features are set to
+by πi / i=1 πi .
+   For the above 3 synthetic                                                    be observed in all the samples. The mask on the other features
+                            Pfeatures,
+                              n
+                                        the label generation pro-
+                                                                                are generated according to a model whose parameters depend
+cess is linear: Y = α0 + i=1 αi Xi + ϵ, where ϵ is a Gaus-
+sian noise such that the signal-to-noise ratio is 10. Different                 on the selected features. The sample missing rate rs means
+from Morvan et al. [2020; 2021] where all αi ’s except α0 are                   the missing proportion of the other 90% features, which is
+equal, we draw more general αi ’s from Gaussian distribution.                   determined in the same way as MCAR-Ind.
+   House Sales. Following Shen et al. [2020], we use dataset                    5.3    Baselines
+of house sales in King County, USA, which contains n = 16
+features and a scalar house price as label.                                     We compare StableMiss with two categories of baselines. (1)
+                                                                                state-of-the-art methods on prediction with incomplete data:
+   MNIST [Lecun et al., 1998]. The MNIST dataset of hand-
+                                                                                NeuMiss [Morvan et al., 2020; Morvan et al., 2021], Par-
+written digit images. Given incomplete image, we aim to pre-
+                                                                                tial VAE [Ma et al., 2019], MIWAE [Mattei and Frellsen,
+dict the complete image.
+                                                                                2019] and P-BiGAN [Li and Marlin, 2020]; (2) state-of-the-
+   Traffic [DiDiChuxing, 2018]. Average traffic speed within
+                                                                                art methods on generalization under agnostic feature distri-
+every hour from 1343 roads in the city of Chengdu, China, in
+                                                                                bution shift: DWR [Kuang et al., 2020], SRDO [Shen et al.,
+2018. We build a graph for the dataset, where nodes represent
+                                                                                2020] and StableNet [Zhang et al., 2021]. For Partial VAE,
+the roads and edges indicate the adjacency of roads. Note that
+                                                                                MIWAE and P-BiGAN, we treat label as missing feature. For
+this dataset is naturally incomplete. Given incomplete history,
+                                                                                DWR, SRDO and StableNet, we use mean-imputed feature as
+we aim to predict the future traffic speed.
+                                                                                input. See the extended version for implementation details.
+   All the datasets except the Traffic dataset are complete. We                    We use the commonly adopted Root Mean Square Error
+generate incomplete datasets by imposing mask on the com-                       (RMSE) as evaluation metric throughout.
+plete samples according to the missing patterns in Section 5.2.
+                                                                                5.4    Performance on Synthetic Dataset
+5.2   Missing Patterns                                                          We compare StableMiss with baselines under different miss-
+We design the following 3 missing patterns. There are 9 miss-                   ing patterns and missing levels. The models are trained un-
+ing levels, denoted by r, from 10% to 90% at a step of 10%.                     der a specific missing level and tested under all the missing
+
+
+
+                                                                         4724
+                         Proceedings of the Thirty-Second International Joint Conference on Artificial Intelligence (IJCAI-23)
+
+
+
+                                                                            Training Missing Level
+           Method
+                                    10%         20%          30%          40%            50%          60%            70%            80%          90%
+               Partial VAE     1441.03        946.28       951.77      880.44        793.32∗      1048.26        1581.51         1608.35    1897.15
+               MIWAE           1092.03        806.06       816.18      753.13        743.63∗       883.19        1333.60         1235.24    1674.31
+               P-BiGAN         1136.98        840.27       849.73      771.86        713.85∗       947.65        1215.25         1255.63    1709.70
+  Gap to       NeuMiss          687.57        650.05       529.37      424.46        293.14∗       692.26         744.01          850.52    1023.01
+  Optimal      DWR             1111.11        957.66       962.37      904.77        893.64∗      1054.67        1312.80         1434.32    1902.80
+               SRDO             991.91        939.84       890.83      884.84        843.85∗      1029.93        1362.18         1359.29    1897.69
+               StableNet        856.08        847.25       866.97      823.89        743.25∗       889.24        1336.49         1410.46    1697.40
+               StableMiss        337.14       326.49       296.93      297.95        282.75∗        421.15        480.80          584.96     716.63
+           Optimal                                                                   1324.00
+
+                  Table 2: Performance on Gaussian-Mix feature with MAR mask when tested under 50% missing level.
+
+                                                                                 Testing Missing Level
+                     Method
+                                                10%        20%        30%        40%          50%        60%        70%          80%       90%
+                             Partial VAE       23.37      18.94      17.94      14.85       8.46∗       19.70      21.87         46.05   52.53
+                             MIWAE             27.14      23.92      22.90      21.16      13.73∗       21.52      25.73         49.95   52.56
+                             P-BiGAN           32.91      25.62      23.82      23.10      16.36∗       26.29      27.44         56.17   62.87
+                                                                                                ∗
+           Gap to            NeuMiss           25.89      20.19      17.89      14.48        7.67       17.67      21.26         46.55   53.06
+        StableMiss-ID        DWR               38.36      26.80      25.22      23.70      11.09∗       26.23      27.62         61.13   71.49
+                             SRDO              29.46      22.49      18.89      15.16       6.88∗       15.65      24.86         51.77   55.68
+                             StableNet         21.41      15.18      14.78      14.53       8.46∗       18.55      15.96         38.09   46.99
+                             StableMiss        14.68      10.16        8.46       7.03       0.00∗       9.51      10.31         21.90   34.90
+                 StableMiss-ID                 20.85      22.80      24.36      28.77        32.89      36.67      39.23         42.90   48.16
+
+           Table 3: Performance on House Sales dataset with MAR mask when trained under 50% missing level (unit: $10000).
+
+
+levels. The difference in missing level represents the mask                    in terms of the gap to optimal. As shown in the extended ver-
+distribution shift. Due to space limit, we only present the re-                sion, for Gaussian features with MCAR or MAR mask, Neu-
+sults of missing rate shift on Gaussian-Mix feature with MAR                   Miss can slightly outperform StableMiss, by at most 2%, in
+mask; see the extended version for the missing rate shift on                   the absence of mask distribution shift. This is not too surpris-
+other settings and missing pattern shift. We also present the                  ing, as these are the cases that NeuMiss is tailored for.
+performance of optimal predictor E[Y | xm , m]. It can be                         Fixing Testing Missing Level. We show the results when
+derived from known feature distribution and label generation                   tested under 50% missing level and trained under all the miss-
+process, without which the performance of optimal predictor                    ing levels in Table 2; the other settings are similar. When
+is not reachable.                                                              the mask distribution shifts, StableMiss achieves the best per-
+   We will show the results from two views: results with                       formance, reducing the gap to optimal of the second best
+fixed training missing level that reflects the generalizability of             NeuMiss by 30%-50%. Reduction is especially large when
+methods, and results with fixed testing missing level that re-                 trained under 10% missing level, since the optimal predic-
+flects the robustness to the mask distribution of training data.               tors are more learnable under lower missing level. The re-
+   Fixing Training Missing Level. We show the results when                     sults show that StableMiss is robust to the quality, i.e., mask
+trained under 50% missing level and tested under all the miss-                 distribution, of training data and can generalize from various
+ing levels in Table 1; the other settings are similar. Since the               training mask distributions.
+amount of observed data is different between missing levels,
+which influences the prediction error, we use the gap to opti-                 5.5    Performance on Real-World Dataset
+mal to reflect the generalization performance.                                 House Sales. We show the results on House Sales dataset
+   As the missing level increases, the error of the optimal pre-               when trained under 50% missing level in Table 3. Without
+dictor also increases, as there are less observed data. When                   prior knowledge about label generation process, the optimal
+the mask distribution shifts, StableMiss has the best general-                 predictor cannot be derived. StableMiss has the best perfor-
+ization performance, reducing the gap to optimal of the sec-                   mance when trained in distribution, i.e., trained under testing
+ond best, NeuMiss in this case, by 31%-44%. When there                         distribution. Instead of Optimal, we show our in-distribution
+is no mask distribution shift, StableMiss still has the best per-              performance, which is denoted by ‘StableMiss-ID’.
+formance in this case, slightly outperforming NeuMiss by 4%                       Error of StableMiss-ID also increases with missing level.
+
+
+
+                                                                        4725
+                        Proceedings of the Thirty-Second International Joint Conference on Artificial Intelligence (IJCAI-23)
+
+
+
+                                                                                  Testing Missing Level
+                     Method
+                                               10%        20%        30%          40%              50%             60%          70%           80%           90%
+                           Partial VAE        21.61      17.51      16.58         13.74       7.82∗              18.22      20.22             42.58         48.57
+                           MIWAE              25.09      22.12      21.18         19.57      12.69∗              19.90      23.79             46.18         48.60
+                           P-BiGAN            30.43      23.69      22.03         21.36      15.13∗              24.31      25.38             51.94         58.13
+           Gap to          NeuMiss            23.94      18.67      16.54         13.39       7.09∗              16.34      19.66             43.04         49.06
+        StableMiss-ID      DWR                35.47      24.78      23.32         21.92      10.26∗              24.25      25.54             56.52         66.10
+                           SRDO               27.24      20.79      17.47         14.01       6.36∗              14.47      22.99             47.87         51.49
+                           StableNet          19.79      14.03      13.67         13.43       7.82∗              17.15      14.76             35.22         43.45
+                           StableMiss         12.33        8.75       7.05         6.65           0.00∗            8.25         9.99          18.73         27.47
+                StableMiss-ID                 19.27      22.14      24.08         27.96           31.93          34.95      38.06             41.65         46.76
+
+                   Table 4: Performance on MNIST dataset with MAR mask when trained under 50% missing level.
+
+       Partial VAE     MIWAE         P-BiGAN          NeuMiss        DWR          SRDO             StableNet          StableMiss               StableMiss-ID
+           16.08        14.82          15.79           15.10         15.93         15.72                 13.97             11.84                       8.39
+
+                         Table 5: Performance on Traffic dataset. All the values are exact RMSE (unit: km/h).
+
+                                                                                                    w/o       Only Intra        Only Inter      Full        Optimal
+When the mask distribution shifts, StableMiss achieves the
+                                                                                                  3000
+best performance, reducing the gap to StableMiss-ID of the                                        2500
+
+
+
+
+                                                                                           RMSE
+second best, usually StableNet, by 26%-50%, with an aver-                                         2000
+                                                                                                  1500
+age of 38%, which demonstrates our generalizability on real-                                      1000
+world data.                                                                                              10   20    30     40      50    60     70     80     90
+                                                                                                                    Testing Missing Level (%)
+   MNIST. We show the results on MNIST dataset when
+trained under 50% missing level in Table 4. When the mask                     Figure 2: Comparison with ablated variants: only decorrelating the
+distribution shifts, StableMiss achieves the best performance,                entries of X and M respectively (only intra), only decorrelating be-
+reducing the gap to StableMiss-ID of the second best, usually                 tween X and M (only inter), and no decorrelaion (w/o). The same
+StableNet, by 28%-50%, with an average of 41%.                                notations are used in Figure 3.
+   Traffic. Table 5 shows the results on Traffic dataset, which
+                                                                                                    w/o       Only Intra        Only Inter      Full        Optimal
+is naturally incomplete. The training and testing missing
+                                                                                                  1800
+rates are 37% and 23%. Since ground truth of missing en-
+                                                                                           RMSE
+
+
+
+
+                                                                                                  1600
+tries is unavailable, RMSE is only computed on observed en-                                       1400
+tries. The value for StableMiss-ID is the training error, which                                   1200
+                                                                                                  1000
+only serves as a reference for our comparison. Note that Sta-                                            10   20    30     40      50    60     70     80     90
+                                                                                                                    Testing Missing Level (%)
+bleMiss achieves the best performance, reducing the gap to
+StableMiss-ID of the second best, StableNet, by 38%, which                                  Figure 3: Influence of unneeded decorrelation.
+shows that StableMiss can be applied to real-world datasets
+with complex missingness.                                                     that without decorrelation. For real-world data with unknown
+                                                                              correlation, we can always conduct decorrelation.
+5.6   Ablation Study
+We study the efficacy of decorrelation by comparing with ab-
+                                                                              6     Conclusion
+lated variants that only decorrelates the entries of X and M                  In this paper, we propose a novel method StableMiss for the
+respectively (only intra), only decorrelates between X and                    problem of prediction with incomplete data under agnostic
+M (only inter) and does not decorrelate (w/o). The result on                  mask distribution shift. We leverage the observation that for
+Gaussian-Mix feature with MAR mask when trained under                         each mask, there is an invariant optimal predictor. We ap-
+10% missing level is given in Figure 2. Our method with full                  proximate the optimal predictors jointly using a double pa-
+decorrelation achieves the best performance especially when                   rameterization technique. We also perform decorrelation to
+mask distribution shift becomes stronger. The gap of the sec-                 minimize the side effect caused by the intra-mask correlation
+ond best to optimal is reduced by 55% on average and by 83%                   and the correlation between features and mask. Extensive
+under 90% missing level.                                                      experiments are conducted on both synthetic and real-world
+   We also study the influence of decorrelation when it is not                datasets. The results show that StableMiss is robust and out-
+needed. The result on Gaussian-Ind feature with MCAR-Ind                      performs state-of-the-art methods under agnostic mask distri-
+mask when trained under 10% missing level is given in Figure                  bution shift.
+3. The performance with unneeded decorrelation is close to
+
+
+
+                                                                       4726
+                        Proceedings of the Thirty-Second International Joint Conference on Artificial Intelligence (IJCAI-23)
+
+
+
+Acknowledgments                                                               [Little and Rubin, 1986] Roderick J. A. Little and Donald B.
+                                                                                 Rubin. Statistical Analysis with Missing Data. John Wiley
+This work was supported by NSF China (No. 62072302,                              & Sons, Inc., USA, 1986.
+U20A20181, U21A20519, 42050105, 62262018) and the
+Open Research Project of the State Key Laboratory of Me-                      [Ma et al., 2019] Chao Ma, Sebastian Tschiatschek, Kon-
+dia Convergence and Communication, Communication Uni-                            stantina Palla, Jose Miguel Hernandez-Lobato, Sebastian
+versity of China, China (No.SKLMCC2021KF011).                                    Nowozin, and Cheng Zhang. EDDI: Efficient dynamic dis-
+                                                                                 covery of high-value information with partial vae. In Pro-
+                                                                                 ceedings of the 36th International Conference on Machine
+References                                                                       Learning, pages 4234–4243, Long Beach, USA, 2019.
+[Burda et al., 2016] Yuri Burda, Roger B. Grosse, and Rus-                    [Mattei and Frellsen, 2019] Pierre-Alexandre Mattei and Jes
+  lan Salakhutdinov. Importance weighted autoencoders. In                        Frellsen. MIWAE: Deep generative modelling and impu-
+  The 4th International Conference on Learning Represen-                         tation of incomplete data sets. In Proceedings of the 36th
+  tations, San Juan, Puerto Rico, 2016.                                          International Conference on Machine Learning, pages
+                                                                                 4413–4423, Long Beach, USA, 2019.
+[DiDiChuxing, 2018] DiDiChuxing.       City traffic index.
+  https://gaia.didichuxing.com/, 2018. Accessed: 2018-12-                     [Morvan et al., 2020] Marine Le Morvan, Julie Josse,
+  31.                                                                            Thomas Moreau, Erwan Scornet, and Gael Varoquaux.
+                                                                                 NeuMiss networks: Differentiable programming for su-
+[Donahue et al., 2017] Jeff Donahue, Philipp Krahenbuhl,                         pervised learning with missing values. In Proceedings of
+  and Trevor Darrell. Adversarial feature learning. In                           the 34th International Conference on Neural Information
+  The 5th International Conference on Learning Represen-                         Processing Systems, page 5980–5990, Vancouver, Canada,
+  tations, Toulon, France, 2017.                                                 2020.
+[Goodfellow et al., 2014] Ian Goodfellow, Jean Pouget-                        [Morvan et al., 2021] Marine Le Morvan, Julie Josse, Erwan
+  Abadie, Mehdi Mirza, Bing Xu, David Warde-Farley,                              Scornet, and Gael Varoquaux. What’s a good imputation to
+  Sherjil Ozair, Aaron Courville, and Yoshua Bengio. Gen-                        predict with mmissing values? In Proceedings of the 35th
+  erative adversarial nets. In Advances in Neural Infor-                         International Conference on Neural Information Process-
+  mation Processing Systems, pages 2672–2680, Montreal,                          ing Systems, pages 11530–11540, Virtual Event, 2021.
+  Canada, December 2014.                                                      [Pan and Yang, 2010] Sinno Jialin Pan and Qiang Yang. A
+[Kingma and Welling, 2014] Diederik P. Kingma and Max                            survey on transfer learning. IEEE Transactions on Knowl-
+  Welling. Auto-encoding variational bayes. In The 2nd                           edge and Data Engineering, 22(10):1345–1359, 2010.
+  International Conference on Learning Representations,                       [Shen et al., 2018] Zheyan Shen, Peng Cui, Kun Kuang,
+  Banff, Canada, 2014.                                                           Bo Li, and Peixuan Chen. Causally regularized learning
+[Kuang et al., 2018] Kun Kuang, Peng Cui, Susan Athey,                           with agnostic data selection bias. In Proceedings of the
+  Ruoxuan Xiong, and Bo Li. Stable prediction across un-                         26th ACM International Conference on Multimedia, page
+  known environments. In Proceedings of the 24th ACM                             411–419, Seoul, Republic of Korea, 2018.
+  SIGKDD International Conference on Knowledge Discov-                        [Shen et al., 2020] Zheyan Shen, Peng Cui, Tong Zhang, and
+  ery & Data Mining, pages 1617–1626, London, UK, 2018.                          Kun Kuang. Stable learning via sample reweighting. In
+                                                                                 The 34th AAAI Conference on Artificial Intelligence, pages
+[Kuang et al., 2020] Kun Kuang, Ruoxuan Xiong, Peng Cui,                         5692–5699, New York, USA, 2020.
+  Susan Athey, and Bo Li. Stable prediction with model mis-
+  specification and agnostic distribution shift. In The 34th                  [Strobl et al., 2019] Eric V. Strobl, Kun Zhang, and Shyam
+  AAAI Conference on Artificial Intelligence, pages 4485–                        Visweswaran. Approximate kernel-based conditional in-
+  4492, New York, USA, 2020.                                                     dependence tests for fast non-parametric causal discovery.
+                                                                                 Journal of Causal Inference, 7(1), 2019.
+[Lecun et al., 1998] Yann Lecun, Leon Bottou, Yoshua Ben-                     [Sugiyama et al., 2012] Masashi Sugiyama, Taiji Suzuki,
+  gio, and Patrick Haffner. Gradient-based learning ap-                          and Takafumi Kanamori. Density Ratio Estimation in Ma-
+  plied to document recognition. Proceedings of the IEEE,                        chine Learning. Cambridge University Press, UK, 2012.
+  86(11):2278–2324, 1998.
+                                                                              [Xu et al., 2022] Renzhe Xu, Xingxuan Zhang, Zheyan
+[Li and Marlin, 2020] Steven Cheng-Xian Li and Benjamin                          Shen, Tong Zhang, and Peng Cui. A theoretical analysis on
+   Marlin. Learning from irregularly-sampled time series: A                      independence-driven importance weighting for covariate-
+   missing data perspective. In Proceedings of the 37th Inter-                   shift generalization. In Proceedings of the 39th Interna-
+   national Conference on Machine Learning, pages 5937–                          tional Conference on Machine Learning, pages 24803–
+   5946, Virtual Event, 2020.                                                    24829, Baltimore, USA, 2022.
+[Li et al., 2019] Steven Cheng-Xian Li, Bo Jiang, and Ben-                    [Yoon et al., 2018] Jinsung Yoon, James Jordon, and Mi-
+   jamin Marlin. Learning from incomplete data with gener-                       haela van der Schaar. GAIN: Missing data imputation us-
+   ative adversarial networks. In Proceedings of the 7th In-                     ing generative adversarial nets. In Proceedings of the 35th
+   ternational Conference on Learning Representations, New                       International Conference on Machine Learning, pages
+   Orleans, USA, May 2019.                                                       5675–5684, Stockholmsmassan, Sweden, July 2018.
+
+
+
+                                                                       4727
+                      Proceedings of the Thirty-Second International Joint Conference on Artificial Intelligence (IJCAI-23)
+
+
+
+[Zhang et al., 2021] Xingxuan Zhang, Peng Cui, Renzhe Xu,
+  Linjun Zhou, Yue He, and Zheyan Shen. Deep stable
+  learning for out-of-distribution generalization. In IEEE
+  Conference on Computer Vision and Pattern Recognition,
+  pages 5372–5382, Virtual Event, 2021.
+
+
+
+
+                                                                     4728
+

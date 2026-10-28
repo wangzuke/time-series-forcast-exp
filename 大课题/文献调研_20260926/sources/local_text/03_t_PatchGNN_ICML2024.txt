@@ -1,0 +1,1117 @@
+                   Irregular Multivariate Time Series Forecasting:
+             A Transformable Patching Graph Neural Networks Approach
+
+
+                     Weijia Zhang 1 Chenlong Yin 1 Hao Liu 1 2 Xiaofang Zhou 2 Hui Xiong 1 2
+
+
+                        Abstract                                   regularly sampled and fully observed MTS (Lim & Zohren,
+                                                                   2021). The forecasting challenges associated with Irreg-
+     Forecasting of Irregular Multivariate Time Se-                ular Multivariate Time Series (IMTS), characterized by
+     ries (IMTS) is critical for numerous areas, such as           their irregular sampling intervals and missing data, have
+     healthcare, biomechanics, climate science, and                received significantly less attention. Indeed, IMTS are
+     astronomy. Despite existing research address-                 prevalent across a wide range of subject areas, such as
+     ing irregularities in time series through ordinary            healthcare, biomechanics, climate science, astronomy, and
+     differential equations, the challenge of model-               finance (Rubanova et al., 2019; De Brouwer et al., 2019;
+     ing correlations between asynchronous IMTS re-                Yao et al., 2018; Vio et al., 2013; Engle & Russell, 1998;
+     mains underexplored. To bridge this gap, this                 Zhang et al., 2021a). Accurate forecasting of IMTS serves
+     study proposes Transformable Patching Graph                   as the foundation to support various significant activities
+     Neural Networks (T-PATCH GNN), which trans-                   from making informed decisions to planning with foresight.
+     forms each univariate irregular time series into
+     a series of transformable patches encompassing                Unlike regular MTS, the modeling and analysis for IMTS
+     a varying number of observations with uniform                 is more challenging due to the inherent irregularity within
+     temporal resolution. It seamlessly facilitates local          the series and asynchrony between them (Horn et al., 2020).
+     semantics capture and inter-time series correla-              As illustrated in Figure 1(a), given a set of historical IMTS
+     tion modeling while avoiding sequence length ex-              observations and forecasting queries, the IMTS forecasting
+     plosion in aligned IMTS. Building on the aligned              problem aims to accurately predict the values in correspon-
+     patching outcomes, we then present time-adaptive              dence to these queries. Although a few proactive efforts have
+     graph neural networks to model dynamic inter-                 been made for IMTS forecasting (Rubanova et al., 2019;
+     time series correlation based on a series of learned          De Brouwer et al., 2019; Biloš et al., 2021; Schirmer et al.,
+     time-varying adaptive graphs. We demonstrate                  2022), these works mainly focus on handling irregularity
+     the remarkable superiority of T-PATCH GNN on                  within the time series based on neural Ordinary Differential
+     a comprehensive IMTS forecasting benchmark                    Equations (ODEs) (Chen et al., 2018), failing to explicitly
+     we build, which contains four real-world scien-               consider the crucial correlations between multiple series.
+     tific datasets covering healthcare, biomechanics              Moreover, calculating ODE solvers is computationally ex-
+     and climate science, and seventeen competitive                pensive due to the numerical integration process, leading to
+     baselines adapted from relevant research fields.1             poor efficiency in both training and inference stages (Biloš
+                                                                   et al., 2021; Shukla & Marlin, 2020).
+                                                                   It is a non-trivial task for accurate IMTS forecasting, which
+1. Introduction                                                    faces three major challenges. (1) The first challenge is the
+                                                                   irregularity in intra-time series dependency modeling. The
+While the forecasting of Multivariate Time Series (MTS)            varying time intervals between adjacent observations disrupt
+has been extensively investigated, most research focuses on        the consistent flow of time series data, making it difficult
+    1
+      The Hong Kong University of Science and Technology           for classical time series forecasting models (Lim & Zohren,
+(Guangzhou) 2 The Hong Kong University of Science and Tech-        2021) to accurately capture the underlying temporal dynam-
+nology. Correspondence to: Hao Liu <liuh@ust.hk>, Hui Xiong        ics and dependencies (Rubanova et al., 2019; Che et al.,
+<xionghui@ust.hk>.                                                 2018). (2) The second challenge is the asynchrony in inter-
+Proceedings of the 41 st International Conference on Machine
+                                                                   time series correlation modeling. While there are always
+Learning, Vienna, Austria. PMLR 235, 2024. Copyright 2024 by       considerable correlations between time series of different
+the author(s).                                                     variables, the observations among IMTS can be significantly
+    1
+      Code and datasets are available at https://github.           misaligned at time due to irregular sampling or missing data.
+com/usail-hkust/t-PatchGNN.
+
+                                                               1
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+                                                                      subsequent inter-time series correlation modeling.
+                                                                      Along this line, a transformable time-aware convolution net-
+                                                                      work is introduced to encode each transformable patch into a
+                                                                      latent embedding, which subsequently serves as input tokens
+                                                                      to a Transformer for intra-time series dependency modeling.
+                                                                      Furthermore, we present time-adaptive graph neural net-
+                                                                      works to model the inter-time series correlation. To explic-
+                                                                      itly represent the dynamic correlations between IMTS, we
+                                                                      learn a series of time-varying adaptive graphs constructed
+                                                                      based on both the learnable inherent variable embedding and
+                                                                      dynamic patch embedding, and consequently, these graphs
+                                                                      keep the same temporal resolution as transformable patches.
+                                                                      Then, graph neural networks are applied to these learned
+                                                                      graphs to model patch-level dynamic correlations between
+                                                                      IMTS. Finally, a Multi-Layer Perception (MLP) output layer
+Figure 1: (a) Irregular multivariate time series forecasting          is employed to generate predicted results in terms of fore-
+problem, where v1 , v2 , and v3 represent three different vari-       casting queries based on the obtained comprehensive latent
+ables. (b) Canonical pre-alignment representation causes              representation of IMTS.
+the average sequence length to increase from 5 to 15, an
+                                                                      Our major contributions are summarized as follows:
+explosive growth proportional to the variable count.
+
+                                                                         • We propose a new transformable patching method to
+This asynchrony complicates direct comparisons and cor-                    transform each univariate irregular time series of IMTS
+relations at specific time points and potentially obscures                 into a series of variable-length yet time-aligned patches.
+or distorts the actual relationships between the time series,              This tactfully bypasses the canonical pre-alignment
+resulting in a significant challenge to model inter-time series            representation for IMTS while aligning IMTS in a con-
+correlations (Zhang et al., 2021b). (3) The last challenge                 sistent temporal resolution. It prevents the sequence
+is the sequence length explosion with the increase of vari-                length of aligned IMTS from explosively growing pro-
+ables. As shown in Figure 1(b), to facilitate IMTS modeling,               portional to the increasing variables, and meanwhile,
+current studies typically represent IMTS in a time-aligned                 seamlessly facilitates local semantics capture and inter-
+format which involves extending each univariate irregular                  time series correlation modeling for IMTS.
+time series to a uniform length corresponding to the count of
+all unique timestamps among IMTS observations (Che et al.,               • Based on the transformable patching outcomes, we
+2018). However, such a canonical pre-alignment representa-                 propose time-adaptive graph neural networks to model
+tion may lead to the sequence length explosively growing                   the dynamic inter-time series correlation within IMTS.
+proportional to the addition of variables, which raises se-
+vere scalability concerns on both computation and memory                 • We build a benchmark for IMTS forecasting evalua-
+overhead when encountering a large number of variables.                    tion. Seventeen state-of-the-art baseline models from
+                                                                           various relevant research fields, i.e., IMTS forecasting,
+To this end, we propose a Transformable Patching Graph
+                                                                           interpolation, classification, and MTS forecasting, are
+Neural Networks (T-PATCH GNN) approach for IMTS fore-
+                                                                           taken for a fair comparison on four public scientific
+casting. T-PATCH GNN initially transforms each univariate
+                                                                           IMTS datasets, which cover areas of healthcare, biome-
+irregular time series into a series of transformable patches,
+                                                                           chanics, and climate science. Extensive experiments
+which vary in observation count but maintain a unified time
+                                                                           demonstrate remarkable superiority of T-PATCH GNN.
+horizon resolution. This process for IMTS offers three ma-
+jor advantages: (1) The independent patching process for
+each univariate irregular time series bypasses the canonical          2. Related Works
+pre-alignment representation for IMTS, eliminating the risk
+                                                                      2.1. Irregular Multivariate Time Series Forecasting
+of sequence length explosion in the representation of IMTS
+with large-scale variables; (2) local semantics of irregular          Existing efforts on IMTS primarily focus on classification
+time series can be better captured by putting each individ-           tasks (Che et al., 2018; Shukla & Marlin, 2021; Zhang et al.,
+ual observation into patches with richer context (Nie et al.,         2021b; 2023a; Horn et al., 2020; Shukla & Marlin, 2018;
+2022); (3) after transformable patching, the IMTS is natu-            Li et al., 2023; Baytas et al., 2017). Only a few proactive
+rally aligned in a consistent patch-level temporal resolution.        studies (Rubanova et al., 2019; De Brouwer et al., 2019;
+It addresses the asynchrony problem, seamlessly facilitating          Biloš et al., 2021; Schirmer et al., 2022) have made efforts
+
+                                                                  2
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+on the IMTS forecasting. Specifically, these works primar-            et al., 2020; Liu et al., 2022). DCRNN (Li et al., 2018) and
+ily rely on neural ODEs (Chen et al., 2018) and focus on              STGCN (Yu et al., 2018) apply GNNs to the pre-defined
+handling the continuous dynamics and irregularity within              graph structures, which may be difficult to obtain in some
+the time series. For instance, Latent-ODE (Rubanova et al.,           domains. Therefore, some studies (Wu et al., 2019; 2020b;
+2019) enables Recurrent Neural Networks (RNNs) to have                Huang et al., 2023; Yi et al., 2023; Cao et al., 2020) pro-
+continuous-time hidden state dynamics specified by neural             pose to learn graph structures from data, enabling automatic
+ODEs. GRU-ODE-Bayes (De Brouwer et al., 2019) incor-                  modeling of variables’ topological relationships. However,
+porates neural ODEs to develop a continuous-time Gated                when it comes to IMTS, the observations can be notably
+Recurrent Unit (GRU) and introduces a Bayesian update                 misaligned at times, raising challenges for the inter-time
+network to process the sparse observations. CRU (Schirmer             series correlation modeling. Raindrop (Zhang et al., 2021b)
+et al., 2022) handles irregular intervals between observations        addresses it by propagating the asynchronous observations
+by evolving the hidden state based on a linear stochastic             at all the timestamps when an observation appears at an arbi-
+differential equation and the continuous-discrete Kalman              trary variable, which involves the IMTS pre-alignment and
+filter. However, calculating ODE solvers is known to be               may suffer from the sequence length explosion problem.
+low-efficient due to the expensive numerical integration
+                                                                      Another line of works associated with us applies GNNs
+computation. To address this, Neural Flows (Biloš et al.,
+                                                                      for modeling regular MTS with missing data (Cini et al.,
+2021) models the solution curves of ODEs through neu-
+                                                                      2022; Marisca et al., 2022; Chen et al., 2024), which usu-
+ral networks to mitigate the expensive numerical solvers
+                                                                      ally necessitate aligning the missing MTS at times like the
+in neural ODEs. While these works have made big efforts
+                                                                      aforementioned pre-alignment representation and focus on
+to handle the irregularity within irregular time series, it is
+                                                                      handling the data missing issues. However, our work empha-
+still underexplored to effectively model the inter-time series
+                                                                      sizes bypassing the canonical pre-alignment representation
+correlations within asynchronous IMTS.
+                                                                      to address both the irregularity and asynchrony challenges
+                                                                      within IMTS modeling.
+2.2. Irregular Multivariate Time Series Representation
+To represent IMTS in a time-aligned manner and facilitate             3. Preliminary
+the subsequent modeling, existing works predominantly
+adopt a pre-alignment representation method (Che et al.,              3.1. Problem Definition
+2018; Shukla & Marlin, 2021; Zhang et al., 2021b; 2023a;              Definition 1 (Irregular Multivariate Time Series). An
+Baytas et al., 2017; Rubanova et al., 2019; De Brouwer                IMTS can be represented as O = {on1:Ln }N             n=1 =
+et al., 2019; Biloš et al., 2021; Schirmer et al., 2022). It
+                                                                      {[(tni , xni )]Ln
+                                                                                        }N
+                                                                                     i=1 n=1 , where there are N variables, the n-th
+involves extending all univariant series in IMTS to a consis-
+                                                                      variable contains Ln observations, and the i-th observation
+tent sequence length that equals the number of all unique
+                                                                      of n-th variable is composed of the recorded time tni and
+timestamps in IMTS and indicating the missing values with
+                                                                      value xni .
+mask terms (Che et al., 2018). However, with the number
+of variables increasing, such a representation method may             Definition 2 (Forecasting Query). A forecasting query is
+suffer from the sequence length explosion problem, which              represented as qjn , denoting j-th query on n-th variable to
+is detailed in Section 3.2, raising severe scalability concerns       predict its corresponding value at a future time qjn .
+on both computation and memory overhead. Beyond the                   Problem 1 (Irregular Multivariate Time Series Fore-
+pre-alignment representation, Horn et al. (2020) introduce a          casting). Given historical IMTS observations O =
+more scalable representation method by regarding observa-             {[(tni , xni )]L    N
+                                                                                     i=1 }n=1 , and a set of IMTS forecasting queries
+                                                                                      n
+
+tions of IMTS as a set of tuples comprising of time, value,                        n Qn N
+                                                                      Q = {[qj ]j=1 }n=1 , the problem is to accurately forecast
+and variable indicator, and then these tuples are summarized
+                                                                      recorded values X̂ = {[x̂nj ]Q         N
+                                                                                                       j=1 }n=1 in correspondence to
+                                                                                                         n
+for the IMTS classification. However, this representation
+                                                                      the forecasting queries:
+method may not be suitable for the forecasting task that
+requires each variable to be more meticulously and distinc-                                F (O, Q) −→ X̂ ,                      (1)
+tively analyzed.
+                                                                      where F(·) denotes the forecasting model we aim to learn.
+2.3. Graph Neural Networks for Multivariate Time
+     Series                                                           3.2. Canonical Pre-Alignment Representation for IMTS
+Graph Neural Networks (GNNs) are introduced to MTS                    To facilitate IMTS modeling, a pre-alignment representation
+for their powerful capability to model complicated correla-           method (Che et al., 2018) has been widely adopted as the
+tions between variables (Li et al., 2018; Yu et al., 2018; Wu         standard in current studies (Che et al., 2018; Shukla & Mar-
+et al., 2019; 2020b; Huang et al., 2023; Yi et al., 2023; Cao         lin, 2021; Zhang et al., 2021b; 2023a; Rubanova et al., 2019;
+
+                                                                  3
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+De Brouwer et al., 2019; Biloš et al., 2021; Schirmer et al.,         To address this problem, we propose to divide each univari-
+2022). In this method, an IMTS O is represented by three               ate irregular time series o1:L as a series of transformable
+                                                 n Ln
+matrix (T , X , M). T = [tl ]L             N
+                                 l=1 = ∪n=1 [ti ]i=1 ∈ R
+                                                            L
+                                                                       patches [olp :rp ]P
+                                                                                         p=1 with variable-length consecutive obser-
+denotes the chronological unique timestamps of all observa-            vations, where P is the number of resulting patches, and
+tions within O. X = [[x̃nl ]N     L
+                             n=1 ]l=1 ∈ R
+                                          L×N
+                                                are variable’s         l1 = 1, rP = L. Each transformable patch spans a patch
+values corresponding to the timestamps, where x̃nl = xni if            window size s with a unified time horizon (e.g., 2 hours)
+the value of n-th variable is observed at time tl , otherwise          to guarantee a consistent temporal resolution across time
+x̃nl would be filled ‘NA’. M = [[mnl ]N      L
+                                        n=1 ]l=1 ∈ R
+                                                     L×N
+                                                          rep-         and variables. The division can be overlapped or disjoint
+                                      n          n
+resents a masking matrix, where ml = 1 if x̃l is observed              between two consecutive transformable patches. Along
+at time tl , otherwise zero.                                           this line, the resulting patches of IMTS are aligned in a
+                                                                       consistent time horizon resolution. As each univariate irreg-
+We can observe that the sequence length L depends on
+                                                                       ular time series is patched independently, this bypasses the
+the number of unique timestamps among O. Let Lavg =
+ 1
+   PN                               N
+                                                                       canonical pre-alignment process on IMTS, preventing se-
+N    n=1 Ln and Lmax = max[Ln ]n=1 respectively denote                 quence length explosion from the increasing variable count.
+the averaged and maximal number of observations for N
+variables in an IMTS, then the sequence length L after pre-            4.1.2. PATCH ENCODING
+aligned representation theoretically falls into:
+                                                                       After transforming each univariate irregular time series into
+                         n Ln
+           Lmax ≤ ∪N
+                   n=1 [ti ]i=1 ≤ N × Lavg ,                 (2)       a series of transformable patches, we encode each patch into
+                                                                       a latent embedding to capture the local semantics within
+which could be explosively growing proportional to the                 time series.
+number of variables, thereby posing significant scalability
+concerns when dealing with large-scale variables.                      Continuous time embedding. To model the time infor-
+                                                                       mation in IMTS, we first adopt a continuous time embed-
+                                                                       ding (Shukla & Marlin, 2021) to encode the continuous time
+4. Methodology                                                         of observations:
+The overview of T-PATCH GNN is illustrated in Figure 2. In                          (
+subsequent sections, we sequentially introduce the technical                         ω0 · t + α0 ,        if d = 0
+                                                                         ϕ(t)[d] =                                         , (3)
+details of irregular time series patching, intra- and inter-time                     sin (ωd · t + αd ) , if 0 < d < Dt
+series modeling, and the IMTS forecasting process.
+                                                                       where the ωd and αd are learnable parameters and Dt is em-
+                                                                       bedding’s dimension. The linear term captures non-periodic
+4.1. Irregular Time Series Patching
+                                                                       patterns that evolve over time and the periodic terms cap-
+In this section, as a unified patching operation is applied to         ture periodicity among time series data, where ωd and αd
+all univariate irregular time series, we take the n-th variable        represent the frequency and phase of the sine function.
+for illustration and omit the superscript n for simplicity in          By incorporating continuous time embedding via concate-
+the presentation.                                                      nation, we derive observations in the patch:
+                                                                                                 r                   r
+4.1.1. T RANSFORMABLE PATCHING                                                                     p
+                                                                                   zlp :rp = [zi ]i=l                  p
+                                                                                                        = [ϕ(ti )∥xi ]i=l  .      (4)
+                                                                                                      p                  p
+
+Time series patching has been demonstrated effective in
+MTS forecasting tasks due to its benefits in capturing lo-             Transformable time-aware convolution. As each trans-
+cal semantic information, reducing computation and mem-                formable patch is essentially a sub-irregular time series,
+ory usage, and modeling longer-range historical observa-               we introduce the Transformable Time-aware Convolution
+tions (Nie et al., 2022). The standard time series patching            Network (TTCN) (Zhang et al., 2023b) to capture the se-
+segments regular time series into a series of subseries-level          mantics within it. TTCN employs a meta-filter to derive
+patches, each of which consists of a fixed number of consec-           the time-aware convolution filter, featuring adaptively gen-
+utive observations. However, in the context of IMTS, this              erated parameters and transformable filter size that matches
+approach will lead to patches spanning across diverse time             the input sequence’s length, formulated as:
+horizons due to the varying time intervals between obser-                                "                      #Lp
+vations. For instance, a patch composed of five sequential                                     exp(Fd (zi ))
+                                                                                    fd = PLp                         ,          (5)
+observations might span merely a few minutes for densely
+                                                                                              j=1 exp(Fd (zj )) i=1
+sampled scenarios and could cover several days in cases of
+sparse sampling. This variability in the patch’s temporal              where Lp is the sequence length of patch zlp :rp , fd ∈
+resolution can even exacerbate the inherent irregularity and           RLp ×Din is the derived filter for d-th feature map, Din is di-
+asynchrony characteristics in IMTS modeling.                           mension of inputs, and Fd denotes the meta-filter that can be
+
+                                                                   4
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+
+
+
+Figure 2: Overview of T-PATCH GNN, which initially divides each univariate irregular time series into a series of trans-
+formable patches with varying number of consecutive observations but maintains a unified time horizon resolution. Then the
+patching outcomes can be seamlessly modeled by Transformer and time-adaptive GNNs, which incorporate the time-varying
+adaptive graph structure learning (GSL), to realize an effective intra- and inter-time series modeling for IMTS. ⊕g represents
+a gated adding operation.
+
+
+instantiated by learnable neural networks. By normalizing            4.2. Intra- and Inter-Time Series Modeling
+the derived filter parameters along the temporal dimension,
+                                                                     This section elaborates on how applying transformable
+TTCN ensures consistent scaling of the convolution results
+                                                                     patching to irregular time series can seamlessly facilitate
+for sequences with varying lengths.
+                                                                     both intra- and inter-time series modeling.
+With D − 1 filters derived based on Eq. (5), we attain the
+latent patch embedding hcp ∈ RD−1 through the following              4.2.1. T RANSFORMER TO MODEL SEQUENTIAL PATCHES
+temporal convolution:
+                                                                     With the patches encoded, they can be utilized as input
+                                          D−1                      tokens in a Transformer (Vaswani et al., 2017) to model
+                     Lp
+                    X                                                the dependencies within the irregular time series. The po-
+             hcp =     fd [i]⊤ zlp :rp [i]    .         (6)        sition encodings PE1:P ∈ RP ×D are added to indicate
+                     i=1
+                                          d=1                        the temporal order of patches: xtf,n              n
+                                                                                                            1:P = h1:P + PE1:P .
+                                                                     After that, the multi-head attention is applied by transform-
+TTCN is applicable to encode transformable patches as                ing them into query matrices qnh = xtf,n           Q
+                                                                                                                1:P Wh , key matri-
+it offers flexibility to adapt to variable-length sequences
+                                                                     ces kh = x1:P Wh and value matrices vh = xtf,n
+                                                                           n       tf,n  K                           n            V
+                                                                                                                           1:P Wh ,
+through transformable filters, customs parameterization for                     Q
+varying time intervals in irregular time series, and the abil-       where Wh , WhK , WhV ∈ RD×(D/H) are learnable param-
+ity to model arbitrarily long sequences without additional           eters, and H is the number of heads. A scaled dot-product
+learnable filter parameters.                                         attention is adopted to obtain the outputs of intra-time series
+                                                                     modeling:
+Considering that some patches may have no observations in                                                      !
+the cases of sparse time series or high time horizon resolu-              tf,n                       qnh knh T
+tion, we additionally incorporate a patch masking term into
+                                                                                    H
+                                                                         h1:P = ∥h=1 Softmax p                   vhn ∈ RP ×D . (8)
+                                                                                                       D/H
+the patch embedding:
+                                                                     4.2.2. T IME - VARYING ADAPTIVE GRAPH STRUCTURE
+                      hp = [hcp ∥mp ],                    (7)
+                                                                            LEARNING
+
+where mp equals one if the patch has observations, other-            Time series of different variables often exhibit substantial
+                                           P ×D
+wise zero, and we have h1:P = [hp ]P
+                                   p=1 ∈ R      .                    correlations. Insights from other variables can be highly in-
+
+                                                                 5
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+formative and significantly enhance the forecasting of each          a patch-level resolution:
+variable. For instance, there is a significant correlation be-
+                                                                                       M
+                                                                                                                  !
+tween a patient’s heart rate and blood pressure that changes                           X
+in one can be indicative of changes in the other, reflecting           Hp = ReLU            (Ap )   m
+                                                                                                        Htf gnn
+                                                                                                         p Wm         ∈ RN ×D , (11)
+the body’s cardiovascular status (Obrist et al., 1978). How-                           m=0
+ever, observations within IMTS can be notably misaligned at                                                         gnn
+times, raising obstacles for the inter-time series correlation       where M is the number of layers for GNNs, and Wm   ∈
+                                                                       D×D
+modeling. Existing work (Zhang et al., 2021b) addresses              R     are learnable parameters at m-th layer.
+this by propagating the asynchronous observations at all             In practical usage, we can flexibly stack multiple K intra-
+the timestamps when an observation appears at an arbitrary           and inter-time series modeling blocks to effectively address
+variable, which also involves the IMTS pre-alignment and             diverse IMTS modeling scenarios.
+may suffer from the sequence length explosion problem.
+Fortunately, the asynchrony problem among IMTS can be                4.3. IMTS Forecasting
+seamlessly addressed after applying transformable patching           Subsequently, a flattened layer with a linear head is used to
+to IMTS. Each variable has a consistent number of patches            obtain the final latent representation for each variable:
+that are aligned to a uniform time horizon resolution. Along
+this line, we present time-adaptive graph neural networks to                                              N ×Do
+                                                                              H = Flatten([Hp ]P     f
+                                                                                               p=1 )W ∈ R       ,               (12)
+model inter-time series correlation within IMTS.
+To shed light on the dynamic correlations underlying IMTS,           where Wf ∈ RP D×Do are learnable parameters.
+we propose to learn a series of time-varying adaptive graphs,
+which keep the same temporal resolution as the patches.              Given Hn ∈ H for n-th variable and a set of forecasting
+Specifically, inspired by studies (Wu et al., 2019; 2020b),          queries {[qjn ]Q    N
+                                                                                    j=1 }n=1 , an MLP projection layer is used to
+                                                                                     n
+
+
+
+we first maintain two embedding dictionaries with learn-             generate the predicted results for these queries:
+able parameters for all variables Es1 , Es2 ∈ RN ×Dg . This
+learns to capture the inherent characteristics of variables.                         x̂nj = MLP([Hn ∥ϕ(qjn )]).                 (13)
+While the above variable embedding can be updated dur-
+ing training, they will be static in the inference and remain        The model is trained by minimizing the Mean Squared Er-
+invariable across all the periods in time series. However,           ror (MSE) loss between the prediction and the ground truth:
+the correlations between variables can dynamically change
+along with time (Zhang et al., 2021b). To address this, we                                N     Qn
+incorporate patch embedding Htf                 ]n=1 ∈ RN ×D ,
+                                            tf,n N                                     1 X 1 X n             2
+                                   p = [hp                                       L=                 x̂j − xnj .                 (14)
+which implies the time-varying semantics of time series at                             N n=1 Qn j=1
+the patch-level temporal resolution, into the static variable
+embedding through a gated adding operation:
+                                                                     4.4. Analysis on Scalability
+                 Ep,k = Esk + gp,k ∗ Edp,k ,
+                                                                     As the proposed transformable patching independently pro-
+                     Edp,k = Htf
+                              p Wk ,
+                                    d
+                                                                     cesses each univariate irregular time series to achieve align-
+                                             g
+                                                          (9)        ment of IMTS, the average sequence length to be processed
+           gp,k = ReLU(tanh([Htf        s
+                                  p ∥Ek ]Wk )),
+                                                                     for IMTS equals  Pto  their average number of observations,
+                        k = {1, 2},                                                      N
+                                                                     i.e., Lavg = N1 n=1 Ln . Based on the analysis in Eq. (2),
+                                                                     it is evident that by using transformable patching, the aver-
+where Wkd ∈ RD×Dg , Wkg ∈ R(D+Dg )×1 are learnable                   age sequence length to be processed, denote as Ltp , serves
+parameters. In this way, we obtain the time-varying adaptive         as a lower bound relative to the resulting average sequence
+graph structure for each patch’s time horizon to explicitly          length, Lcpr , derived by canonical pre-alignment represen-
+characterize the dynamic correlations underlying IMTS:               tation:
+           Ap = Softmax ReLU Ep,1 ETp,2
+                                               
+                                                        (10)
+                                                                          Ltp = Lavg ≤ Lmax ≤ Lcpr ≤ N × Lavg .                 (15)
+4.2.3. GNN S TO MODEL INTER - TIME SERIES
+                                                                     It prevents Ltp from explosively growing proportional to
+       CORRELATION
+                                                                     the number of variables, enhancing the model’s scalability
+Based on the learned graph structures, we introduce                  as the variable count increases. We also provide empiri-
+GNNs (Kipf & Welling, 2016; Wu et al., 2020a; Zhou et al.,           cal evidence to analyze the scalability in Section 5.4 and
+2020) to model the dynamic inter-time series correlations at         Appendix A.2.
+
+                                                                 6
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+Table 1: Overall performance evaluated by MSE and MAE (mean ± std). The best-performing and second-best results are
+highlighted in bold and underline, respectively.
+                           PhysioNet                    MIMIC                     Human Activity                 USHCN
+       Algorithm
+                     MSE×10−3 MAE×10−2           MSE×10−2 MAE×10−2            MSE×10−3 MAE×10−2            MSE×10−1 MAE×10−1
+       DLinear       41.86 ± 0.05 15.52 ± 0.03   4.90 ± 0.00   16.29 ± 0.05   4.03 ± 0.01    4.21 ± 0.01   6.21 ± 0.00   3.88 ± 0.02
+       TimesNet      16.48 ± 0.11 6.14 ± 0.03    5.88 ± 0.08   13.62 ± 0.07   3.12 ± 0.01    3.56 ± 0.02   5.58 ± 0.05   3.60 ± 0.04
+       PatchTST      12.00 ± 0.23 6.02 ± 0.14    3.78 ± 0.03   12.43 ± 0.10   4.29 ± 0.14    4.80 ± 0.09   5.75 ± 0.01   3.57 ± 0.02
+       Crossformer    6.66 ± 0.11 4.81 ± 0.11    2.65 ± 0.10    9.56 ± 0.29   4.29 ± 0.20    4.89 ± 0.17   5.25 ± 0.04   3.27 ± 0.09
+       Graph Wavenet 6.04 ± 0.28 4.41 ± 0.11     2.93 ± 0.09   10.50 ± 0.15   2.89 ± 0.03    3.40 ± 0.05   5.29 ± 0.04   3.16 ± 0.09
+       MTGNN          6.26 ± 0.18 4.46 ± 0.07    2.71 ± 0.23    9.55 ± 0.65   3.03 ± 0.03    3.53 ± 0.03   5.39 ± 0.05   3.34 ± 0.02
+       StemGNN        6.86 ± 0.28 4.76 ± 0.19    1.73 ± 0.02    7.71 ± 0.11   8.81 ± 0.37    6.90 ± 0.02   5.75 ± 0.09   3.40 ± 0.09
+       CrossGNN       7.22 ± 0.36 4.96 ± 0.12    2.95 ± 0.16   10.82 ± 0.21   3.03 ± 0.10    3.48 ± 0.08   5.66 ± 0.04   3.53 ± 0.05
+       FourierGNN     6.84 ± 0.35 4.65 ± 0.12    2.55 ± 0.03   10.22 ± 0.08   2.99 ± 0.02    3.42 ± 0.02   5.82 ± 0.06   3.62 ± 0.07
+       GRU-D         5.59 ± 0.09   4.08 ± 0.05   1.76 ± 0.03   7.53 ± 0.09     2.94 ± 0.05   3.53 ± 0.06   5.54 ± 0.38   3.40 ± 0.28
+       SeFT          9.22 ± 0.18   5.40 ± 0.08   1.87 ± 0.01   7.84 ± 0.08    12.20 ± 0.17   8.43 ± 0.07   5.80 ± 0.19   3.70 ± 0.11
+       RainDrop      9.82 ± 0.08   5.57 ± 0.06   1.99 ± 0.03   8.27 ± 0.07    14.92 ± 0.14   9.45 ± 0.05   5.78 ± 0.22   3.67 ± 0.17
+       Warpformer    5.94 ± 0.35   4.21 ± 0.12   1.73 ± 0.04   7.58 ± 0.13     2.79 ± 0.04   3.39 ± 0.03   5.25 ± 0.05   3.23 ± 0.05
+       mTAND         6.23 ± 0.24   4.51 ± 0.17   1.85 ± 0.06   7.73 ± 0.13    3.22 ± 0.07    3.81 ± 0.07   5.33 ± 0.05   3.26 ± 0.10
+       Latent-ODE    6.05 ± 0.57   4.23 ± 0.26   1.89 ± 0.19   8.11 ± 0.52    3.34 ± 0.11    3.94 ± 0.12   5.62 ± 0.03   3.60 ± 0.12
+       CRU           8.56 ± 0.26   5.16 ± 0.09   1.97 ± 0.02   7.93 ± 0.19    6.97 ± 0.78    6.30 ± 0.47   6.09 ± 0.17   3.54 ± 0.18
+       Neural Flow   7.20 ± 0.07   4.67 ± 0.04   1.87 ± 0.05   8.03 ± 0.19    4.05 ± 0.13    4.46 ± 0.09   5.35 ± 0.05   3.25 ± 0.05
+       T-PATCH GNN   4.98 ± 0.08 3.72 ± 0.03 1.69 ± 0.03 7.22 ± 0.09 2.66 ± 0.03 3.15 ± 0.02 5.00 ± 0.04 3.08 ± 0.04
+
+
+
+
+5. Experiments                                                          The number of heads H in Transformer, layers M in GNNs,
+                                                                        and the number of block K is selected as 1. We adopt three
+5.1. Experimental Setup                                                 layers MLPs to instantiate the meta-filters in TTCN and the
+5.1.1. DATASETS                                                         output projection layer. We set the learning rate to 0.001 for
+                                                                        the entire model training.
+We involve four datasets, including PhysioNet, MIMIC,
+Human Activity, and USHCN, across diverse subject areas,                5.1.3. E VALUATION M ETRICS
+such as healthcare, biomechanics, and climate science, to
+comprehensively evaluate models’ performance on IMTS                    Current IMTS forecasting studies predominantly utilize
+forecasting tasks. Consistently, we randomly divide all the             Mean Square Error (MSE) for the evaluation, which
+instances among each dataset into training, validation, and             tends to be sensitively affected by outliers and is hard
+test sets adhering to ratios of 60%, 20%, and 20%. Please               to interpret (Chai & Draxler, 2014). To offer a more
+refer to Appendix Section A.5 for details of these datasets.            comprehensive assessment of model performance, we
+                                                                        also incorporate Mean Absolute Error (MAE), a metric
+5.1.2. I MPLEMENTATION D ETAILS                                         extensively employed in evaluations for classical time
+                                                                        series forecasting (Lim & Zohren, 2021; Fan et al.,
+All experiments are performed on a Linux server with 20-                2023). These two metrics are formally defined as fol-
+core Intel(R) Xeon(R) Platinum 8255C CPU @ 2.50GHz                                        PN
+                                                                        lows: MSE = N1 n=1 Q1n j=1
+                                                                                                     PQn              2
+                                                                                                            x̂nj − xnj , MAE =
+and NVIDIA Tesla V100 GPU. To ensure a fair comparison,                  1
+                                                                           PN      1
+                                                                                      PQn n        n
+for all compared models, we consistently set the hidden                 N     n=1 Qn    j=1 x̂j − xj .
+dimensions to 64 for PhysioNet and MIMIC, and 32 for
+Human Activity and USHCN. The batch size is chosen as                   5.1.4. BASELINES
+192 for USHCN and 32 for the other datasets. We employ                  To establish a thorough benchmark for the under-explored
+Adam optimizer for these models’ training and apply early               IMTS forecasting task, we incorporate seventeen relevant
+stopping when the validation loss doesn’t decrease over 10              baselines for a fair comparison, covering the SOTA mod-
+epochs. To mitigate randomness, we perform each experi-                 els from (1) MTS forecasting: DLinear (Zeng et al., 2023),
+ment using five different random seeds and present the mean             TimesNet (Wu et al., 2022), PatchTST (Nie et al., 2022),
+and standard deviation of the results.                                  Crossformer (Zhang & Yan, 2022), Graphwavenet (Wu et al.,
+For detailed setups of T-PATCH GNN, we chose the patch                  2019), MTGNN (Wu et al., 2020b), StemGNN (Cao et al.,
+window size s as 8 hours for PhysioNet and MIMIC, 300                   2020), CrossGNN (Huang et al., 2023) and FourierGNN (Yi
+milliseconds for Human Activity, and 2 months for USHCN.                et al., 2023), (2) IMTS classification: GRU-D (Che et al.,
+To reduce the number of resulting patches, we do not make               2018), SeFT (Horn et al., 2020), RainDrop (Zhang et al.,
+the patch segmenting overlap and maintain a sliding stride              2021b), Warpformer (Zhang et al., 2023a), (3) IMTS
+for the patch window equal to its size. The dimension of                interpolation: mTAND (Shukla & Marlin, 2021), and
+time embedding Dt and variable embedding Dg is set to 10.               (4) IMTS forecasting: Latent ODEs (Rubanova et al., 2019),
+
+                                                                    7
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+                                      Table 2: Ablation results of T-PATCH GNN on four datasets.
+                             PhysioNet                      MIMIC                     Human Activity                  USHCN
+       Ablation
+                       MSE×10−3 MAE×10−2             MSE×10−2 MAE×10−2            MSE×10−3 MAE×10−2             MSE×10−1 MAE×10−1
+       Complete       4.98 ± 0.08 3.72 ± 0.03 1.69 ± 0.03 7.22 ± 0.09 2.66 ± 0.03 3.15 ± 0.02 5.00 ± 0.04 3.08 ± 0.04
+       w/o Patch       5.27 ± 0.06     3.88 ± 0.03   1.73 ± 0.02    7.41 ± 0.06   2.85 ± 0.05    3.28 ± 0.02   5.32 ± 0.02    3.30 ± 0.09
+       rp Patch        5.64 ± 0.13     3.97 ± 0.05   1.72 ± 0.01    7.29 ± 0.02   2.82 ± 0.02    3.29 ± 0.04   5.20 ± 0.07    3.17 ± 0.07
+       w/o VE          10.53 ± 0.15    5.30 ± 0.01   3.71 ± 0.02   12.06 ± 0.03   2.79 ± 0.03    3.18 ± 0.03   5.08 ± 0.03    3.25 ± 0.08
+       w/o PE          5.10 ± 0.02     3.83 ± 0.06   1.71 ± 0.01    7.42 ± 0.11   2.79 ± 0.02    3.21 ± 0.04   5.08 ± 0.02    3.22 ± 0.08
+       w/o Transformer 5.10 ± 0.12     3.83 ± 0.07   1.71 ± 0.02    7.27 ± 0.06   2.78 ± 0.04    3.20 ± 0.04   5.22 ± 0.06    3.19 ± 0.11
+
+
+
+
+CRU (Schirmer et al., 2022), Neural Flows (Biloš et al.,                  Table 3: Evidence of sequence length explosion. Aligned
+2021). The details of these baseliens are provided in Ap-                  length represents the sequence length after canonical pre-
+pendix Section A.6.                                                        alignment. Amplification indicates the multiple of growth
+                                                                           by comparing the aligned length of IMTS to the original
+5.2. Main Results                                                          number of observations.
+                                                                            Description          PhysioNet     MIMIC   Human Activity   USHCN
+Table 1 reports the models’ forecasting performance eval-
+uated by MSE and MAE on four datasets. As can be seen,                      # Variable               41          96            12             5
+                                                                            Avg # observations      10.7         1.5          30.2           36.1
+T-PATCH GNN archives the consistently best performance                      Avg aligned length       75         46.1         120.6          163.9
+on all datasets and even outperforms the second-best base-                  Max aligned length      216         643           130            214
+                                                                            Avg amplification      ×7.0        ×21.9         ×4.0           ×4.5
+line over 10%. Besides, we observe the MTS forecasting                      Max amplification      ×16.8       ×96.0         ×4.0           ×5.0
+models, including patching-based models and GNN-based
+models, do not attain consistently competitive performance
+on IMTS forecasting. It indicates that straightforwardly                   than w/o Patch in some datasets like PhysioNet. It verifies
+applying these two techniques to IMTS fails to effectively                 our claims that the standard patching faces troubles with the
+handle the challenging intra- and inter-time series model-                 variability in the patch’s temporal resolution, which may
+ing. Moreover, the existing IMTS forecasting models do                     even exacerbate the inherent irregularity and asynchrony
+not achieve satisfactory performance, probably because they                characteristics in IMTS modeling. Comparing the results
+fail to effectively model inter-time series correlations to en-            of w/o VE and w/o PE, we can find that variable’s inherent
+hance forecasting performance. We also test these models’                  characteristic is more important than its dynamic patterns to
+performance on longer and shorter forecasting windows,                     characterize the inter-time series correlations for physiolog-
+where the results are provided in Appendix Section A.1.                    ical signals forecasting tasks (PhysioNet and MIMIC). This
+                                                                           makes sense because there is a remarkable semantic dis-
+5.3. Ablation Study                                                        crepancy between these signals, it is difficult to accurately
+We evaluate the performance of T-PATCH GNN and its sev-                    characterize their interrelation without effectively identify-
+eral variants on four datasets. (1) Complete represents the                ing them. However, we observe that the dynamic patch
+model without any ablation; (2) w/o Patch removes trans-                   embedding plays a significant role on human motion and
+formable patching and adopts the canonical pre-alignment                   climate forecasting, which indicates the variables’ correla-
+representation; (3) rp Patch replaces transformable patch-                 tion in these tasks can usually dynamically vary along with
+ing with standard time series patching (Nie et al., 2022);                 time. For instance, temperature decreases in winter often
+(4) w/o VE removes the variable embedding in Eq. (9)                       lead to increased snow cover, but this correlation does not
+when constructing adaptive graph; (5) w/o PE removes                       necessarily apply in summer.
+the patch embedding when constructing adaptive graph;
+(6) w/o Transformer removes the Transformer module in                      5.4. Scalability and Efficiency Analysis
+the model.                                                                 Table 3 showcases the extent of the sequence length explo-
+Table 2 shows the results of model ablation. As can be seen,               sion issue following canonical pre-alignment representation
+removing any component can lead to a performance descent                   across four datasets. It is evident that, on average, sequence
+compared to the complete model. From these results, we                     lengths can expand more than 20-fold from the original num-
+observe w/o Patch causes notable performance degradation                   ber of observations, particularly when dealing with a larger
+for all datasets, which proves that patching irregular time se-            number of variables. In extreme cases, the sequence length
+ries can indeed facilitate the subsequent intra- and inter-time            may increase explosively proportional to the number of vari-
+series modeling for IMTS. However, directly using standard                 ables (revealed by max amplification), posing significant
+time series patching can even lead to worse performance                    scalability challenges. However, our transformable patching
+                                                                           effectively circumvents this issue by processing the original
+
+                                                                       8
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+
+
+
+              (a) Average training time per epoch
+                                                                              (a) PhysioNet                    (b) MIMIC
+
+
+
+
+            (b) Average inference time per instance
+
+Figure 3: Efficiency comparison of training and inference.                  (c) Human Activity                 (d) USHCN
+
+                                                                                Figure 4: Effect of different patch sizes.
+observation sequences without requiring pre-alignment.
+To further study the benefits of transformable patching on            From another perspective, the optimal patch size can be se-
+the model’s efficiency, we present the average training time          lected by comprehensively considering the forecasting and
+per epoch and average inference time per IMTS instance on             observed window sizes. Long-range forecasting and obser-
+MIMIC in Figure 3. We can observe T-PATCH GNN out-                    vation usually involve a larger patch size to better capture
+performs all models that employ canonical pre-alignment               the trend semantics within patches and long-range depen-
+representation in terms of efficiency during both training            dencies across time series (e.g., PhysioNet and MIMIC),
+and inference phases. Furthermore, when compared to cur-              whereas short-range forecasting (e.g., Human Activity and
+rent predominant ODE-based IMTS forecasting models, T-                USHCN) are more recommended to choose a relatively
+PATCH GNN even achieves at least 65 times faster training             smaller patch size for finer-grained resolution modeling.
+speeds and 15 times quicker inference speeds. More analyt-            The sensitivity analysis on more hyper-parameters is pro-
+ical testing on models’ scalability with increased variables          vided in Appendix A.3.
+is provided in Appendix A.2.
+
+5.5. Effect of Patch Size                                             6. Conclusion
+Figure 4 depicts the effect of different patch window sizes           This paper presented a Transformable Patching Graph Neu-
+on various datasets. We can observe the impact of patch               ral Networks approach, T-PATCH GNN, to address the IMTS
+size on performance varies across datasets from different             forecasting problem. T-PATCH GNN achieved the align-
+areas. Specifically, for PhysioNet and MIMIC, performance             ment between asynchronous IMTS by transforming each
+remains relatively stable with smaller patch sizes and peaks          univariate irregular time series into a series of transformable
+when the patch size reaches 8 hours. This could be attributed         patches with varying observation counts but maintaining uni-
+to the sparse nature of many physiological signals, where a           fied time horizon resolution. This transformation enabled
+timespan shorter than four hours may not encompass suffi-             the capture of local semantics within IMTS and seamlessly
+cient observations to capture local patterns effectively within       facilitated intra- and inter-time series modeling without a
+sub-series. However, as patch size increases beyond this              canonical pre-alignment representation process, prevent-
+point, we observe a decline in model performance. An ex-              ing the aligned sequence length from explosively growing
+cessively large patch size results in a reduced patch-level           proportional to the increasing variables. Building on trans-
+temporal resolution, adversely affecting the detailed intra-          formable patching, we then presented the time-adaptive
+and inter-time series analysis. When it comes to Human                graph neural networks to model dynamic inter-time series
+Activity and USHCN, a relatively small patch size would               correlations based on a series of learned time-varying adap-
+be preferred. As the IMTS from these areas usually exhibit            tive graphs. We demonstrated the remarkable superiority
+highly dynamic patterns, a relatively small patch size can            of T-PATCH GNN on a comprehensive IMTS forecasting
+enable finer-grained modeling of dynamics within IMTS.                benchmark we build.
+
+                                                                  9
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+Acknowledgements                                                       Chen, X., Li, X., Liu, B., and Li, Z. Biased temporal
+                                                                         convolution graph network for time series forecasting
+This work was partially supported by the National                        with missing values. In International Conference on
+Key Research and Development Program of China                            Learning Representations, 2024.
+(No.2023YFF0725001), National Natural Science Foun-
+dation of China (Grant No.92370204, No.62102110),                      Cini, A., Marisca, I., and Alippi, C. Filling the g ap s: Mul-
+Guangzhou-HKUST(GZ) Joint Funding Program (Grant                         tivariate time series imputation by graph neural networks.
+No.2023A03J0008), Education Bureau of Guangzhou Mu-                      In International Conference on Learning Representations,
+nicipality, Guangdong Science and Technology Department,                 2022.
+and CCF-Baidu Open Fund.
+                                                                       De Brouwer, E., Simm, J., Arany, A., and Moreau, Y.
+Impact Statement                                                         Gru-ode-bayes: Continuous modeling of sporadically-
+                                                                         observed time series. Advances in neural information
+This paper details efforts to advance time series analysis and           processing systems, 32, 2019.
+its applications across various scientific domains. While our
+research may lead to many societal impacts, we do not find             Engle, R. F. and Russell, J. R. Autoregressive conditional
+it necessary to single out any particular consequences for               duration: a new model for irregularly spaced transaction
+emphasis here.                                                           data. Econometrica, pp. 1127–1162, 1998.
+
+                                                                       Fan, W., Wang, P., Wang, D., Wang, D., Zhou, Y., and Fu,
+References                                                               Y. Dish-ts: a general paradigm for alleviating distribution
+A. Johnson, T. Pollard, L. S. H. L. L.-W. M. F. M. G. B.                 shift in time series forecasting. In Proceedings of the
+  M. P. S. L. A. C. and Mark, R. G. Mimic-iii, a freely                  AAAI Conference on Artificial Intelligence, volume 37,
+  accessible critical care database. Scientific data, 3(1):1–9,          pp. 7522–7529, 2023.
+  2016.
+                                                                       Horn, M., Moor, M., Bock, C., Rieck, B., and Borgwardt, K.
+Baytas, I. M., Xiao, C., Zhang, X., Wang, F., Jain, A. K., and           Set functions for time series. In International Conference
+  Zhou, J. Patient subtyping via time-aware lstm networks.               on Machine Learning, pp. 4353–4363. PMLR, 2020.
+  In Proceedings of the 23rd ACM SIGKDD international
+  conference on knowledge discovery and data mining, pp.               Huang, Q., Shen, L., Zhang, R., Ding, S., Wang, B., Zhou,
+  65–74, 2017.                                                           Z., and Wang, Y. Crossgnn: Confronting noisy multi-
+                                                                        variate time series via cross interaction refinement. In
+Biloš, M., Sommer, J., Rangapuram, S. S., Januschowski, T.,            Thirty-seventh Conference on Neural Information Pro-
+  and Günnemann, S. Neural flows: Efficient alternative to              cessing Systems, 2023.
+  neural odes. Advances in neural information processing
+                                                                       Ikaro Silva, George Moody, D. S. L. C. and Mark, R. Predict-
+  systems, 34:21325–21337, 2021.
+                                                                         ing in-hospital mortality of icu patients: The physionet
+                                                                         computing in cardiology challenge 2012. Computing in
+Cao, D., Wang, Y., Duan, J., Zhang, C., Zhu, X., Huang,
+                                                                         cardiology, 39:245–248, 2012.
+  C., Tong, Y., Xu, B., Bai, J., Tong, J., et al. Spectral tem-
+  poral graph neural network for multivariate time-series              Kipf, T. N. and Welling, M. Semi-supervised classifica-
+  forecasting. Advances in neural information processing                 tion with graph convolutional networks. In International
+  systems, 33:17766–17778, 2020.                                         Conference on Learning Representations, 2016.
+Chai, T. and Draxler, R. R. Root mean square error (rmse) or           Li, Y., Yu, R., Shahabi, C., and Liu, Y. Diffusion con-
+  mean absolute error (mae)?–arguments against avoiding                  volutional recurrent neural network: Data-driven traffic
+  rmse in the literature. Geoscientific model development,               forecasting. In International Conference on Learning
+  pp. 1247–1250, 2014.                                                   Representations, 2018.
+
+Che, Z., Purushotham, S., Cho, K., Sontag, D., and Liu, Y.             Li, Z., Li, S., and Yan, X. Time series as images: Vision
+  Recurrent neural networks for multivariate time series                 transformer for irregularly sampled time series. arXiv
+  with missing values. Scientific reports, 8(1):6085, 2018.              preprint arXiv:2303.12799, 2023.
+
+Chen, R. T., Rubanova, Y., Bettencourt, J., and Duvenaud,              Lim, B. and Zohren, S. Time-series forecasting with deep
+  D. K. Neural ordinary differential equations. Advances                 learning: a survey. Philosophical Transactions of the
+  in neural information processing systems, 31, 2018.                    Royal Society A, 379(2194):20200209, 2021.
+
+                                                                  10
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+Liu, F., Liu, H., and Jiang, W. Practical adversarial attacks         Wu, Z., Pan, S., Long, G., Jiang, J., and Zhang, C. Graph
+  on spatiotemporal traffic forecasting models. Advances               wavenet for deep spatial-temporal graph modeling. In
+  in Neural Information Processing Systems, 35:19035–                  Proceedings of the 28th International Joint Conference
+  19047, 2022.                                                         on Artificial Intelligence, pp. 1907–1913, 2019.
+Marisca, I., Cini, A., and Alippi, C. Learning to reconstruct         Wu, Z., Pan, S., Chen, F., Long, G., Zhang, C., and Philip,
+ missing data from spatiotemporal graphs with sparse ob-               S. Y. A comprehensive survey on graph neural networks.
+ servations. Advances in Neural Information Processing                 IEEE transactions on neural networks and learning sys-
+ Systems, 35:32069–32082, 2022.                                        tems, 32(1):4–24, 2020a.
+Menne, M., W. J. C. and Vose, R. Long-term daily climate
+ records from stations across the contiguous united states.           Wu, Z., Pan, S., Long, G., Jiang, J., Chang, X., and Zhang, C.
+                                                                       Connecting the dots: Multivariate time series forecasting
+Nie, Y., Nguyen, N. H., Sinthong, P., and Kalagnanam, J. A             with graph neural networks. In Proceedings of the 26th
+  time series is worth 64 words: Long-term forecasting with            ACM SIGKDD international conference on knowledge
+  transformers. In The Eleventh International Conference               discovery & data mining, pp. 753–763, 2020b.
+  on Learning Representations, 2022.
+                                                                      Yao, Z.-J., Bi, J., and Chen, Y.-X. Applying deep learn-
+Obrist, P. A., Gaebelein, C. J., Teller, E. S., Langer, A. W.,          ing to individual and community health monitoring data:
+  Grignolo, A., Light, K. C., and McCubbin, J. A. The                   A survey. Machine Intelligence Research, 15:643–655,
+  relationship among heart rate, carotid dp/dt, and blood               2018.
+  pressure in humans as a function of the type of stress.
+ Psychophysiology, pp. 102–115, 1978.                                 Yi, K., Zhang, Q., Fan, W., He, H., Hu, L., Wang, P., An, N.,
+Rubanova, Y., Chen, R. T., and Duvenaud, D. K. Latent                   Cao, L., and Niu, Z. Fouriergnn: Rethinking multivariate
+  ordinary differential equations for irregularly-sampled               time series forecasting from a pure graph perspective. In
+  time series. Advances in neural information processing                Thirty-seventh Conference on Neural Information Pro-
+  systems, 32, 2019.                                                    cessing Systems, 2023.
+
+Schirmer, M., Eltayeb, M., Lessmann, S., and Rudolph, M.              Yu, B., Yin, H., and Zhu, Z. Spatio-temporal graph convo-
+  Modeling irregular time series with continuous recurrent              lutional networks: a deep learning framework for traffic
+  units. In International Conference on Machine Learning,               forecasting. In Proceedings of the 27th International Joint
+  pp. 19388–19405. PMLR, 2022.                                          Conference on Artificial Intelligence, pp. 3634–3640,
+                                                                        2018.
+Shukla, S. N. and Marlin, B. Interpolation-prediction net-
+  works for irregularly sampled time series. In International         Zeng, A., Chen, M., Zhang, L., and Xu, Q. Are transformers
+  Conference on Learning Representations, 2018.                         effective for time series forecasting? In Proceedings of
+Shukla, S. N. and Marlin, B. Multi-time attention networks              the AAAI conference on artificial intelligence, volume 37,
+  for irregularly sampled time series. In International Con-            pp. 11121–11128, 2023.
+  ference on Learning Representations, 2021.
+                                                                      Zhang, J., Zheng, S., Cao, W., Bian, J., and Li, J. Warp-
+Shukla, S. N. and Marlin, B. M. A survey on principles,                 former: A multi-scale modeling approach for irregular
+  models and methods for learning from irregularly sam-                 clinical time series. In Proceedings of the 29th ACM
+  pled time series. arXiv preprint arXiv:2012.00168, 2020.              SIGKDD Conference on Knowledge Discovery and Data
+                                                                        Mining, pp. 3273–3285, 2023a.
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones,
+  L., Gomez, A. N., Kaiser, Ł., and Polosukhin, I. At-                Zhang, W., Liu, H., Zha, L., Zhu, H., Liu, J., Dou, D., and
+  tention is all you need. Advances in neural information               Xiong, H. Mugrep: A multi-task hierarchical graph rep-
+  processing systems, 30, 2017.                                         resentation learning framework for real estate appraisal.
+Vio, R., Diaz-Trigo, M., and Andreani, P. Irregular time                In Proceedings of the 27th ACM SIGKDD Conference on
+  series in astronomy and the use of the lomb–scargle peri-             Knowledge Discovery & Data Mining, pp. 3937–3947,
+  odogram. Astronomy and Computing, 1:5–16, 2013.                       2021a.
+
+Wu, H., Hu, T., Liu, Y., Zhou, H., Wang, J., and Long,                Zhang, W., Zhang, L., Han, J., Liu, H., Zhou, J., Mei, Y., and
+ M. Timesnet: Temporal 2d-variation modeling for gen-                   Xiong, H. Irregular traffic time series forecasting based
+ eral time series analysis. In The Eleventh International               on asynchronous spatio-temporal graph convolutional
+ Conference on Learning Representations, 2022.                          network. arXiv preprint arXiv:2308.16818, 2023b.
+
+                                                                 11
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+Zhang, X., Zeman, M., Tsiligkaridis, T., and Zitnik, M.
+  Graph-guided network for irregularly sampled multivari-
+  ate time series. In International Conference on Learning
+  Representations, 2021b.
+Zhang, Y. and Yan, J. Crossformer: Transformer utilizing
+  cross-dimension dependency for multivariate time series
+  forecasting. In The Eleventh International Conference on
+  Learning Representations, 2022.
+Zhou, J., Cui, G., Hu, S., Zhang, Z., Yang, C., Liu, Z., Wang,
+  L., Li, C., and Sun, M. Graph neural networks: A review
+  of methods and applications. AI open, 1:57–81, 2020.
+
+
+
+
+                                                                 12
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+                                  Table 4: Performance of varying observation and forecast horizons.
+                            History=3h, Forecast=45h History=12h, Forecast=36h History=36h, Forecast=12h History=45h, Forecast=3h
+           Algorithm
+                           MSE×10−3 MAE×10−2 MSE×10−3 MAE×10−2 MSE×10−3 MAE×10−2 MSE×10−3 MAE×10−2
+           DLinear              51.82         17.13          43.56            15.73          41.63            15.48           41.23            15.51
+           TimesNet             57.30         10.70          24.95             7.62          13.57             5.50           13.86             5.65
+           PatchTST             42.18         13.67          18.56             7.80          9.85             5.11            8.53             4.64
+           Crossformer           9.48         5.86            8.57            5.70           5.70             4.47            5.33             4.44
+           Graph Wavenet         9.43         5.86            7.23            4.82           4.71             3.90            4.10             3.73
+           MTGNN                 9.83         5.95            7.48            5.01           5.08             3.99            5.22             4.19
+           StemGNN               8.70         5.37            7.46            4.84           6.65             4.69            5.47             4.56
+           CrossGNN             10.44          6.56           7.97            5.37           6.87             4.73            4.80             4.24
+           FourierGNN            9.59         5.61            7.95            4.99           6.35             4.61            5.37             4.34
+           GRU-D                 8.18          4.99           6.89             4.55          4.42              3.66           4.44              3.79
+           SeFT                  9.78          5.55           9.30             5.41          9.15              5.15           8.76              5.57
+           RainDrop             10.47          5.72           9.89             5.62          9.70              5.40           9.28              5.62
+           Warpformer            8.48          5.13           7.57             4.83          5.60              4.09           6.44              4.67
+           mTAND                8.45           5.23           7.11             4.67          5.71              4.17           5.44              4.33
+           Latent-ODE           8.25           5.04           7.20             4.69          6.70              4.36           7.10              5.33
+           CRU                  9.20           5.38           9.20             5.31          9.50              5.41           11.60             6.98
+           Neural Flow          8.30           4.99           8.50             5.27          7.70              4.68           7.40              5.10
+           T-PATCH GNN          8.01           4.87           6.48             4.19          4.14             3.31            3.69             3.25
+
+
+
+
+                                       Table 5: Training and inference time with increased variables.
+                  # Variable              100                             500                              1000                               2000
+      Algorithm                Training(s) Inference(ms)    Training(s)      Inference(ms)   Training(s)      Inference(ms)     Training(s)      Inference(ms)
+      GRU-D                     870.79       469.43          4178.09       2228.06       8839.45       4819.39       > 10000       12073.38
+      Warpformer                138.66       208.31        out of memory out of memory out of memory out of memory out of memory out of memory
+      mTAND                      6.32         4.15             22.71         30.92         78.92        126.40     out of memory out of memory
+      T-PATCH GNN                5.05         2.30              5.65          2.45          6.53          3.08          7.45          3.19
+
+
+
+
+A. Additional Experiment
+A.1. Varying Observation and Forecast Horizons
+Table 4 presents the model’s performance on longer- (forecast next 36 / 45 hours using historical 12 / 3 hours) and shorter-
+horizon (forecast next 12 / 3 hours using historical 36 / 45 hours) forecasting on PhysioNet. We can observe T-PATCH GNN
+achieves the consistently best performance for different forecasting horizons. Moreover, our model showcases larger
+superiority over baselines to process longer historical windows (e.g., 24h, 36h, and 45h), which is probably attributed
+to the transformable patching to facilitate long-range time series dependencies modeling. Furthermore, it shows that the
+performance of these algorithms tends to be closer when the historical observed window becomes very short (e.g., 3h). This
+may be because a shorter historical window contains less semantics and is thus easier to capture by different models. While
+most models perform better when forecasting horizon window reduction, the ODE-based models yet perform worse when
+using a longer history to predict shorter horizons. This may be because the too-long sequence and less labeled data degrade
+the performance of this type of method.
+
+A.2. Model Scalability with Increased Variables
+To further analyze the impact of pre-alignment representation on scalability, we created a synthetic dataset designed to
+flexibly test the influence of increased variables and report the average training time per epoch and inference time per
+instance. In this test, we generated 1,000 IMTS instances with multiple variables. Each variable comprises an average of
+10 observations, randomly distributed at different timestamps (in seconds) within a day. To conserve memory and enable
+testing with larger variables, we set the batch size to 1 and restricted the hidden dimension to 2. As illustrated in Table 5,
+we observe that the sequence length explosion problem deteriorates as the number of variables increases. This leads to
+pronounced scalability issues affecting both computational efficiency and memory usage for the pre-alignment methods,
+i.e., GRU-D, Warpformer and mTAND. However, our T-PATCH GNN with transformable patching effectively mitigates this
+problem, maintaining high training and inference efficiency despite the increased variables.
+
+                                                                               13
+              Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+             ×10 3                                      ×10 2                                      ×10 3                                      ×10 1
+      5.00                                       1.69                                       2.68                                       5.02
+      4.95                                       1.68                                       2.66                                       4.99
+      4.90                                       1.67                                       2.64                                       4.96
+MSE
+
+
+
+
+                                           MSE
+
+
+
+
+                                                                                      MSE
+
+
+
+
+                                                                                                                                 MSE
+      4.85                                       1.66                                       2.62                                       4.93
+      4.80                                       1.65                                       2.60                                       4.90
+             1        2    3      4   5                 1        2    3      4   5                  1       2    3      4   5                 1       2    3      4   5
+                      Num of Blocks                              Num of Blocks                              Num of Blocks                             Num of Blocks
+                  (a) PhysioNet                               (b) MIMIC                            (c) Human Activity                              (d) USHCN
+
+                                                                Figure 5: Effect of different block K.
+
+
+
+             ×10 3                                      ×10 2                                      ×10 3                                      ×10 1
+   5.15                                          1.77                                   2.97                                       5.03
+   5.10                                          1.74                                       2.89                                   5.01
+   5.05                                          1.71                                       2.81                                   4.99
+MSE
+
+
+
+
+                                           MSE
+
+
+
+
+                                                                                      MSE
+
+
+
+
+                                                                                                                                 MSE
+   5.00                                      1.68                                           2.73                                   4.97
+   4.95                                      1.65                                       2.65                                       4.95
+             5       10 15 40 80                        5       10 15 40 80                        5       10 15 40 80                        5      10 15 40 80
+                  Dimension of VE and TE                     Dimension of VE and TE                     Dimension of VE and TE                    Dimension of VE and TE
+                 (a) PhysioNet                               (b) MIMIC                         (c) Human Activity                                  (d) USHCN
+                     Figure 6: Effect of different variable embedding (VE)&time embedding (TE) dimensions Dt &Dg .
+
+
+
+A.3. Parameter Sensitivity
+Figure 5 displays the effect of different intra- and inter-time series modeling blocks. We observe stacking multiple K blocks
+always has the potential to achieve better performance. However, it also costs more expensive computational overheads.
+Therefore, we choose K = 1 for the major experiments.
+Figure 6 shows the effect of dimensions Dt &Dg of variable&time embeddings. It indicates relatively small sizes (e.g., 10 or
+15) usually perform better. A too-large size may lead to performance collapse due to the potential data sparsity issues for
+some variables to learn semantic embedding.
+Figure 7 reports the effect of different hidden dimension D. We find setting the hidden dimension to 32 for smaller datasets
+(e.g., Human Activity and USHCN) and 64 for larger datasets (e.g., PhysioNet) would be a good choice. However, this is
+not absolute. While MIMIC is a large-scale dataset, its best setting is 32 due to a notable sparsity in its measurements. The
+choice of hidden dimension should comprehensively consider the number of training data and the sparsity of measurements.
+
+
+
+
+             ×10 3                                      ×10 2                                      ×10 3                                      ×10 1
+      5.15                                       1.77                                       2.85                                       5.12
+      5.10                                       1.74                                       2.80                                       5.09
+      5.05                                       1.71                                       2.75                                       5.06
+MSE
+
+
+
+
+                                           MSE
+
+
+
+
+                                                                                      MSE
+
+
+
+
+                                                                                                                                 MSE
+
+
+
+
+      5.00                                       1.68                                       2.70                                       5.03
+      4.95                                       1.65                                       2.65                                       5.00
+             16      32 64 128 256                      16      32 64 128 256                      16      32 64 128 256                      16     32 64 128 256
+                    Hidden Dimension                           Hidden Dimension                           Hidden Dimension                          Hidden Dimension
+                  (a) PhysioNet                               (b) MIMIC                            (c) Human Activity                              (d) USHCN
+
+                                                    Figure 7: Effect of different hidden dimension D.
+
+                                                                                  14
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+
+
+
+             (a) Patch 1 (0-7h)                         (b) Patch 2 (8-15h)                        (c) Patch 3 (16-23h)
+
+                       Figure 8: Adjacent matrices of time-adaptive graphs learned from PhysioNet.
+
+
+
+
+(a) Patch 1 (Jan, Feb) (b) Patch 2 (Mar, (c) Patch 3 (May, Jun) (d) Patch 4 (Jul, Aug) (e) Patch 5 (Sep, Oct) (f) Patch 6 (Nov, Dec)
+                       Apr)
+
+
+
+
+(g) Patch 7 (Jan, Feb) (h) Patch 8 (Mar, (i) Patch 9 (May, Jun) (j) Patch     10   (Jul, (k) Patch 11 (Sep, (l) Patch 12 (Nov,
+                       Apr)                                     Aug)                     Oct)               Dec)
+
+                        Figure 9: Adjacent matrices of time-adaptive graphs learned from USHCN.
+
+
+A.4. Visualization on Learned Adaptive Graphs
+Figure 8 and Figure 9 provide visualizations on the learned adjacent matrices of adaptive graph structures to analyze how
+they work in different contexts. Overall, we find the learned adjacent matrices are usually sparse, which implies our model
+attempts to learn the real correlations from data instead of simply aggregating these variables. Moreover, we observe
+remarked and insightful time-varying correlations learned from dynamic contexts (e.g., USHCN), further underscoring the
+necessity of learning time-adaptive graph structures.
+For PhysioNet, as illustrated in Figure 8, we observe our model can learn insightful correlations between different indicator
+variables of patients. For example, the adjacent matrix indicates that heart rate (HR) and respiratory rate (RespRate) are
+highly correlated because they usually simultaneously increase during physical activity or stress to meet the body’s higher
+demand for oxygen. A high correlation is also displayed between RespRate and body temperature (Temp) as they usually
+increase together in many situations like when the body is fighting an infection. In addition, some underlying and more
+complex correlations may be automatically discovered from data through the graph structure learning process. For instance,
+it indicates that there is a high correlation between blood urea nitrogen (BUN) and Lactate levels. Typically, BUN levels
+reflect renal function. Impaired renal function can lead to reduced clearance of both urea and lactate, and thus cause lactate
+to accumulate.
+The cases from USHCN are illustrated in Figure 9, where the learned graph structures exhibit pronounced seasonal variation.
+
+                                                                15
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+For instance, in winter (Patch 1 (Jan, Feb)), snowfall (SNOW) markedly influences maximum temperature forecasts (TMAX).
+This effect gradually wanes from winter to summer, correlating with the reduction or absence of snowfall. As seasons cycle
+from summer back to winter, this influence progressively strengthens. A similar trend is also showcased between TMAX
+and snow depth (SNWD). Furthermore, we discover that these correlations exhibit cyclical changes on an annual scale. This
+highlights our model’s ability to learn the temporal dynamics of variable correlations within data.
+
+A.5. Description on Datasets
+PhysioNet2 (Ikaro Silva & Mark, 2012) contains 12,000 IMTS corresponding to different patients, where each consists of a
+total of 41 clinical signal variables irregularly collected during the initial 48 hours following the patient’s admission to the
+ICU. For each IMTS, we use the first 24 hours as the observed data to predict the queried values in the next 24 hours.
+MIMIC3 (A. Johnson & Mark, 2016) is a widely accessible clinical database that houses electronic health records of patients
+in critical care. Following the pre-processing provided by (Biloš et al., 2021), we obtain 23,457 patients’ IMTS collected
+from the first 48 hours after the patient’s admission, and each with 96 variables. Similar to the PhysioNet, we utilize the
+initial 24-hour period as the observed data to forecast the target values for the subsequent 24-hour time frame.
+Human Activity4 comprises 12 variables consisting of irregularly measured 3D positional records of four different sensors
+worn in the human left ankle, right ankle, belt, and chest. The dataset is gathered from five individuals executing a diverse
+range of activities such as walking, sitting, lying down, standing, and others. To better align with the requirements of
+realistic forecasting scenarios, we chunk the original time series to obtain a total of 5,400 IMTS, each of which contains
+4,000 milliseconds span, and we leverage the first 3,000 milliseconds as the observed data to predict the positional value of
+sensors in the next 1,000 milliseconds.
+Given that data missing is a frequent occurrence in climate research possibly due to sensor malfunctions, measurement
+errors, or data acquisition issues, we follow the previous works (De Brouwer et al., 2019; Schirmer et al., 2022) and have
+chosen the USHCN5 (Menne & Vose) as one of our evaluation datasets. USHCN encompasses daily measurements for 5
+climate variables spanning over 150 years collected by widespread meteorological stations throughout the United States. We
+follow the pre-processing adopted by (De Brouwer et al., 2019) to obtain 1,114 stations and four-year observational periods
+between 1996 and 2000. To meet realistic forecasting requirements, we chunk the data to acquire a total of 26,736 IMTS,
+each of which uses the previous 24 months’ climate data to forecast the following month’s climate conditions.
+
+A.6. Baseline Details
+We incorporate seventeen relevant baselines for a fair comparison, covering the SOTA models from MTS forecasting,
+and IMTS classification, interpolation, and forecasting. We carefully search the key hyper-parameters of these models
+around their recommended setups. For a fair comparison across all models, we standardize the hidden dimensions to 64
+for PhysioNet and MIMIC, and 32 for Human Activity and USHCN. We select a batch size of 192 for USHCN and 32 for
+the other datasets. The Adam optimizer is used for training, with early stopping implemented if there is no reduction in
+validation loss after 10 epochs.
+
+A.6.1. M ODELS FOR MTS FORECASTING
+For MTS forecasting models, we input sequences after canonical pre-alignment and incorporate the observed time, mask
+information, and forecasting queries as additional features into these models.
+DLinear (Zeng et al., 2023) decomposes time series into trend series and remainder series, subsequently employing two
+single-layer linear networks to model each of these sequences to accomplish the forecasting task. We use the following
+setting in our experiment: The window size of moving average is 25. The learning rate is 1 × 10−4 .
+TimesNet (Wu et al., 2022) disassembles complex sequential changes into different periods through a modular structure, and
+achieves unified modeling of both inter-period and intra-period representation by transforming the original one-dimensional
+time series into a two-dimensional space to capture cross-time dependency for forecasting. We use the following setting in
+   2
+     https://archive.physionet.org/challenge/2012
+   3
+     https://mimic.mit.edu/
+   4
+     https://archive.ics.uci.edu/dataset/196/localization+data+for+person+activity
+   5
+     https://www.osti.gov/biblio/1394920
+
+
+                                                              16
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+our experiment: The number of top-k for period is 5. The number of the encoder layers is 2. The learning rate is 1 × 10−4 .
+PatchTST (Nie et al., 2022) is a Transformer-based model using Patch and Channel Independence to capture cross-time
+dependency for forecasting. We use the following setting in our experiment: The number of multi-heads is 2. The length of
+the patch is 16. The length of the stride is 8. The number of the encoder layers is 1. The learning rate is 1 × 10−4 .
+Crossformer (Zhang & Yan, 2022) is a Transformer-based model using Cross-Time Attention and Cross-Dimension
+Attention to capture cross-dimension dependency and cross-time dependency for forecasting. We use the following setting
+in our experiment: The length of the segment is 12. The size of the window is 2. The number of the encoder layers is 1 for
+the Human Activity and 2 for other datasets. The number of the multi-heads is 3 for the Human Activity and 8 for other
+datasets. The learning rate is 1 × 10−3 .
+We use the implementation provided by https://github.com/thuml/TimesNet to reproduce the above four baseline models.
+GraphWavenet (Wu et al., 2019) leverages the self-adaptive adjacency matrix and diffusion convolution to capture the
+cross-dimension dependency and uses gated mechanism and dilated casual convolution to capture the cross-time dependency
+for forecasting. We use the following setting in our experiment: The dilation exponential is 3 for MIMIC and 2 for other
+datasets. The size of the kernel is 5 for PhysioNet and Human Activity, 7 for USHCN and 9 for MIMIC. The number of the
+blocks is 2 for Human Activity and 3 for other datasets. The number of convolution layers is 3 for MIMIC and 4 for other
+datasets. The learning rate is 1 × 10−3 . We use the official implementation at https://github.com/nnzhan/Graph-WaveNet.
+MTGNN (Wu et al., 2020b) integrates graph convolutional networks and temporal convolutional networks to capture
+cross-dimensional relationships and cross-temporal dependencies in a direct and explicit manner. We use the following
+setting in our experiment: The dilation exponential is 2 for PhysioNet and Human Activity, 3 for USHCN and 4 for MIMIC.
+The size of the kernel is 7. The number of the convolution layers is 4 for MIMIC and USHCN, 5 for PhysioNet and Human
+Activity. The size of the subgraph is 5 for USHCN, 12 for Human Activity and 20 for PhysioNet and MIMIC. The learning
+rate is 1 × 10−3 . We use the official implementation at https://github.com/nnzhan/MTGNN.
+StemGNN (Cao et al., 2020) transfers the spatiotemporal domain to the frequency domain through discrete Fourier transform
+and graph Fourier transform while capturing spatiotemporal dependencies in the frequency domain. We use the following
+setting in our experiment: The number of layers is 5 and the learning rate is 1 × 10−4 . We use the official implementation at
+https://github.com/microsoft/StemGNN.
+CrossGNN (Huang et al., 2023) uses adaptive multi-scale identifier to construct multi-scale time series with different noise
+levels, subsequently utilize cross-scale GNN to capture the cross-time dependency and cross-variable GNN to capture the
+cross-dimension dependency for forecasting. We use the following setting in our experiment: The dimension of the scale
+vector and variable vector is 10. The scale number is 4. The number of cross-scale neighbors is 10. The learning rate is
+1 × 10−3 . We use the official implementation at https://github.com/hqh0728/CrossGNN.
+FourierGNN (Yi et al., 2023) initially constructs a hypervariate graph and transforms features into the Fourier space.
+Subsequently, it stacks Fourier graph operators in the Fourier domain and finally maps the convolved results back to the
+original feature space for forecasting. We use the following setting in our experiment: The number of frequency is 1. The
+scale is 0.02. The hidden size factor is 1. The sparsity threshold is 0.01. The learning rate is 1 × 10−3 . We use the official
+implementation at https://github.com/aikunyi/FourierGNN.
+
+A.6.2. M ODELS FOR IRREGULAR TIME SERIES CLASSIFICATION
+To adapt these classification baseline models for forecasting tasks, we substitute their classification output layer with a
+MLP-based forecasting output layer that is the same as us.
+GRU-D (Che et al., 2018) is a GRU-based model using time decay and missing data imputation strategies to handle irregularly
+sampled time series. We set learning rate to 1 × 10−3 and follows the implementation at https://github.com/zhiyongc/GRU-D.
+SEFT (Horn et al., 2020) converts the time series into a set encoding, then using set functions to model them. We use the
+following setting in our experiment: The number of layers is 2. The learning rate is 1 × 10−3 . We use the implementation
+provided by https://github.com/mims-harvard/Raindrop.
+RainDrop (Zhang et al., 2021b) employs neural message passing and temporal self-attention to model the dependencies
+among sensors, considering cross-sample shared relationships between sensors and adaptively estimates unaligned ob-
+servations based on neighboring measurements. We use the following setting in our experiment: The dimension of the
+
+                                                             17
+        Irregular Multivariate Time Series Forecasting: A Transformable Patching Graph Neural Networks Approach
+
+observation is 4. The number of layers and heads for the Transformer is 2. The learning rate is 1 × 10−3 . We use the official
+implementation at https://github.com/mims-harvard/Raindrop.
+Warpformer (Zhang et al., 2023a) is a Transformer-based model that adopts a tailored input representation, explicitly
+encapsulating both the within-series irregularities and inter-series variations. It further incorporates a warping module
+to flexibly synchronize irregular time series at a predefined scale, along with a custom-designed attention module for
+advanced representation learning. We use the following setting in our experiment: The number of warp is 0-0.2-1.
+The number of the heads is 1 and layers is 2. The learning rate is 1 × 10−3 . We use the official implementation at
+https://github.com/imJiawen/Warpformer.
+
+A.6.3. M ODELS FOR IRREGULAR TIME SERIES INTERPOLATION AND FORECASTING
+mTAND (Shukla & Marlin, 2021) is an IMTS interpolation model that can be easily applied to forecasting tasks by
+only replacing the queries for interpolation with forecasting. It learns embeddings for numerical values corresponding
+to continuous time steps and generates fixed-length representations for variable-length sequential data using an attention
+mechanism. We use the following setting in our experiment: The encoder and the decoder is mTAND-rnn, the k-iwae is
+5, the std is 0.01, the number of the ref-points is 64. The learning rate is 1 × 10−3 . We use the official implementation at
+https://github.com/reml-lab/mTAN.
+Latent-ODE (Rubanova et al., 2019) is an ODE-based model that improves RNNs with continuous-time hidden state
+dynamics specified by neural ODEs. We use the following setting in our experiment: The number of the rec-layers and
+gen-layers is 3 for PhysioNet and USHCN and 1 for MIMIC and Human Activity. The learning rate is 1 × 10−3 . We use the
+official implementation at https://github.com/YuliaRubanova/latent-ode.
+CRU (Schirmer et al., 2022) integrates the Kalman Filter with an encoder-decoder architecture to facilitate updates of the
+latent states in ODEs. We use the following setting in our experiment: The scaling factor of timestamps for numerical
+stability is 0.2 for PhysioNet and MIMIC and 0.3 for USHCN and Human Activity. The variance activation function in
+encoder is square and the variance activation function in decoder is exp. The activation function for transition net is relu. The
+number of bias is 15 for USHCN and Human Activity and 20 for PhysioNet and MIMIC. The bandwidth is 3 for USHCN
+and Human Activity and 10 for PhysioNet and MIMIC. The learning rate is 1 × 10−3 . We use the official implementation at
+https://github.com/boschresearch/Continuous-Recurrent-Units.
+Neural Flow (Biloš et al., 2021) models the solution curves of ODEs through neural networks. We use the following
+setting in our experiment: The number of the flow-layers is 4 for MIMIC and 2 for other datasets. The number of the
+hidden-layers is 2 for MIMIC and 3 for other datasets. The rec-dims is 20 for MIMIC and 40 for other datasets. The flow
+model is GRU for MIMIC and coupling for other datasets. The time-net is TimeTanh for MIMIC and TimeLinear for other
+datasets. The time-hidden-dim is 8. The activation is ReLU for MIMIC and Tanh for other datasets. The learning rate is
+1 × 10−3 . The decay of the learning rate is 0.33 for MIMIC and 0.5 for other datasets. We use the official implementation at
+https://github.com/mbilos/neural-flows-experiments.
+
+
+
+
+                                                               18
+

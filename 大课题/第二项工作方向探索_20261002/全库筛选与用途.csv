@@ -1,0 +1,80 @@
+﻿id,name,year,task,directions,role,reason,old_evidence,current_reading,status,source_url,new_verified_url,local_text
+P01,BiTGraph,2024,缺失历史预测,A;C,直接预测基线,掩码卷积与图聚合；需超出散点协议并控制骨干差异,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://proceedings.iclr.cc/paper_files/paper/2024/hash/7f3b25e39e0f0330435d1ffc1d6fa193-Abstract-Conference.html,,../文献调研_20260926/sources/local_text/01_BiTGraph_ICLR2024.txt
+P02,HD-TTS,2024,缺失历史预测,A;C,直接竞争/空间骨干,已含缺失条件多尺度融合；防止重复第一项工作,A,本轮全文关键段落复核,已发表（旧库快照）,https://arxiv.org/abs/2402.10634,,../文献调研_20260926/sources/local_text/02_HD_TTS_ICML2024.txt
+P03,GinAR,2024,缺失历史预测,A;C,任务边界/强缺失扩展,已知节点整列历史缺失并预测全部变量；与一般点块主任务分列,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://arxiv.org/abs/2405.11333,,../文献调研_20260926/sources/local_text/06_GinAR_End_To_End_MTS_Forecasting_Suitable_for_Variable_Missing.txt
+P04,S4M,2025,缺失历史预测,A;C,长空洞机制/基线,原型记忆和双流S4已处理块缺失；不能简单加入记忆,A,本轮全文关键段落复核,已发表（旧库快照）,https://openreview.net/pdf?id=BkftcwIVmR,,../文献调研_20260926/sources/local_text/03_S4M_S4_for_Multivariate_Time_Series_Forecasting_with_Missing_Values.txt
+P05,Merlin,2025,缺失历史预测,A,直接竞争/训练策略,完整观测教师与多缺失率对比；须登记额外完整数据,A,本轮全文关键段落复核,已发表（旧库快照）,https://arxiv.org/abs/2506.12459,,../文献调研_20260926/sources/local_text/04_Merlin_Multi_View_Representation_Learning_for_Robust_MTS_Forecasting.txt
+P06,CoIFNet,2025,缺失历史预测,B,直接竞争/联合目标,共享表征联合插补预测；简单联合损失不构成充分差异,A,本轮全文关键段落复核,预印本（旧库快照）,https://arxiv.org/abs/2506.13064,,../文献调研_20260926/sources/local_text/05_CoIFNet_Unified_Framework_for_MTS_Forecasting_with_Missing_Values.txt
+P07,MissTSM,2026,缺失历史预测,A;C,接口基线/局限证据,作者明确时间动力学和高维token成本局限；并承认简单插补的适用条件,A,本轮全文关键段落复核,已发表（旧库快照）,https://openreview.net/pdf?id=HgJ0DMVAA3,,../文献调研_20260926/sources/local_text/02_MissTSM_Investigating_Model_Agnostic_Imputation_Free_IMTS_Modeling.txt
+P08,CRIB,2025,缺失历史预测,A;B,直接竞争/一致性目标,已有不完整输入一致性与信息瓶颈；取消完整教师本身不新,A,本轮全文关键段落复核,预印本（旧库快照）,https://arxiv.org/abs/2509.23494,,../文献调研_20260926/sources/local_text/01_CRIB_Revisiting_Multivariate_Time_Series_Forecasting_with_Missing_Values.txt
+P09,IBN,2025,缺失历史预测,B,整变量与不确定性支撑,整变量依赖恢复；任务和发表状态需独立限定,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,预印本（旧库快照）,https://arxiv.org/abs/2509.07725,,../文献调研_20260926/sources/local_text/08_IBN_Interpretable_Bidirectional_Modeling_Network_for_MTS_with_Variable_Missing.txt
+P10,ChannelTokenFormer,2026,缺失历史预测,A;C,直接竞争/异步块缺失,训练patch遮蔽和测试块缺失已有证据；适合作更强参照,A,本轮全文关键段落复核,已发表（旧库快照）,https://arxiv.org/abs/2506.08660,,../文献调研_20260926/sources/local_text/ChannelTokenFormer.txt
+P11,FDW/VSF,2022,可用子集预测,扩展,任务边界,输出仍可用变量的VSF；不能直接与全变量预测排名,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://arxiv.org/abs/2206.12626,,../文献调研_20260926/sources/downloaded_text/VSF2022.txt
+P12,TRF,2024,可用子集预测,B,生成机制/任务边界,条件流可借鉴；原任务是可用变量子集预测,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://www.ijcai.org/proceedings/2024/228,,../文献调研_20260926/sources/downloaded_text/TRF2024.txt
+P13,GCN-M,2023,缺失历史预测,A;C,记忆与图基线,多种块缺失和局部全局记忆已存在,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://link.springer.com/article/10.1007/s10618-022-00903-7,,../文献调研_20260926/sources/downloaded_text/GCNM2023.txt
+P14,GSTAE,2023,缺失历史预测,B,训练流程对照,插补预训练后预测；顺序学习不应误写为同时优化,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://file.jqyu.me/pub/traffic-prediction-with-missing-data-a-multi-task-learning-approach.pdf,,../文献调研_20260926/sources/downloaded_text/MTLTraffic2023.txt
+P15,在线图论插补,2023,缺失历史预测,B,任务导向插补线索,在线图优化强调预测价值；摘要证据不足以细述协议,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://research.monash.edu/en/publications/engineering-traffic-prediction-with-online-data-imputation-a-grap/,,
+P16,UIGNN,2023,未见节点预测,B;扩展,归纳任务/概率支撑,训练未见节点且量化不确定性；不等于临时掉线,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://arxiv.org/abs/2309.06800,,../文献调研_20260926/sources/downloaded_text/UATraffic2023.txt
+P17,T-TRGCGR,2022,缺失历史预测,B,非深度流程对照,张量补全结合图预测；掩码与维度未核清,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://www.sciencedirect.com/science/article/abs/pii/S0378437121007470,,
+P18,强化动态图预测,2022,缺失历史预测,B;扩展,结构和插补对照,动态图和插补已有工作；与第一项重叠且全文证据不足,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://www.sciencedirect.com/science/article/abs/pii/S0968090X22002431,,
+P19,低秩张量DMD,2022,缺失历史预测,B;C,统计结构基线,低秩动态模态分解；可检验深度复杂性必要性,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/itr2.12200,,
+P20,嵌入模块Seq2Seq,2021,缺失历史预测,C,应用补充,长时预测嵌入模块；原协议信息尚不充分,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://eprints.bournemouth.ac.uk/35723/1/ICAC2021_Accepted_version.pdf,,../文献调研_20260926/sources/downloaded_text/Seq2Seq2021.txt
+P21,Enter,2026,缺失历史预测,A;B,不完整训练目标线索,缺失感知预训练；只有摘要证据，不据此断言缺口,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://www.sciencedirect.com/science/article/pii/S0957417426013254,,
+P22,动态注意力图预测,2026,缺失历史预测,A;C,近邻监测/暂缓主证据,动态注意力图与第一项可能重叠；实验字段待核,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://www.sciencedirect.com/science/article/pii/S092523122602093X,,
+P23,风电FCS,2024,缺失历史预测,B,概率建模核心支撑,联合输入目标分布与缺失边缘化已存在；低维风电限制,A,本轮全文关键段落复核,已发表（旧库快照）,https://arxiv.org/abs/2203.08252,,../文献调研_20260926/sources/downloaded_text/WindFCS2024.txt
+P24,光伏多域协同,2025,缺失历史预测,A;C,外生与跨站点支撑,跨域和协变量信息重要；信息预算与输入组合待核,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://researchonline.jcu.edu.au/89193/,,
+P25,非参数风电概率预测,2026,缺失历史预测,B,概率联合目标线索,非参数分位数联合插补预测；原文全文仍需补核,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://ira.lib.polyu.edu.hk/handle/10397/117725,,
+P26,CGLU-BNF,2025,缺失历史预测,B,直接时空概率近邻,贝叶斯空气质量预测已覆盖多种缺失几何,A,本轮全文关键段落复核,预印本（旧库快照）,https://arxiv.org/abs/2511.02175,,../文献调研_20260926/sources/downloaded_text/AirBayes2025.txt
+P27,稀疏城市空气预测,2026,未见节点预测,扩展,归纳扩展线索,跨位置泛化与可靠性；目标集合和数据规模待核,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://www.mdpi.com/2224-2708/15/4/52,,
+P28,DeepSIP,2026,应用预测（时间协议待核）,背景,应用边界,尚不能清楚排除同时刻估计；不作为严格未来预测主证据,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://link.springer.com/article/10.1007/s44408-026-00145-y,,
+P29,TSDiff,2023,缺失历史预测,A;B,生成预测核心对照,推理时缺失上下文；完整序列训练和采样成本必须登记,A,本轮全文关键段落复核,已发表（旧库快照）,https://arxiv.org/abs/2307.11494,,../文献调研_20260926/sources/downloaded_text/TSDiff2023.txt
+P30,TACTiS,2022,概率预测/插值统一,B,联合分布核心支撑,支持缺失训练和联合预测；不能称概率联合建模未研究,A,本轮全文关键段落复核,已发表（旧库快照）,https://proceedings.mlr.press/v162/drouin22a.html,,../文献调研_20260926/sources/downloaded_text/TACTiS2022.txt
+P31,TACTiS-2,2024,概率预测/插值统一,B,联合分布基线,TACTiS改进；预测插值与缺失上下文实验要分开,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://proceedings.iclr.cc/paper_files/paper/2024/hash/63796148c99205adb0fcac069cc714d4-Abstract-Conference.html,,../文献调研_20260926/sources/downloaded_text/TACTiS2_2024.txt
+P32,Neural Flows,2021,不规则预测,C,连续时间机制,演化流减少ODE求解；块缺失鲁棒性需单独验证,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://arxiv.org/abs/2110.13040,,../文献调研_20260926/sources/downloaded_text/NeuralFlows2021.txt
+P33,CRU,2022,不规则预测,B;C,连续时间概率机制,状态演化和不确定性融合；可用于空洞期间的状态处理,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://proceedings.mlr.press/v162/schirmer22a.html,,../文献调研_20260926/sources/downloaded_text/CRU2022.txt
+P34,GraFITi,2024,不规则预测,C,稀疏表示直接近邻,观测为二部图边、支持未来查询；不以稀疏表示本身主张创新,A,本轮全文关键段落复核,已发表（旧库快照）,https://ojs.aaai.org/index.php/AAAI/article/download/29560/30939,,../文献调研_20260926/sources/local_text/GraFITi_aaai_2024.txt
+P35,t-PatchGNN,2024,不规则预测,C,片段图直接近邻,非规则片段和时间自适应变量图；注意USHCN站点作样本,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://proceedings.mlr.press/v235/zhang24bw.html,,../文献调研_20260926/sources/local_text/03_t_PatchGNN_ICML2024.txt
+P36,HyperIMTS,2025,不规则预测,C,高阶观测表示近邻,观测超图；不能推定已覆盖高维路网共同掉线,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://arxiv.org/abs/2505.17431,,../文献调研_20260926/sources/local_text/07_HyperIMTS_ICML2025.txt
+P37,Hi-Patch,2025,不规则预测,C,层次片段直接近邻,已有片段内/间多尺度；数据总数含分类任务,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://proceedings.mlr.press/v267/luo25r.html,,../文献调研_20260926/sources/downloaded_text/HiPatch2025.txt
+P38,ReIMTS,2026,不规则预测,C,递归表示直接近邻,原始时间戳与递归尺度；只沿用旧轮关键全文证据,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://arxiv.org/abs/2602.21498,,../文献调研_20260926/sources/local_text/ReIMTS.txt
+P39,TFMixer,2026,不规则预测,C,时频方法直接近邻,本轮官方确认ICML2026；非均匀频谱已有路线,A,本轮官方会议页面核验；方法沿用已存全文与笔记,ICML 2026 官方记录核实；修正旧库预印本标签,https://arxiv.org/abs/2602.00582,https://proceedings.mlr.press/v306/qiu26t.html,../文献调研_20260926/sources/local_text/TFMixer.txt
+P40,ProFITi,2025,不规则概率预测,B,概率流机制,未来任意查询联合分布；任务适配与密度评分需统一,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://ojs.aaai.org/index.php/AAAI/article/view/35494,,
+P41,MOSES,2026,不规则概率预测,B,分布一致性机制,查询子集边缘一致性；不是缺失不确定性全部问题的答案,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://proceedings.iclr.cc/paper_files/paper/2026/hash/899c6a43b9976e1077522fe5a39cafa3-Abstract-Conference.html,,
+P42,mTAN,2021,插补/表示学习,C,时间表示基础,主要插补/分类；若改成预测需声明任务改造,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://arxiv.org/abs/2101.10318,,
+P43,HeTVAE,2022,概率插补,B,稀疏概率表示基础,异方差插补不等于未来预测；可借鉴密度信息传递,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://arxiv.org/abs/2107.11350,,
+P44,CSDI,2021,插补/概率预测,B,条件生成恢复模块,多样本插补；未来后缀实验不能替代缺失历史预测验证,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://arxiv.org/abs/2107.03502,,../文献调研_20260926/sources/downloaded_text/CSDI2021.txt
+P45,SSSD,2023,插补/概率预测,B;C,状态空间生成模块,扩散结合S4；重构和预测表分开，记录迭代采样成本,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://openreview.net/forum?id=hHiIbk7ApW,,../文献调研_20260926/sources/downloaded_text/SSSD2023.txt
+P46,GRIN,2022,插补,B,强插补流程基线,图递归插补；仅允许使用预测起点以前的双向历史,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://openreview.net/forum?id=kOu3-S3wJ7,,../文献调研_20260926/sources/downloaded_text/GRIN2022.txt
+P47,SPIN,2022,插补,B;C,稀疏图恢复支撑,稀疏节点重构；不是节点未来预测的直接证据,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://openreview.net/pdf?id=YXHoPO33rk,,
+P48,SAITS,2023,插补,B,插补流程基线,固定后续预测器，避免骨干差异；本轮不重复全文核对,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://arxiv.org/abs/2202.08516,,../文献调研_20260926/sources/downloaded_text/SAITS2023.txt
+P49,PriSTI,2023,插补,B,时空生成恢复模块,图先验与条件扩散；按相同图预算比较,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://arxiv.org/abs/2302.09746,,
+P50,ImputeFormer,2024,插补,A;B,泛化插补强对照,低秩偏置已做缺失配置泛化；需评价完整预测流程,A,本轮全文关键段落复核,已发表（旧库快照）,https://arxiv.org/abs/2312.01728,,../文献调研_20260926/sources/local_text/05_ImputeFormer_KDD2024.txt
+P51,LSCD,2025,概率插补,B;C,非均匀频谱支撑,Lomb-Scargle条件扩散主任务为插补,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://proceedings.mlr.press/v267/fons25a.html,,../文献调研_20260926/sources/local_text/08_LSCD_ICML2025.txt
+P52,CoFILL,2025,插补,B;C,时频生成支撑,时频扩散插补已有；下游预测收益另验,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://www.ijcai.org/proceedings/2025/320,,../文献调研_20260926/sources/local_text/CoFILL_IJCAI.txt
+P53,P-GUTS,2025,插补/预测扩展,背景,多尺度结构参照,学生论坛/稿件；与现有小论文结构近，不作主会证据,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,学生论坛/稿件（旧库快照）,https://kdd.org/kdd2025/undergraduate-and-masters-consortium/,,../文献调研_20260926/sources/local_text/P-GUTS_kdd2025.txt
+P54,HELIX,2026,插补,B;C,表示恢复近邻,变量身份及混合注意力；预印本和插补任务边界,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,预印本（旧库快照）,https://arxiv.org/abs/2605.02278,,../文献调研_20260926/sources/local_text/HELIX.txt
+P55,Task-oriented Imputation Evaluation,2024,评测方法,B,任务导向核心证据,逐点重构价值和下游目标已有专门评估，不重复发现,A,本轮全文关键段落复核,已发表（旧库快照）,https://proceedings.neurips.cc/paper_files/paper/2024/hash/f88264fcc54775ee1706116e90fe351a-Abstract-Conference.html,,../文献调研_20260926/sources/local_text/04_Task_Oriented_Imputation_NeurIPS2024.txt
+P56,NuwaTS,2024,插补/迁移,A;C,预训练扩展,跨领域插补基础模型；预算和语料边界待核,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,预印本（旧库快照）,https://arxiv.org/abs/2405.15317,,../文献调研_20260926/sources/downloaded_text/NuwaTS2024.txt
+P57,DGCRIN,2023,插补,B,图插补补充,动态图插补与已有空间工作重叠；不单列第二项主线,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://www.sciencedirect.com/science/article/pii/S0950705122012849,,
+P58,空气质量迁移自编码器,2024,插补,A;B,跨域插补补充,空气质量迁移；未来预测仍需外接验证,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://www.sciencedirect.com/science/article/abs/pii/S0167739X24000839,,
+P59,CT-MVP,2026,插补,C,物理空间重构扩展,长期大气网格插补；不同于传感器未来预测,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2025JH000656,,
+P60,插补综述,2025,综述,背景,回溯文献工具,综述用于覆盖检查，不作为单个方法效果证据,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://www.ijcai.org/proceedings/2025/1187,,../文献调研_20260926/sources/downloaded_text/Survey2025.txt
+P61,TSI-Bench,2024,基准,背景,评测协议支撑,插补基准，不能当下游预测SOTA表,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,预印本（旧库快照）,https://arxiv.org/abs/2406.12747,,
+P62,AirQualityBench,2026,基准,A;B;C,自然缺失评测支撑,只在可得未来真值评价；规模与单模型输入维度分开,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,预印本（旧库快照）,https://arxiv.org/abs/2605.05854,,../文献调研_20260926/sources/downloaded_text/AirQualityBench2026.txt
+P63,Physiome-ODE,2025,基准,C,可控动力学诊断,已知生成过程有利机制测试，不能代替真实网络,A,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://arxiv.org/abs/2502.07489,,../文献调研_20260926/sources/downloaded_text/Physiome2025.txt
+P64,GRU-D,2018,基础：分类/表示,A;C,掩码时间间隔基础,标准输入特征早已存在，原任务主要分类,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://pubmed.ncbi.nlm.nih.gov/29666385/,,
+P65,BRITS,2018,基础：插补,B,经典插补基础,双向RNN历史恢复；不能使用预测起点后的值,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://arxiv.org/abs/1805.10572,,
+P66,GRU-ODE-Bayes,2019,基础：不规则预测,B;C,连续状态基础,空洞中演化与观测更新已有；建立基础对照,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://arxiv.org/abs/1905.12374,,
+P67,Neural CDE,2020,基础：表示/分类,C,连续表示基础,受控动力学及插值路径；原任务常为分类,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://proceedings.neurips.cc/paper/2020/hash/4a5876b450b45371f6cfe5047ac8cd45-Abstract.html,,
+P68,GP-VAE,2020,基础：概率插补,B,潜变量概率基础,GP-VAE恢复不确定性；未来分布能力需另验,B,上一轮笔记/结构化记录复审；不表示本轮重读全文,已发表（旧库快照）,https://proceedings.mlr.press/v108/fortuin20a.html,,
+N01,StableMiss,2023,缺失输入预测/交通预测,A,直接竞争,已有掩码分布迁移且有自然缺失交通实验；MCAR/MAR与完整联合分布不变假设,新增,全文关键段落与官方页面,IJCAI；官方会议记录核实,https://www.ijcai.org/proceedings/2023/525,https://www.ijcai.org/proceedings/2023/525,sources/StableMiss.txt
+N02,INTER,2025,不完整序列预测/插补/异常检测,A;C,直接竞争,缺失率相关patch丢弃与缺失感知Transformer；不能把patch丢弃当空白,新增,全文方法段落与官方页面,IJCAI；官方会议记录核实,https://www.ijcai.org/proceedings/2025/734,https://www.ijcai.org/proceedings/2025/734,sources/INTER.txt
+N03,APN,2026,不规则预测,C,直接竞争,软时间窗与通道独立聚合；全历史摘要与未来查询解码需分清,新增,全文方法/数据段落与官方页面,AAAI；官方会议记录核实；预印本首发2025,https://ojs.aaai.org/index.php/AAAI/article/view/39563,https://ojs.aaai.org/index.php/AAAI/article/view/39563,sources/APN.txt
+N04,TimeCHEAT,2025,不规则预测/分类/插值,C,直接竞争,局部通道相关、全局通道独立已组合；不能仅拼两类策略,新增,全文方法段落与官方页面,AAAI；官方会议记录核实,https://ojs.aaai.org/index.php/AAAI/article/view/34076,https://ojs.aaai.org/index.php/AAAI/article/view/34076,sources/TimeCHEAT.txt
+N05,KRNO / Shifting Time,2025,连续时间和时空预测,C,机制与边界,连续时间平移算子及可分核；PDE网格与传感器图不能直接等同,新增,全文方法/实验段落与官方页面,ICML；官方会议记录核实,https://proceedings.mlr.press/v267/dama25a.html,https://proceedings.mlr.press/v267/dama25a.html,sources/KRNO.txt
+N06,VIMTS,2025,不规则预测/预训练,C,近邻与预训练扩展,视觉MAE、跨变量恢复及粗到细预测已存在；预训练信息预算另列,新增,官方摘要与作者仓库；未重读全文,ICML；官方会议记录核实,https://proceedings.mlr.press/v267/hu25y.html,https://proceedings.mlr.press/v267/hu25y.html,
+N07,Post-Training Adaptive Conformal Prediction for Incomplete Time Series,2026,不完整时序预测区间校准,B,直接竞争,缺失模式条件覆盖已有工作；全文直接访问失败，不转述完整理论保证,新增,官方期刊列表及索引原文摘要；PDF浏览器验证阻挡,TMLR；官方期刊列表核实,https://openreview.net/pdf?id=KMBU4wx79B,https://openreview.net/pdf?id=KMBU4wx79B,
+N08,Under-Cali,2026,在线不规则预测,A;B,信息预算边界,获得标签后更新轻量校准器；误差分数不等于完整预测分布,新增,HTML/PDF方法关键段落,arXiv；作者稿列KDD2026；作者稿含会议与DOI；出版方页面未成功打开,https://arxiv.org/abs/2605.28603,https://arxiv.org/abs/2605.28603,sources/UnderCali.txt
+N09,Transformer-based Diffusion models for Hydrological Time Series Probabilistic Imputation and Forecasting,2026,水文插补/概率预测,B;C,现实场景支撑,自然缺失水文数据；长空洞重构表不等于未来预测表,新增,HTML数据/方法/评测关键段落,arXiv；预印本,https://arxiv.org/abs/2607.21200,https://arxiv.org/abs/2607.21200,
+N10,A Hybrid Attention Model Learning Unified Time-aware Patch Representation for Irregular Multivariate Time Series Forecasting,2026,不规则序列基础模型预测,C,最新近邻监测,时间感知patch、大规模不规则预训练；尚未核对完整协议和代码,新增,官方摘要；未精读全文,arXiv；预印本,https://arxiv.org/abs/2609.22836,https://arxiv.org/abs/2609.22836,
+N11,AMRC,2025,一般时间序列预测,A;B;C,遮蔽训练旁证,有意删去冗余前缀与被动数据缺失不同；不当作缺失预测直接基线,新增,摘要与原文方法检索段落；非完整评审,arXiv；NeurIPS论文检索中可检得题名；本轮不独立确认最终会议书目,https://arxiv.org/abs/2510.19980,https://arxiv.org/abs/2510.19980,

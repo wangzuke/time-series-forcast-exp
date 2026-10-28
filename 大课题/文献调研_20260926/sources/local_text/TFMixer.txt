@@ -1,0 +1,1204 @@
+                                                 Bridging Time and Frequency: A Joint Modeling Framework for Irregular
+                                                                Multivariate Time Series Forecasting
+
+
+                                                                 Xiangfei Qiu 1 Kangjia Yan 1 Xvyuan Liu 1 Xingjian Wu 1 Jilin Hu 1
+
+
+                                                                  Abstract                                                                  Observed Window                        Forecasting Window
+
+                                                                                                                                 v!
+                                                Irregular multivariate time series forecasting
+arXiv:2602.00582v1 [cs.LG] 31 Jan 2026
+
+
+
+
+                                                                                                                     Variables
+                                                (IMTSF) is challenging due to non-uniform sam-                                   v"
+                                                pling and variable asynchronicity. These irreg-                 （a）
+                                                ularities violate the equidistant assumptions of
+                                                                                                                                 v#
+                                                standard models, hindering local temporal mod-
+                                                eling and rendering classical frequency-domain                                        𝑡!   𝑡"        𝑡#         𝑡$   𝑡% 𝑡&   𝑡'            𝑡( 𝑡) 𝑡!*   Time
+
+                                                methods ineffective for capturing global periodic
+                                                                                                                                 v!
+                                                structures. To address this challenge, we propose
+
+                                                                                                                     Variables
+                                                TFMixer, a joint time–frequency modeling frame-                                  v"
+                                                work for IMTS forecasting. Specifically, TFMixer                （b）
+
+                                                incorporates a Global Frequency Module that em-
+                                                                                                                                 v#
+                                                ploys a learnable Non-Uniform Discrete Fourier
+                                                Transform (NUDFT) to directly extract spectral                                        𝑡!        𝑡"        𝑡#    𝑡$    𝑡%      𝑡&      𝑡'     𝑡(   𝑡)   Time
+                                                representations from irregular timestamps. In                                         Observation              Missing Data         Forecasting
+                                                parallel, the Local Time Module introduces a
+                                                query-based patch mixing mechanism to adap-                    Figure 1. The comparison of irregular multivariate time series
+                                                tively aggregate informative temporal patches and              forecasting (a) and regular multivariate time series forecasting (b).
+                                                alleviate information density imbalance. Finally,
+                                                TFMixer fuses the time-domain and frequency-
+                                                domain representations to generate forecasts and               The importance of IMTS modeling is paramount in numer-
+                                                further leverages inverse NUDFT for explicit sea-              ous real-world applications where data is naturally irregu-
+                                                sonal extrapolation. Extensive experiments on                  lar (Yao et al., 2018; Brouwer et al., 2019; Wu et al., 2025b;
+                                                real-world datasets demonstrate the state-of-the-              Gao et al., 2025). In healthcare, patient vitals are recorded at
+                                                art performance of TFMixer.                                    varying frequencies based on clinical needs; in environmen-
+                                                                                                               tal monitoring, sensor failures or power-saving modes lead
+                                                                                                               to sporadic data streams; and in finance, trade events occur
+                                                                                                               at irregular ticks. Accurate forecasting in these domains is
+                                         1. Introduction
+                                                                                                               critical for proactive decision-making and system stability.
+                                         Irregular Multivariate Time Series (IMTS) are defined as
+                                                                                                               Irregular Multivariate Time Series Forecasting (IMTSF)
+                                         collections of univariate variables where observations are
+                                                                                                               is inherently challenging due to the intricate interplay be-
+                                         recorded at non-uniform temporal intervals and exhibit
+                                                                                                               tween long- and short-range temporal dependencies (Luo
+                                         inter-variable asynchronicity (Kidger et al., 2020; Liu et al.,
+                                                                                                               et al., 2025; Liu et al., 2026b). Long-range (global) depen-
+                                         2026b; Qiu et al., 2025d). Unlike traditional regular time
+                                                                                                               dencies typically manifest as seasonal or periodic patterns
+                                         series (Qiu et al., 2025c; Wu et al., 2025a;b), IMTS do not
+                                                                                                               spanning the entire historical horizon, whereas short-range
+                                         adhere to a fixed sampling rate, often resulting in missing
+                                                                                                               (local) dependencies represent fine-grained dynamics occur-
+                                         values and sparse data segments across different channels—
+                                                                                                               ring within localized intervals—see Figure 2. Successfully
+                                         see Figure 1.
+                                                                                                               capturing both scales is critical for accurate forecasting in
+                                            1
+                                             School of Data Science and Engineering, East China Nor-           irregular settings.
+                                         mal University, Shanghai, China. Correspondence to: Jilin Hu
+                                         <byang@dase.ecnu.edu.cn>.                                             From a modeling perspective, frequency-domain meth-
+                                                                                                               ods provide a natural and effective mechanism for captur-
+                                         Preprint.                                                             ing long-term periodic structures and global dependencies.
+
+                                                                                                           1
+       Bridging Time and Frequency: A Joint Modeling Framework for Irregular Multivariate Time Series Forecasting
+
+
+                                Local Dependencies
+                                                                        crete Fourier Transform (NUDFT) to directly extract spec-
+                                                                        tral representations from irregularly sampled time series,
+     Observed Time Point
+                                                                        avoiding the need for interpolation. The resulting spectral
+                                                                        coefficients are further processed by a spectrum encoder to
+                                                                        capture global frequency-domain features. In parallel, the
+                                                                        Local Time Module introduces a query-based patch mixing
+                                                                        mechanism, in which a fixed set of learnable query tokens
+                                                                        selectively attends to informative patches. This design alle-
+                           Global Periodicity                           viates information density imbalance and yields a compact
+                                                                        local temporal representation. Finally, the Output Mod-
+Figure 2. Global and local temporal dependencies in IMTSF. The          ule fuses the complementary time-domain and frequency-
+observed time points (green dots) are sampled non-uniformly, cre-       domain representations to generate predictions and further
+ating challenges for traditional models. The global periodicity         leverages the refined spectral coefficients to perform inverse
+(blue dashed line) represents long-range seasonal patterns, while
+local dependencies (pink shaded area) capture fine-grained tempo-       NUDFT for explicit seasonal extrapolation.
+ral dynamics within specific intervals.                                 Our contributions are summarized as follows:
+
+                                                                           • We propose TFMixer, a unified joint time–frequency
+Fourier-based techniques and their neural extensions have                    framework for irregular multivariate time series fore-
+demonstrated strong performance on regularly sampled time                    casting that explicitly bridges global spectral depen-
+series (Zhou et al., 2022b; Wu et al., 2023). However, classi-               dencies and local temporal dynamics.
+cal spectral operators such as the Discrete Fourier Transform
+                                                                           • We introduce a learnable NUDFT that directly operates
+(DFT) and the Fast Fourier Transform (FFT) fundamentally
+                                                                             on irregular timestamps. This approach facilitates the
+rely on the assumption of uniform sampling, which rarely
+                                                                             extraction of frequency-domain representations and the
+holds for irregular time grids, thereby limiting their direct
+                                                                             generation of additional seasonal biases.
+applicability to IMTSF.
+At the same time, irregular sampling substantially com-                    • We identify the information density imbalance prob-
+plicates local temporal representation learning. Many                        lem induced by patch-based approaches in IMTSF and
+IMTSF approaches segment observations into local tem-                        propose a novel query-based patch mixing mechanism
+poral patches to extract fine-grained dynamics (Zhang et al.,                to selectively aggregate local temporal representations.
+2024a; Liu et al., 2025; Luo et al., 2025). Under non-
+                                                                           • Extensive experiments on multiple real-world IMTSF
+uniform sampling, the imbalance in information density
+                                                                             datasets demonstrate that TFMixer achieves state-of-
+presents a significant challenge. These patches often exhibit
+                                                                             the-art performance.
+highly uneven distributions: while some contain dense ob-
+servations with rich temporal structures, others are sparse
+or entirely vacant. This imbalance makes reliable feature               2. Related works
+aggregation particularly challenging and, if not explicitly
+                                                                        2.1. Irregular Multivariate Time Series Forecasting
+addressed, can introduce noise and significantly degrade
+representation quality.                                                 IMTSF is a critical task in domains such as clinical medicine
+                                                                        and meteorology (Zhang et al., 2023; Li et al., 2025; Liu
+Taken together, these limitations expose a fundamental chal-
+                                                                        et al., 2026b). Early research primarily focused on using
+lenge in IMTS forecasting: how to jointly model global
+                                                                        Recurrent Neural Networks (RNNs) modified with tempo-
+frequency structures and local temporal dynamics under
+                                                                        ral decay components or missing value indicators to han-
+irregular sampling. Addressing this challenge requires not
+                                                                        dle irregular gaps, such as the GRU-D model (Che et al.,
+only frequency-domain operators that can directly operate
+                                                                        2016). Another prominent line of work employs Neural
+on irregular timestamps, but also time-domain mechanisms
+                                                                        Ordinary Differential Equations (Neural ODEs) to model
+capable of robustly aggregating information from unevenly
+                                                                        the continuous-time evolution of hidden states between ob-
+distributed observations.
+                                                                        servations (Chen et al., 2018). Recently, the field has shifted
+To address these challenges, we propose TFMixer, a joint                toward more flexible architectures. Set-based models like
+modeling framework that bridges time and frequency for                  SeFT (Horn et al., 2020) treat observations as unordered sets
+IMTS forecasting. TFMixer explicitly decouples global pe-               to eliminate the need for fixed time grids. Graph-based meth-
+riodic modeling from local temporal representation learning             ods, such as Raindrop (Zhang et al., 2022) and ASTGI (Liu
+and processes them in parallel. Specifically, the Global                et al., 2026a), have been developed to capture the complex
+Frequency Module employs a learnable Non-Uniform Dis-                   relationships between multiple sensors with asynchronous
+
+                                                                    2
+       Bridging Time and Frequency: A Joint Modeling Framework for Irregular Multivariate Time Series Forecasting
+
+sampling. More recently, patching mechanisms have been                  mates of future values V̂ = {[v̂jn ]Q    N
+                                                                                                            j=1 }n=1 . This mapping
+                                                                                                             n
+
+
+adapted for IMTSF. For example, tPatchGNN (Zhang et al.,                can be expressed as:
+2024a) segments irregular sequences into transformable
+patches to capture local structures. However, these methods                                   V̂ = F(O, Q).                       (1)
+often struggle with information density imbalances across
+patches and primarily operate in the time domain, missing               3.2. Canonical Pre-Alignment Representation for IMTS
+frequency domain analysis.
+                                                                        To facilitate IMTS modeling, we adopt a pre-alignment rep-
+                                                                        resentation method (Zhang et al., 2024a; Che et al., 2018),
+2.2. Frequency Domain Analysis in Time Series
+                                                                        which has been widely in current researches (Brouwer et al.,
+Frequency domain analysis is highly effective for capturing             2019; Zhang et al., 2023; Schirmer et al., 2022; Bilos et al.,
+long-term periodic patterns, which are often obscured in the            2021a). In this method, an IMTS O is S  represented by three
+                                                                                                                  N      n Ln
+time domain. For regularly sampled data, the Fast Fourier               matrix (T , X , M). T = [tl ]L   l=1 =    n=1 [ti ]i=1 ∈ R
+                                                                                                                                    L
+
+Transform (FFT) is the standard tool. FEDformer (Zhou                   denotes the chronological unique timestamps of all observa-
+et al., 2022c) incorporates a frequency-enhanced Trans-                 tions within O. X = [[x̃nl ]N     L
+                                                                                                     n=1 ]l=1 ∈ R
+                                                                                                                 L×N
+                                                                                                                        are variable’s
+former with a seasonal-trend decomposition to improve                   values corresponding to the timestamps, where x̃nl = xni if
+long-term forecasting. FiLM (Zhou et al., 2022a) applies                the value of n-th variable is observed at time tl , otherwise
+Legendre Polynomials and Fourier projections to preserve                x̃nl would be filled zero. M = [[mnl ]N     L
+                                                                                                               n=1 ]l=1 ∈ R
+                                                                                                                             L×N
+                                                                                                                                  rep-
+structural information and remove noise. TimesNet (Wu                   resents a masking matrix, where mnl = 1 if x̃nl is observed
+et al., 2023) further advances this by transforming 1D time             at time tl , otherwise zero.
+series into 2D tensors based on multiple periods, applying
+2D kernels to extract intra-period and inter-period varia-              4. Methodology
+tions. HyFAD (Anonymous Authors, 2026) models the
+diffusion process directly in both time and frequency do-               4.1. Structure Overview
+main for time series impuation task. However, applying
+                                                                        Figure 3 illustrates the overall architecture of TFMixer.
+frequency analysis to irregular multivariate time series is
+                                                                        Specifically, we first introduce a Masked RevIN Module to
+challenging because FFT requires uniform grids. To address
+                                                                        apply masked normalization to the raw input. Subsequently,
+this, KAFNet (Zhou et al., 2026) utilizes Canonical Pre-
+                                                                        we design the Global Frequency Module, which utilizes a
+Alignment to project irregular observations onto a shared
+                                                                        Learnable NUDFT to map signals into the frequency do-
+temporal grid, allowing for global inter-series correlation
+                                                                        main, where a spectrum encoder extracts global frequency
+modeling in the frequency domain. And it maps the aligned
+                                                                        features. Concurrently, we propose the Local Time Module,
+sequences into a fixed-dimensional latent space, where spec-
+                                                                        which begins with patch partitioning and initial encoding.
+tral analysis is performed on the hidden features rather than
+                                                                        To address the non-uniform information density of patches
+the raw observations. Unlike previous approaches, TFMixer
+                                                                        in irregular time series, we introduce a Query-based Patch
+integrates a learnable NUDFT module, enabling the direct
+                                                                        Attention mechanism and Dual-Mixing Blocks to deeply
+extraction of spectral features from datasets with raw non-
+                                                                        explore temporal dependencies between patches and inter-
+uniform observations.
+                                                                        variable correlations. Following this, the Output Module
+                                                                        facilitates the joint fusion of time and frequency features,
+3. Preliminary                                                          employing an MLP decoder to generate the initial predic-
+                                                                        tions. The final prediction is synthesized by combining the
+3.1. Problem Definition
+                                                                        initial predictions with the seasonal bias derived from fu-
+An Irregular Multivariate Time Series (IMTS) O is defined               ture timestamps via Inverse NUDFT, followed by a Masked
+as a collection of N univariate variable {on1:Ln }N
+                                                  n=1 . Each            Denormalization step.
+variable on1:Ln consists of Ln observation triplets (tni , xni ),
+                                                                        Below, we will introduce the details of each module in our
+where tni denotes the timestamp and xni represents the corre-
+                                                                        framework. Technical details regarding the Masked RevIN
+sponding observed value for the i-th observation of the n-th
+                                                                        Module are provided in the Appendix B.1.
+variable. These variables are characterized by non-uniform
+temporal intervals and inter-variable asynchronicity.
+                                                                        4.2. Global Frequency Module
+The IMTSF task is formulated as follows: given the histori-
+cal observations O and a set of target prediction queries               The Global Frequency Module is designed to capture over-
+Q = {[qjn ]Q    N                    n                                  arching periodic dependencies that are often obscured by
+           j=1 }n=1 (where each qj represents a future
+             n
+
+
+timestamp for variable n), the goal is to develop and opti-             irregular sampling and missing values in the time domain.
+mize a predictive model F(·) that generates accurate esti-              Unlike the standard Fast Fourier Transform (FFT) which re-
+                                                                        quires inputs to be on a regular grid, we implement a Learn-
+
+                                                                    3
+       Bridging Time and Frequency: A Joint Modeling Framework for Irregular Multivariate Time Series Forecasting
+
+                                        Global Frequency Module                                                                                                                                        Inverse NUDFT
+
+                                          NUDFT                                                                                                                                                                     ∑
+                                         Calculation            Spectrum           Spectral                         Spectrum
+                                                               Refinement        Coefficients                        Encoder                                    Future Time
+
+
+
+
+                                                                                                                                                                                                    Seasonal
+                                                                                                                                                                                                      Bias
+
+
+                                                                                                                                                                                                               Denormalization
+                                                                                                                                                      hfreq
+                                                       Learnable NUDFT
+
+
+
+
+                                                                                                                                                              Feature Fusion
+                    Normalization
+
+
+
+
+                                                                                                                                                                               hjoint
+
+
+
+
+                                                                                                                                                                                                                  Masked
+                                                                                                                                                                                        Decoder
+            ？
+                                        Local Time Module
+                      Masked
+
+
+                ？
+
+
+
+
+                                                                                                                                                                                         MLP
+            ？？
+           ？
+                                                        Transformable                                                                                                                             Prediction
+
+
+
+
+                                                                                                                                  Aggregation Layer
+           ？？
+
+
+
+
+                                                                             Patch Attention
+
+
+
+
+                                                                                                                                                      htime
+                                                                                                                 Variable Mixer
+                                                         Time-aware
+
+
+
+
+                                                                                                 Patch Mixer
+                                                                              Query-based
+  Raw Input                                                                                                                                                                                                                          Final Output
+                                                         Convolution
+                                         Patching
+
+
+
+                                                                                                                                                              Output Module
+                                                           Continuous
+                                                             Time                                                                                                                     Masked                                   Global
+                                                           Embedding                                                                                                                Revin Module                          Frequency Module
+                                                                                                                                                                                        Local
+                                                    Patch Encoder           Query-based Patch Mixing                                                                                                                             Output Module
+                                                                                                                                                                                    Time Module
+
+Figure 3. TFMixer architecture. (1) Masked RevIN Module normalizes/denormalizes the data. (2) Global Frequency Module captures
+long-range periodic dependencies through a learnable Non-Uniform Discrete Fourier Transform (NUDFT). (3) Local Time Module
+extracts fine-grained patterns using a transformable patch encoder followed by query-based attention and dual-mixing blocks. (4) Output
+Module performs joint time-frequency feature fusion to generate the final forecasting results.
+
+
+able Non-Uniform Discrete Fourier Transform (NUDFT) to                                                         cess the raw coefficients:
+directly process the irregular triplets (T , V, M).
+                                                                                                               Srefined = MLPrefine (Sraw ) = [R̂n (ωk ) ∥ Iˆn (ωk )] ∈ RN ×2K ,
+4.2.1. L EARNABLE NUDFT                                                                                                                                                     (6)
+                                                                                                               where MLPrefine (·) applies non-linear transformations while
+NUDFT Calculation. Given a set of learnable frequencies                                                        preserving the original spectral dimensionality N × 2K.
+{ωk }K
+     k=1 , we project the normalized observed values V                                                         This step allows the model to adaptively refine the am-
+onto a set of non-uniform basis functions. For each variable                                                   plitude and phase information, capturing complex, non-
+n, the real and imaginary components of the spectrum at                                                        stationary frequency patterns that are difficult to extract
+frequency ωk are calculated as:                                                                                through analytical derivation alone. This refined spectrum
+                                                                                                               Srefined = [R̂n (ωk ) ∥ Iˆn (ωk )] provides the final optimized
+                                L
+                     1 X n n                                                                                   Spectral coefficients for the subsequent Inverse NUDFT,
+   Rn (ωk ) =           ml vl cos(2πωk tl ) ∈ RN ×K ,                                          (2)
+                    Zn                                                                                         ensuring that the generated seasonal bias accurately reflects
+                             l=1
+                                    L
+                                                                                                               complex periodicities.
+                 1 X n n
+   In (ωk ) = −        ml vl sin(2πωk tl ) ∈ RN ×K ,                                           (3)
+                Zn                                                                                             4.2.2. S PECTRUM E NCODER
+                   l=1
+                              L
+                                       !
+                             X                                                                                 After obtaining the refined spectrum Srefined , the Spectrum
+                                  n
+                Zn = max         ml , ϵ ,                                                      (4)             Encoder is responsible for extracting high-level frequency
+                                                     l=1                                                       features and projecting them into the model’s latent space
+                                                                                                               to facilitate joint modeling with the local time branch. We
+where Zn is a normalization factor representing the count of                                                   project the refined spectral features into the hidden dimen-
+valid observations for variable n, and ϵ is a small constant to                                                sion D using a dedicated projection layer followed by nor-
+prevent division by zero. We then construct the raw spectral                                                   malization:
+representation Sraw ∈ RN ×2K by concatenating the real
+and imaginary parts:                                                                                                                    hfreq = LayerNorm (MLPenc (Srefined )) ,                                                                 (7)
+
+           Sraw = [Rn (ωk ) ∥ In (ωk )] ∈ RN ×2K ,                                             (5)             where hfreq ∈ RN ×D serves as the global frequency-domain
+                                                                                                               representation.
+where ∥ denotes the concatenation operation.
+                                                                                                               In summary, the Global Frequency Module outputs two key
+Spectrum Refinement. To compensate for the limited ex-                                                         components: (1) the latent representation hfreq for feature
+pressiveness of the purely linear NUDFT calculation, we                                                        fusion in the Output Module, and (2) the refined spectral
+introduce a refinement stage within the learnable NUDFT                                                        coefficients Srefined (which retains the N × 2K structure) for
+block. We employ a Multi-Layer Perceptron (MLP) to pro-                                                        subsequent Inverse NUDFT to provide a seasonal bias.
+
+                                                                                                       4
+       Bridging Time and Frequency: A Joint Modeling Framework for Irregular Multivariate Time Series Forecasting
+
+4.3. Local Time Module                                               Considering that some patches may lack observations in
+                                                                     sparse scenarios, we incorporate a patch masking term mp
+The Local Time Module is engineered to capture fine-
+                                                                     (where mp = 1 if the patch contains observations, else 0)
+grained temporal patterns and inter-variable correlations
+                                                                     to produce the final encoding hp = [hcp ∥ mp ] ∈ RD , and
+from irregular observations. By leveraging a patch encoder                                        P ×D
+                                                                     we have hpatch = [hp ]P
+                                                                                           p=1 ∈ R      .
+mechanism and the query-based patch mixing mechanism,
+the module adaptively handles the non-uniform information
+                                                                     4.3.2. Q UERY- BASED PATCH M IXING
+density inherent in IMTSF.
+                                                                     Query-based Patch Attention. Directly processing a se-
+4.3.1. PATCH E NCODER                                                quence of P patches is often inefficient in the context of
+                                                                     IMTSF due to extreme variability in information density.
+Patching. Time series patching has demonstrated signifi-
+                                                                     Patches corresponding to sparse sampling intervals contain
+cant efficacy in capturing local semantic information while
+                                                                     fewer observations, which may introduce significant noise
+reducing computational complexity. Unlike standard patch-
+                                                                     and hinder the model’s ability to capture meaningful tempo-
+ing for regular time series that segments data into a fixed
+                                                                     ral patterns. To distill the most salient features and ensure
+number of observations, we adopt the transformable patch-
+                                                                     a fixed-capacity representation regardless of the input se-
+ing strategy inspired by tPatchGNN (Zhang et al., 2024a) to
+                                                                     quence length, we introduce a bottleneck mechanism via W
+handle the inherent irregularity of IMTS. Formally, given
+                                                                     learnable query patches W ∈ RW ×D .
+a univariate irregular time series o1:L , we partition it into
+a sequence of P transformable patches [olp :rp ]P p=1 . Each         These learnable queries interact with the extracted patch
+patch is defined by a consistent time window of size s (e.g.,        features hpatch = [h1 , . . . , hP ] ∈ RP ×D through a cross-
+2 hours), ensuring a unified temporal resolution across all          attention mechanism. This process allows the model to
+variables regardless of their sampling density. For the p-th         adaptively aggregate information from the most informa-
+patch, the boundary indices lp and rp are determined by the          tive temporal patches while suppressing noise from sparse
+time horizon:                                                        patches. The attention weights A are computed as:
+
+                                                                                         W(hpatch + PE)⊤
+                                                                                                               
+  lp = min i | ti ≥ (p − 1)s,       rp = max i | ti < ps. (8)
+                                                                        A = Softmax                 √             ∈ RW ×P , (12)
+                                                                                                      D
+Continuous Time Embedding. To accurately represent                   where PE ∈ RP ×D represents the positional encodings
+the continuous-time nature of IMTS, we adopt a continuous            assigned to each patch to preserve temporal order. The final
+time embedding ϕ(t) to encode each timestamp tl . The                semantic representation hW ∈ RW ×D is obtained by taking
+embedding is formulated as:                                          the weighted sum of the patch features:
+                (
+                  ω0 · t + α0 ,      if d = 0                                              hW = Ahpatch .                    (13)
+      ϕ(t)[d] =                                     , (9)
+                  sin(ωd · t + αd ), if 0 < d < Dt
+                                                                     Dual-Mixing Blocks. The condensed semantic represen-
+where ωd and αd are learnable parameters. The linear term            tations HW ∈ RN ×W ×D (where N is the number of
+captures non-periodic trends, while the periodic terms model         variables) are further processed through L layers of Dual-
+the inherent seasonality within the data. Each observation i         Mixing Blocks to capture deep temporal and multivariate
+within a patch is represented as a concatenated vector:              dependencies. These blocks alternate between mixing infor-
+                          r p                    r
+                                                 p
+                                                                     mation within the temporal domain of individual variables
+            zlp :rp = [zi ]i=lp
+                                = [ϕ(ti ) ∥ vi ]i=l p
+                                                      .   (10)       and across the variable dimension.
+                                                                     Patch Mixing. To capture the intra-variable temporal evo-
+Transformable Time-aware Convolution. Since each                     lution, the patch mixer operates across the W semantic
+transformable patch is essentially a sub-irregular time se-          patches. For each variable n and feature dimension d, the
+ries, we utilize the Transformable Time-aware Convolution            MLP-based patch mixer allows different semantic tokens to
+Network (TTCN) (Zhang et al., 2024c) to capture its local            interact:
+semantics. TTCN is specifically designed to handle the
+inherent variability of IMTS by providing the flexibility to           H′ = LayerNorm(HW + MLPpatch (Permute(HW ))),
+adapt to variable-length sequences and varying time inter-                                                                  (14)
+vals without additional learnable parameters. By utilizing           where MLPpatch (·) consists of two linear layers with a
+transformable filters that ensure consistent scaling across          GELU non-linearity. By mixing information across the
+diverse temporal resolutions, the latent patch embedding is          distilled W tokens, the model captures the high-level tem-
+extracted as:                                                        poral dynamics that characterize each specific variable.
+                     hcp = TTCN(zlp :rp ).              (11)         Variable Mixing. To model inter-variable correlations and
+
+                                                                 5
+       Bridging Time and Frequency: A Joint Modeling Framework for Irregular Multivariate Time Series Forecasting
+
+joint system dynamics, we employ a variable mixer that                  4.5. Loss Function
+operates across the N variables for each semantic token and
+                                                                        The optimization of TFMixer balances supervised forecast-
+feature dimension:
+                                                                        ing with self-supervised reconstruction. The total loss L is
+  H′′ = LayerNorm(H′ + MLPvar (Permute(H′ ))), (15)                     formulated as:
+This operation allows the model to exchange information                               L = Lfore (V̂, Vtrue ) + γLrecon (X , Ẋ ),    (21)
+among different variables, capturing complex cross-channel                      K
+dependencies which are crucial for accurate multivariate
+                                                                                X
+                                                                         Ẋ =         [R̂n (ωk ) cos(2πωk T ) − Iˆn (ωk ) sin(2πωk T )],
+forecasting.                                                                    k=1
+
+Following the L dual-mixing layers, the local time module                                                                            (22)
+employs an aggregation layer to consolidate the W semantic              where γ is a hyperparameter that weights the relative impor-
+dimensions into a fixed-length temporal context vector. De-             tance of the two objectives.
+pending on the configuration, this is implemented as either
+a linear projection or a 1D-convolutional layer:                        Forecasting Loss (Lfore ) evaluates the predictive perfor-
+                                                                        mance on future target values using the Mean Absolute
+    htime = Aggregation(Flatten(H′′ )) ∈ RN ×D ,             (16)       Error (MAE). To accommodate the irregular sampling and
+where H ∈ R ′′        N ×W ×D
+                            , htime serves as the final local           missing values inherent in IMTS, the loss is computed exclu-
+temporal representation, encapsulating the fine-grained pat-            sively over the observed future timestamps. This objective
+terns and inter-variable interactions extracted from the non-           restricts the model’s focus to minimizing errors solely on
+uniform input patches.                                                  valid target queries.
+                                                                        Reconstruction Loss (Lrecon ) measures the MAE between
+4.4. Output Module                                                      the original historical observations X and the reconstructed
+                                                                        historical values Ẋ . As defined, Ẋ is synthesized from
+The Output Module facilitates the joint fusion of time and
+                                                                        the refined spectral coefficients {Rn (ωk ), In (ωk )} via the
+frequency features, employing an MLP decoder to generate
+                                                                        Inverse NUDFT over the historical timestamps T . This ob-
+the initial predictions. The final predictions is synthesized
+                                                                        jective ensures that the Global Frequency Module captures
+by combining the initial predictions with the seasonal bias
+                                                                        authentic physical periodicities rather than spurious noise.
+derived from future timestamps via Inverse NUDFT, fol-
+lowed by a Masked Denormalization step.
+                                                                        5. Experiments
+Joint Feature Fusion. Features from both branches are
+fused via a learnable weighted connection:                              5.1. Experimental Settings
+                    hjoint = htime + λfusion · hfreq ,       (17)       5.1.1. DATASETS
+where λfusion is a learnable scaling parameter.                         To ensure comprehensive and fair comparisons across dif-
+MLP Decoder and Seasonal Bias. The base prediction                      ferent models, we perform experiments on four widely
+V̂base is generated by passing hjoint and future time encodings         used benchmarks for irregular multivariate forecasting:
+QEmbedding through an MLP decoder.                                      PhysioNet, MIMIC, HumanActivity, and USHCN. These
+                                                                        datasets span multiple domains such as healthcare, biome-
+                 V̂base = MLP([hjoint ∥ QEmbedding ]).       (18)       chanics, and climate science. Summary statistics and further
+                                                                        details are available in Appendix A.1.
+where QEmbedding denotes the encoded representation of the
+future timestamps Q, derived via the transformation defined
+                                                                        5.1.2. BASELINES
+in Equation 9.
+                                                                        We comprehensively evaluate our model against 14 base-
+Concurrently, Inverse NUDFT is performed using the spec-
+                                                                        lines: 1) IMTS Classification/Imputation Models, com-
+tral coefficients Srefined to estimate the seasonal bias:
+                                                                        prising PrimeNet (Chowdhury et al., 2023), SeFT (Horn
+           K
+           X                                                            et al., 2020), mTAN (Shukla & Marlin, 2021), GRU-D
+V̂bias =         [R̂n (ωk ) cos(2πωk Q) − Iˆn (ωk ) sin(2πωk Q)].       (Che et al., 2016), Raindrop (Zhang et al., 2022), and
+           k=1
+                                                                        Warpformer (Zhang et al., 2023); and 2) IMTS Fore-
+                                                             (19)
+                                                                        casting Models, which include NeuralFlows (Bilos et al.,
+The final prediction is obtained as:                                    2021b), CRU (Schirmer et al., 2022), GNeuralFlow (Mer-
+                                                                        catali et al., 2024), tPatchGNN (Zhang et al., 2024a),
+                  V̂ = Denorm(V̂base + λs · V̂bias ),        (20)
+                                                                        GraFITi (Yalavarthi et al., 2024), Hi-Patch (Luo et al., 2025),
+where λs is a learnable scaling parameter.                              KAFNet (Zhou et al., 2026), and APN (Liu et al., 2026b).
+
+                                                                    6
+           Bridging Time and Frequency: A Joint Modeling Framework for Irregular Multivariate Time Series Forecasting
+
+Table 1. Forecasting performance on four IMTS datasets. Overall performance is evaluated by MSE and MAE (mean ± std). The best and
+second-best results are highlighted in bold and with an underline, respectively.
+
+ Dataset                  HumanActivity                      USHCN                           PhysioNet                       MIMIC
+
+ Metric                MSE             MAE             MSE             MAE             MSE               MAE           MSE             MAE
+
+ PrimeNet          4.2507±0.0041   1.7018±0.0011   0.4930±0.0015   0.4954±0.0018   0.7953±0.0000   0.6859±0.0001   0.9073±0.0001   0.6614±0.0001
+ NeuralFlows       0.1722±0.0090   0.3150±0.0094   0.2087±0.0258   0.3157±0.0187   0.4056±0.0033   0.4466±0.0027   0.6085±0.0101   0.5306±0.0066
+ CRU               0.1387±0.0073   0.2607±0.0092   0.2168±0.0162   0.3180±0.0248   0.6179±0.0045   0.5778±0.0031   0.5895±0.0092   0.5151±0.0048
+ mTAN              0.0993±0.0026   0.2219±0.0047   0.5561±0.2020   0.5015±0.0968   0.3809±0.0043   0.4291±0.0035   0.9408±0.1126   0.6755±0.0459
+ SeFT              1.3786±0.0024   0.9762±0.0007   0.3345±0.0022   0.4083±0.0084   0.7721±0.0021   0.6760±0.0029   0.9230±0.0015   0.6628±0.0008
+ GNeuralFlow       0.3936±0.1585   0.4541±0.0841   0.2205±0.0421   0.3286±0.0412   0.8207±0.0310   0.6759±0.0100   0.8957±0.0209   0.6450±0.0072
+ GRU-D             0.1893±0.0627   0.3253±0.0485   0.2097±0.0493   0.3045±0.0305   0.3419±0.0029   0.3992±0.0011   0.4759±0.0100   0.4526±0.0055
+ Raindrop          0.0916±0.0072   0.2114±0.0072   0.2035±0.0336   0.3029±0.0264   0.3478±0.0019   0.4044±0.0020   0.6754±0.1829   0.5444±0.0868
+ Warpformer        0.0449±0.0010   0.1228±0.0018   0.1888±0.0598   0.2939±0.0591   0.3056±0.0011   0.3661±0.0016   0.4302±0.0035   0.4025±0.0014
+ tPatchGNN         0.0443±0.0009   0.1247±0.0031   0.1885±0.0403   0.3084±0.0479   0.3133±0.0053   0.3697±0.0049   0.4431±0.0115   0.4077±0.0088
+ GraFITi           0.0437±0.0005   0.1221±0.0017   0.1691±0.0093   0.2777±0.0248   0.3075±0.0015   0.3637±0.0036   0.4359±0.0455   0.4142±0.0297
+ Hi-Patch          0.0435±0.0002   0.1204±0.0009   0.1749±0.0268   0.2717±0.0216   0.3071±0.0029   0.3675±0.0042   0.4279±0.0010   0.4033±0.0032
+ KAFNet            0.0429±0.0003   0.1161±0.0010   0.1698±0.0181   0.2690±0.0226   0.3164±0.0028   0.3715±0.0038   0.4402±0.0086   0.4102±0.0041
+ APN               0.0421±0.0001   0.1159±0.0006   0.1590±0.0137   0.2611±0.0167   0.3093±0.0011   0.3650±0.0026   0.4292±0.0027   0.4016±0.0016
+
+ TFMixer (Ours)    0.0415±0.0004   0.1124±0.0005   0.1448±0.0044   0.2052±0.0036   0.3118±0.0023   0.3576±0.0019   0.4182±0.0038   0.3782±0.0034
+
+
+
+Detailed descriptions of the methods are provided in the                    mate science (USHCN). This outstanding performance is
+Appendix A.2.                                                               primarily attributed to its decoupled architecture, which
+                                                                            models global periodicity and local temporal representations
+5.1.3. I MPLEMENTATION D ETAILS                                             in parallel. Specifically, TFMixer utilizes a learnable Non-
+                                                                            Uniform Discrete Fourier Transform (NUDFT) to directly
+The lookback time periods are 36 hours for MIMIC-III,
+                                                                            extract spectral representations from irregular timestamps,
+and PhysioNet, 3000 milliseconds for Human Activity, and
+                                                                            while employing a query-based patch attention mechanism
+3 years for USHCN. Human Activity uses 300 millisec-
+                                                                            to adaptively aggregate informative temporal segments and
+onds as forecast length, and the rest datasets use the next
+                                                                            alleviate information density imbalance.
+3 timestamps as forecast targets, following the settings in
+existing works (Liu et al., 2026b; Li et al., 2025; Bilos et al.,
+                                                                            5.3. Model Analyses
+2021b; Brouwer et al., 2019). To ensure reproducibility and
+mitigate the effects of randomness, each experiment is run                  5.3.1. A BLATION S TUDIES
+independently with five different random seeds (from 2024
+to 2028), and we report the mean and standard deviation.                    We perform ablation studies to validate the contribution of
+Further details regarding the implementation are provided                   each primary component of TFMixer—see Table 2. We
+in Appendix A.3.                                                            make the following observations: 1) Removing either the
+                                                                            Global Frequency Module or the Local Time Module and
+                                                                            retaining a single branch leads to performance degradation,
+5.2. Main Results
+                                                                            demonstrating their complementarity and the necessity of
+Comprehensive results are presented in Table 1 to demon-                    jointly modeling global and local dependencies. 2) Eliminat-
+strate the performance of TFMixer. We have the follow-                      ing the reconstruction loss (Section 4.5) and optimizing only
+ing observations: 1) Compared with forecasters of various                   with the forecasting loss degrades performance, indicating
+structures, TFMixer achieves outstanding predictive perfor-                 that the reconstruction loss acts as an effective regularizer
+mance. In terms of absolute metrics, TFMixer surpasses the                  for the Global Frequency Module. 3) Removing the Spec-
+second-best baseline, APN, with a 3.0% reduction in MSE                     trum Refinement module (Section 4.2.1) and reverting to a
+and an 8.1% reduction in MAE. 2) TFMixer demonstrates                       purely linear NUDFT calculation impairs model accuracy.
+exceptional cross-domain generalization and robustness, de-                 This suggests that the learnable NUDFT is critical for effec-
+livering superior performance across diverse IMTS datasets                  tively extracting spectral representations from irregular time
+with distinct characteristics—ranging from healthcare (Phy-                 series. 4) Removing the Query-based Patch Mixing module
+sioNet, MIMIC) to biomechanics (HumanActivity) and cli-                     (Section 4.3.2) and using only the naive Patch Encoder re-
+
+
+                                                                        7
+              Bridging Time and Frequency: A Joint Modeling Framework for Irregular Multivariate Time Series Forecasting
+
+                                Table 2. Ablation studies for TFMixer in terms of the lowest MSE and MAE highlighted in bold.
+
+                Variations                                  Activity                                      USHCN                                          PhysioNet                                         MIMIC
+
+                  Metric                         MSE                        MAE                   MSE                       MAE                   MSE                  MAE                        MSE                  MAE
+
+ w/o Global Frequency Module               0.0430±0.0018              0.1147±0.0036         0.1468±0.0075          0.2145±0.0093              0.3123±0.0028        0.3580±0.0024            0.4211±0.0073         0.3805±0.0054
+     w/o Local Time Module                 0.0432±0.0004              0.1147±0.0005         0.1566±0.0083          0.2339±0.0035              0.3542±0.0022        0.4023±0.0016            0.5454±0.0021         0.4635±0.0011
+     w/o Reconstruction Loss               0.0445±0.0011              0.1137±0.0011         0.1464±0.0040          0.2069±0.0040              0.3126±0.0015        0.3585±0.0023            0.4190±0.0048         0.3790±0.0039
+    w/o Spectrum Refinement                0.0420±0.0007              0.1126±0.0004         0.1519±0.0095          0.2059±0.0062              0.3128±0.0025        0.3578±0.0022            0.4197±0.0044         0.3789±0.0034
+ w/o Query-based Patch Mixing              0.0432±0.0004              0.1129±0.0005         0.1518±0.0116          0.2109±0.0091              0.3188±0.0023        0.3595±0.0022            0.4478±0.0005         0.3915±0.0006
+
+            TFMixer (Ours)                 0.0415±0.0004              0.1124±0.0005         0.1448±0.0044          0.2052±0.0036              0.3118±0.0023        0.3576±0.0019            0.4182±0.0038         0.3782±0.0034
+
+
+
+               ×                                                  ×                                                  ×                                                  ×  
+                                                                                                                                                                                                
+
+                                                                                                                                                                             
+  0 6 (
+
+
+
+
+                                                           0 6 (
+
+
+
+
+                                                                                                                    0 6 (
+
+
+
+
+                                                                                                                                                                             0 6 (
+                                                                                                                                                                             
+                                                                                                                                                                             
+                                                                                                                                                          
+                          0 R G H O  ' L P H Q V L R Q                            0 R G H O  ' L P H Q V L R Q                            0 R G H O  ' L P H Q V L R Q                            0 R G H O  ' L P H Q V L R Q
+               (a) Human Activity                                             (b) USHCN                                              (c) PhysioNet                                              (d) MIMIC
+                            Figure 4. Parameter sensitivity studies of TFMixer, analyzing the impact of different model dimensions D.
+
+
+               ×                                                  ×                                                  ×                                                  ×  
+                                                                                                                                                                                                
+
+
+                                                                                                                                                                             
+  0 6 (
+
+
+
+
+                                                           0 6 (
+
+
+
+
+                                                                                                                    0 6 (
+
+
+
+
+                                                                                                                                                                             0 6 (
+                                                                                                                                                                             
+                                                                                                                                                                             
+                                                                                                                                                                                      
+                                   :                                                        :                                                        :                                                        :
+               (a) Human Activity                                             (b) USHCN                                              (c) PhysioNet                                              (d) MIMIC
+            Figure 5. Parameter sensitivity studies of TFMixer, analyzing the impact of different number of learnable query patches W.
+
+
+duces forecasting accuracy, confirming that the query-based                                                            overly large W results in fragmented and highly coupled
+mechanism mitigates uneven information density across                                                                  semantic information. The optimal value typically resides
+patches and improves predictive performance.                                                                           at 8 or 16. Due to space constraints, please refer to the
+                                                                                                                       Appendix B.3 for additional parameter sensitivity analyses.
+5.3.2. PARAMETER S ENSITIVITY
+We also conduct parameter sensitivity studies of TFMixer.                                                              6. Conclusion
+We make the following observations: 1) Figure 4 shows
+                                                                                                                       In this paper, we present TFMixer, a novel joint
+the impact of the model dimension D varies significantly
+                                                                                                                       time–frequency modeling framework specifically designed
+with the dataset scale. Smaller datasets, such as Human
+                                                                                                                       for IMTSF. By integrating a Global Frequency Module
+Activity and USHCN, tend to perform better with lower di-
+                                                                                                                       based on learnable NUDFT and a Local Time Module with a
+mensions (e.g., 32 or 64); excessive dimensionality in these
+                                                                                                                       query-based patch mixing mechanism, TFMixer effectively
+cases often leads to performance degradation due to overfit-
+                                                                                                                       overcomes the limitations of standard models in handling
+ting. Conversely, larger datasets like PhysioNet and MIMIC
+                                                                                                                       non-uniform sampling and information density imbalance.
+require higher dimensions (e.g., 128 or 256) to provide suf-
+                                                                                                                       Our dual-branch approach enables the simultaneous capture
+ficient representational capacity for data fitting. 2) Figure 5
+                                                                                                                       of global dependencies and fine-grained local dynamics. Ex-
+demonstrates the influence of the number of learnable query
+                                                                                                                       tensive evaluations on real-world datasets demonstrate that
+patches, W . We observed that both excessively small and
+                                                                                                                       TFMixer consistently outperforms existing state-of-the-art
+large patch counts negatively impact performance. A small
+                                                                                                                       methods.
+W fails to capture sufficient semantic information, while an
+
+
+                                                                                                                   8
+       Bridging Time and Frequency: A Joint Modeling Framework for Irregular Multivariate Time Series Forecasting
+
+Impact Statement                                                    Kidger, P., Morrill, J., Foster, J., and Lyons, T. J. Neural
+                                                                      controlled differential equations for irregular time series.
+This paper presents work whose goal is to advance the field           In NeurIPS 2020, 2020.
+of Machine Learning. There are many potential societal
+consequences of our work, none which we feel must be                Li, B., Luo, Y., Liu, Z., Zheng, J., Lv, J., and Ma, Q. Hyper-
+specifically highlighted here.                                         imts: Hypergraph neural network for irregular multivari-
+                                                                       ate time series forecasting. In ICML, 2025.
+References                                                          Liu, J., Cao, M., and Chen, S. Timecheat: A channel
+Anonymous Authors. Hyfad: Hybrid time-frequency dif-                  harmony strategy for irregularly sampled multivariate
+  fusion with frequency-aware embedding for time series               time series analysis. In AAAI 2025, pp. 18861–18869,
+  imputation. Concurrent Submission to ICML, 2026. File-              2025.
+  name: HYFAD_ICML_2026.pdf.                                        Liu, X., Qiu, X., Cheng, H., Wu, X., Guo, C., Yang, B., and
+Bilos, M., Sommer, J., Rangapuram, S. S., Januschowski, T.,           Hu, J. Astgi: Adaptive spatio-temporal graph interactions
+  and Günnemann, S. Neural flows: Efficient alternative to            for irregular multivariate time series forecasting. In ICLR,
+  neural odes. In NeurIPS 2021, pp. 21325–21337, 2021a.               2026a.
+
+Bilos, M., Sommer, J., Rangapuram, S. S., Januschowski, T.,         Liu, X., Qiu, X., Wu, X., Li, Z., Guo, C., Hu, J., and Yang,
+  and Günnemann, S. Neural Flows: Efficient alternative to            B. Rethinking irregular time series forecasting: A simple
+  neural odes. In NeurIPS 2021, pp. 21325–21337, 2021b.               yet effective baseline. In AAAI, 2026b.
+
+Brouwer, E. D., Simm, J., Arany, A., and Moreau, Y.                 Luo, Y., Zhang, B., Liu, Z., and Ma, Q. Hi-patch: Hierar-
+  Gru-ode-bayes: Continuous modeling of sporadically-                 chical patch gnn for irregular multivariate time series. In
+  observed time series. In NeurIPS 2019, pp. 7377–7388,               ICML, 2025.
+  2019.                                                             Menne, M., Williams Jr, C., and Vose, R. Long-term daily
+Che, Z., Purushotham, S., Cho, K., Sontag, D. A., and Liu,           and monthly climate records from stations across the con-
+  Y. Recurrent neural networks for multivariate time series          tiguous united states (us historical climatology network).
+  with missing values. CoRR, abs/1606.01865, 2016.                   Technical report, 2016.
+
+Che, Z., Purushotham, S., Cho, K., Sontag, D., and Liu, Y.          Mercatali, G., Freitas, A., and Chen, J. Graph neural flows
+  Recurrent neural networks for multivariate time series             for unveiling systemic interactions among irregularly sam-
+  with missing values. Scientific reports, 8(1):6085, 2018.          pled time series. In NeurIPS 2024, 2024.
+
+Chen, T. Q., Rubanova, Y., Bettencourt, J., and Duvenaud,           Paszke, A., Gross, S., Massa, F., Lerer, A., Bradbury, J.,
+  D. Neural ordinary differential equations. In NeurIPS               Chanan, G., Killeen, T., Lin, Z., Gimelshein, N., Antiga,
+  2018, pp. 6572–6583, 2018.                                          L., Desmaison, A., Köpf, A., Yang, E. Z., DeVito, Z.,
+                                                                      Raison, M., Tejani, A., Chilamkurthy, S., Steiner, B.,
+Chowdhury, R. R., Li, J., Zhang, X., Hong, D., Gupta,                 Fang, L., Bai, J., and Chintala, S. Pytorch: An imperative
+  R. K., and Shang, J. PrimeNet: Pre-training for irregular           style, high-performance deep learning library. In NeurIPS,
+  multivariate time series. In AAAI 2023, pp. 7184–7192,              pp. 8024–8035, 2019.
+  2023.
+                                                                    Qiu, X., Hu, J., Zhou, L., Wu, X., Du, J., Zhang, B., Guo,
+Gao, H., Shen, W., Qiu, X., Xu, R., Yang, B., and Hu, J.              C., Zhou, A., Jensen, C. S., Sheng, Z., and Yang, B. TFB:
+  SSD-TS: Exploring the potential of linear state space               Towards comprehensive and fair benchmarking of time
+  models for diffusion models in time series imputation. In           series forecasting methods. In Proc. VLDB Endow. 2024,
+  SIGKDD 2025, 2025.                                                  pp. 2363–2377, 2024.
+Horn, M., Moor, M., Bock, C., Rieck, B., and Borgwardt,             Qiu, X., Li, X., Pang, R., Pan, Z., Wu, X., Yang, L., Hu,
+  K. M. Set functions for time series. In ICML 2020, vol-             J., Shu, Y., Lu, X., Yang, C., Guo, C., Zhou, A., Jensen,
+  ume 119 of Proceedings of Machine Learning Research,                C. S., and Yang, B. EasyTime: Time series forecasting
+  pp. 4353–4363, 2020.                                                made easy. In ICDE 2025, 2025a.
+Johnson, A. E., Pollard, T. J., Shen, L., Lehman, L.-w. H.,         Qiu, X., Li, Z., Qiu, W., Hu, S., Zhou, L., Wu, X., Li,
+  Feng, M., Ghassemi, M., Moody, B., Szolovits, P., An-               Z., Guo, C., Zhou, A., Sheng, Z., Hu, J., Jensen, C. S.,
+  thony Celi, L., and Mark, R. G. Mimic-iii, a freely ac-             and Yang, B. TAB: Unified benchmarking of time series
+  cessible critical care database. Scientific data, 3(1):1–9,         anomaly detection methods. In Proc. VLDB Endow. 2025,
+  2016.                                                               pp. 2775–2789, 2025b.
+
+                                                                9
+       Bridging Time and Frequency: A Joint Modeling Framework for Irregular Multivariate Time Series Forecasting
+
+Qiu, X., Wu, X., Cheng, H., Liu, X., Guo, C., Hu, J., and             Zhang, W., Yin, C., Liu, H., Zhou, X., and Xiong, H. Irreg-
+  Yang, B. DBLoss: Decomposition-based loss function                    ular multivariate time series forecasting: A transformable
+  for time series forecasting. In NeurIPS 2025, 2025c.                  patching graph neural networks approach. In ICML,
+                                                                        2024b.
+Qiu, X., Wu, X., Lin, Y., Guo, C., Hu, J., and Yang, B.
+  DUET: Dual clustering enhanced multivariate time series             Zhang, W., Zhang, L., Han, J., Liu, H., Fu, Y., Zhou, J., Mei,
+  forecasting. In SIGKDD 2025, pp. 1185–1196, 2025d.                    Y., and Xiong, H. Irregular traffic time series forecasting
+                                                                        based on asynchronous spatio-temporal graph convolu-
+Schirmer, M., Eltayeb, M., Lessmann, S., and Rudolph, M.                tional networks. In SIGKDD, pp. 4302–4313, 2024c.
+  Modeling irregular time series with continuous recurrent
+  units. In ICML 2022, volume 162 of Proceedings of                   Zhang, X., Zeman, M., Tsiligkaridis, T., and Zitnik, M.
+  Machine Learning Research, pp. 19388–19405, 2022.                     Graph-guided network for irregularly sampled multivari-
+                                                                        ate time series. In ICLR 2022, 2022.
+Shukla, S. N. and Marlin, B. M. Multi-time attention net-
+  works for irregularly sampled time series. In ICLR 2021,            Zhou, T., Ma, Z., Wen, Q., Sun, L., Yao, T., Yin, W., Jin,
+  2021.                                                                 R., et al. Film: Frequency improved legendre memory
+                                                                        model for long-term time series forecasting. In NeurIPS,
+Silva, I., Moody, G., Scott, D. J., Celi, L. A., and Mark,              volume 35, pp. 12677–12690, 2022a.
+   R. G. Predicting in-hospital mortality of icu patients: The
+   physionet/computing in cardiology challenge 2012. In               Zhou, T., Ma, Z., Wen, Q., Wang, X., Sun, L., and Jin,
+  2012 computing in cardiology, pp. 245–248, 2012.                      R. Fedformer: Frequency enhanced decomposed trans-
+                                                                        former for long-term series forecasting. In ICML 2022,
+Wu, H., Hu, T., Liu, Y., Zhou, H., Wang, J., and Long, M.               volume 162 of Proceedings of Machine Learning Re-
+ Timesnet: Temporal 2d-variation modeling for general                   search, pp. 27268–27286, 2022b.
+ time series analysis. In ICLR 2023, 2023.
+                                                                      Zhou, T., Ma, Z., Wen, Q., Wang, X., Sun, L., and Jin,
+Wu, X., Qiu, X., Cheng, H., Li, Z., Hu, J., Guo, C., and                R. Fedformer: Frequency enhanced decomposed trans-
+ Yang, B. Enhancing time series forecasting through se-                 former for long-term series forecasting. In ICML, pp.
+ lective representation spaces: A patch perspective. arXiv              27268–27286, 2022c.
+ preprint arXiv:2510.14510, 2025a.
+                                                                      Zhou, Z., Huang, Y., Wang, Y., Wu, Y., Kwok, J., and Liang,
+Wu, X., Qiu, X., Gao, H., Hu, J., Yang, B., and Guo, C.                 Y. Revitalizing canonical pre-alignment for irregular
+ K2 VAE: A koopman-kalman enhanced variational au-                      multivariate time series forecasting. In AAAI, 2026.
+ toencoder for probabilistic time series forecasting. In
+ ICML 2025, 2025b.
+
+Wu, X., Qiu, X., Li, Z., Wang, Y., Hu, J., Guo, C., Xiong,
+ H., and Yang, B. CATCH: Channel-aware multivariate
+ time series anomaly detection via frequency patching. In
+ ICLR 2025, 2025c.
+
+Yalavarthi, V. K., Madhusudhanan, K., Scholz, R., Ahmed,
+  N., Burchert, J., Jawed, S., Born, S., and Schmidt-Thieme,
+  L. Grafiti: Graphs for forecasting irregularly sampled
+  time series. In AAAI 2024, pp. 16255–16263, 2024.
+
+Yao, Z., Bi, J., and Chen, Y. Applying deep learning to
+  individual and community health monitoring data: A
+  survey. Int. J. Autom. Comput., 15(6):643–655, 2018.
+
+Zhang, J., Zheng, S., Cao, W., Bian, J., and Li, J. Warp-
+  former: A multi-scale modeling approach for irregular
+  clinical time series. In KDD 2023, pp. 3273–3285, 2023.
+
+Zhang, W., Yin, C., Liu, H., Zhou, X., and Xiong, H. Irreg-
+  ular multivariate time series forecasting: A transformable
+  patching graph neural networks approach. In ICML 2024,
+  2024a.
+
+                                                                 10
+       Bridging Time and Frequency: A Joint Modeling Framework for Irregular Multivariate Time Series Forecasting
+
+A. Experiments setup details                                              process, effectively bridging RNNs and SDEs.
+A.1. Datasets                                                             mTAN (Shukla & Marlin, 2021) converts IMTS to reference
+                                                                          points for IMTS classification.
+                   Table 3. Dataset statistics.
+                                                                          SeFT (Horn et al., 2020) Set Functions for Time Series
+ Dataset         # Variables   # samples   Avg # Obs.   Max Length        treat observations as an unordered set of points, utilizing
+ PhysioNet           36         11,981       308.6          47            attention to remain invariant to sampling frequency.
+ MIMIC               96         21,250       144.6          96
+ HumanActivity       12          1,359       362.2         131            GNeuralFlow (Mercatali et al., 2024) enhances Neu-
+ USHCN                5          1,114       313.5         337            ralFlows with graph neural networks for IMTS analysis.
+                                                                          GRU-D (Che et al., 2016) A classic RNN variant that incor-
+To ensure comprehensive and fair comparisons across dif-                  porates trainable decay terms to account for the time elapsed
+ferent models, we perform experiments on four widely                      between irregular observations.
+used benchmarks for irregular multivariate forecasting:
+PhysioNet, MIMIC, HumanActivity, and USHCN. These                         Raindrop (Zhang et al., 2022) A graph-based attention
+datasets span multiple domains such as healthcare, biome-                 model that captures message-passing between sensors to
+chanics, and climate science. For PhysioNet, MIMIC-III,                   handle missing values and irregular intervals.
+and USHCN, we follow the preprocessing setup in previous                  Warpformer (Zhang et al., 2023) This model introduces
+work (Yalavarthi et al., 2024; Li et al., 2025). For Human                a time-warping mechanism within a Transformer block to
+Activity, we follow the preprocessing set up in (Zhang et al.,            handle non-stationary and irregularly sampled sequences.
+2023; Li et al., 2025). All datasets are partitioned into train-
+ing, validation, and test sets using a standard 80%, 10%,                 tPatchGNN (Zhang et al., 2024a) This framework partitions
+and 10% ratio, respectively.                                              time series into temporal patches and uses graph neural
+                                                                          networks to model inter-variable correlations.
+PhysioNet (Silva et al., 2012) The PhysioNet dataset con-
+sists of 12,000 irregular multivariate time series representing           GraFITi (Yalavarthi et al., 2024) uses bipartite graphs for
+unique patients. Each entry comprises 41 clinical signals                 IMTS forecasting.
+recorded sporadically during the initial 48 hours of ICU                  Hi-Patch (Luo et al., 2025) A hierarchical patching ap-
+hospitalization. For experimental purposes, the data is parti-            proach that captures both local details and global trends by
+tioned into observation and prediction windows.                           processing the series at multiple granularities.
+MIMIC-III (Johnson et al., 2016) The MIMIC-III dataset                    KAFNet (Zhou et al., 2026) Uses a compact CPA-grounded
+(Johnson et al., 2016) comprises 96 clinical variables for                architecture with frequency-domain attention to achieve
+23,457 patients during their first 48 hours in the ICU.                   state-of-the-art efficiency and accuracy.
+Human Activity The Human Activity dataset consists of 3D                  APN (Liu et al., 2026b) Addresses irregularity via a Time-
+positional sensor data from five subjects, with 12 variables              Aware Patch Aggregation (TAPA) module that adaptively
+measured at irregular intervals. The time series are divided              regularizes sequences for efficient forecasting.
+into 5,400 samples of 4,000 ms each.
+USHCN (Menne et al., 2016) While the full USHCN dataset                   A.3. Implementation Details
+spans over 150 years of climate data from numerous U.S.
+                                                                          To keep consistent with previous works, we adopt Mean
+stations across 5 variables, our study follows standard pre-
+                                                                          Squared Error (mse) and Mean Absolute Error (mae) as
+processing by focusing on 1,114 stations from 1996 to 2000.
+                                                                          evaluation metrics. The lookback time periods are 36 hours
+This results in 26,736 IMTS instances.
+                                                                          for MIMIC-III, and PhysioNet, 3000 milliseconds for Hu-
+                                                                          man Activity, and 3 years for USHCN. Human Activity uses
+A.2. Baselines                                                            300 milliseconds as forecast length, and the rest datasets
+PrimeNet (Chowdhury et al., 2023) is an IMTS pretraining                  use the next 3 timestamps as forecast targets, following
+model.                                                                    the settings in existing works (Liu et al., 2026b; Li et al.,
+                                                                          2025; Bilos et al., 2021b; Brouwer et al., 2019). Follow-
+NeuralFlows (Bilos et al., 2021b) This model uses                         ing the settings in TFB (Qiu et al., 2024) and TAB (Qiu
+continuous-time normalizing flows to model the density                    et al., 2025b), we do not apply the “Drop Last” trick to en-
+of trajectories, offering a more flexible alternative to Neural           sure a fair comparison (Qiu et al., 2025a; Wu et al., 2025c).
+ODEs.                                                                     All our experiments are conducted on a server equipped
+CRU (Schirmer et al., 2022) The Continuous Recurrent                      with an NVIDIA Tesla-A800 GPU and implemented using
+Unit models the hidden state transition as a continuous-time              the PyTorch 2.6.0+cu124 (Paszke et al., 2019) framework.
+
+                                                                     11
+                         Bridging Time and Frequency: A Joint Modeling Framework for Irregular Multivariate Time Series Forecasting
+
+Table 4. Experimental results on four irregular multivariate time series datasets evaluated using MSE and MAE, with the lookback length
+following Table 1 and forecast horizons set to the rest length of the whole series, which are 12 hours for MIMIC-III and PhysioNet’12,
+1000 milliseconds for Human Activity, and 1 year for USHCN.
+
+ Dataset                                                              HumanActivity                                                                           USHCN                                                                     PhysioNet                                                                        MIMIC
+
+ Metric                                                          MSE                                MAE                                        MSE                                  MAE                                   MSE                                    MAE                                     MSE                                  MAE
+
+ tPatchGNN                                         0.0580±0.0011                          0.1448±0.0027                              0.5753±0.0892                           0.4111±0.0713                      0.3635±0.0014                        0.4120±0.0020                                0.5140±0.0040                     0.4440±0.0052
+ Hi-Patch                                          0.0557±0.0002                          0.1423±0.0011                              0.4528±0.0075                           0.3148±0.0099                      0.3628±0.0018                        0.4145±0.0028                                0.5024±0.0115                     0.4415±0.0035
+ KAFNet                                            0.0559±0.0002                          0.1376±0.0012                              0.5327±0.1160                           0.3932±0.0731                      0.3709±0.0018                        0.4182±0.0015                                0.5334±0.0253                     0.4542±0.0134
+ APN                                               0.0657±0.0022                          0.1577±0.0033                              0.5455±0.1106                           0.3894±0.0642                      0.3686±0.0013                        0.4159±0.0020                                0.4982±0.0064                     0.4421±0.0070
+
+ TFMixer (Ours)                                    0.0553±0.0003                          0.1350±0.0005                              0.4444±0.0041                           0.2614±0.0084                      0.3603±0.0024                        0.3978±0.0022                                0.4981±0.0058                     0.4095±0.0028
+
+
+
+
+                                                                                                                          W 3 D W F K * 1 1                  + L  3 D W F K              . $ ) 1 H W                        $ 3 1                    7 ) 0 L [ H U
+
+
+                                                                                                                                                                                                                                                                              
+
+                                                                                                                                                                                                                                                                              
+  0 6 (
+
+
+
+
+                                                                                                 0 6 (
+
+
+
+
+                                                                                                                                                                                      0 6 (
+
+
+
+
+                                                                                                                                                                                                                                                                              0 6 (
+                                                                                                                                                                                                                                                                              
+
+                                                                                                                                                                                                                                                                              
+
+                                                                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                                                  
+                            / R R N E D F N  / H Q J W K   P L O O L V H F R Q G V                                       / R R N E D F N  / H Q J W K   \ H D U V                                        / R R N E D F N  / H Q J W K   K R X U V                                            / R R N E D F N  / H Q J W K   K R X U V 
+                          (a) Human Activity                                                                                   (b) USHCN                                                                        (c) PhysioNet                                                                              (d) MIMIC
+                                                                                                                                                                                                                                                                              
+
+                                                                                                                                                                                                                                                                              
+  0 $ (
+
+
+
+
+                                                                                                 0 $ (
+
+
+
+
+                                                                                                                                                                                      0 $ (
+
+
+
+
+                                                                                                                                                                                                                                                                              0 $ (
+                                                                                                                                                                                                                                                                              
+
+                                                                                                                                                                                                                                                                              
+
+                                                                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                                                  
+                            / R R N E D F N  / H Q J W K   P L O O L V H F R Q G V                                       / R R N E D F N  / H Q J W K   \ H D U V                                        / R R N E D F N  / H Q J W K   K R X U V                                            / R R N E D F N  / H Q J W K   K R X U V 
+                          (e) Human Activity                                                                                   (f) USHCN                                                                        (g) PhysioNet                                                                              (h) MIMIC
+                                                            Figure 6. Forecasting performance with varying lookback lengths and fixed forecast horizons.
+
+
+The training process of TFMixer is guided by the L1 loss                                                                                                                                  input instance. Crucially, to prevent the masked portions
+function and employs the ADAM optimizer. To ensure re-                                                                                                                                    (typically represented by zero paddings or mask tokens)
+producibility and mitigate the effects of randomness, each                                                                                                                                from biasing the statistical estimates, the module computes
+experiment is run independently with five different random                                                                                                                                these metrics exclusively based on the visible (unmasked)
+seeds (from 2024 to 2028), and we report the mean and                                                                                                                                     time points. This ensures that the normalized representation
+standard deviation.                                                                                                                                                                       faithfully reflects the underlying distribution of the actual
+                                                                                                                                                                                          data, even under high masking ratios.
+B. Experiments                                                                                                                                                                            Masked Denormalization: By utilizing the statistics previ-
+                                                                                                                                                                                          ously stored during the normalization phase, it restores the
+B.1. Masked RevIN Module
+                                                                                                                                                                                          output to its original magnitude and scale.
+To mitigate the adverse effects of distribution shift and
+non-stationarity in time series data, we employ the Masked                                                                                                                                B.2. Varying Lookback Lengths and Forecast Horizons
+Reversible Instance Normalization (Masked RevIN) mod-
+ule. Unlike standard normalization techniques that operate                                                                                                                                We assess the robustness of TFMixer by evaluating its per-
+across the entire input, Masked RevIN is specifically de-                                                                                                                                 formance across varying lookback and forecast horizons,
+signed to be compatible with irregular time series forecast-                                                                                                                              comparing it against competitive IMTS baselines.
+ing task. The module operates in two distinct phases:                                                                                                                                     For varying forecast horizons, we follow the experimental
+Masked Normalization: Prior to entering the encoder, the                                                                                                                                  settings established in previous work (Zhang et al., 2024b)
+module calculates the mean and standard deviation of each                                                                                                                                 and maintain the lookback lengths consistent with Table 1.
+
+
+                                                                                                                                                                                    12
+       Bridging Time and Frequency: A Joint Modeling Framework for Irregular Multivariate Time Series Forecasting
+
+Specifically, the forecast horizons are set to 12 hours for            sub-optimal results. On the other hand, a disproportion-
+MIMIC and PhysioNet’12, 1000 milliseconds for Human                    ately large P (e.g., 64) may cause the loss of fine-grained
+Activity, and 1 year for USHCN. The results are summarized             temporal dynamics within each patch, as it smooths out crit-
+in Table 4. It can be observed that TFMixer consistently               ical local fluctuations. The results indicate that a moderate
+achieves the best overall performance across most datasets.            patch size, such as 16 or 24, strikes a favorable balance be-
+The stability of TFMixer in long-term forecasting is primar-           tween local detail preservation and computational efficiency
+ily attributed to its global frequency module, which provides          across most datasets. 4) Figure 10 presents the impact of the
+a consistent periodic skeleton that remains robust even as             number of selected frequencies K in the global frequency
+the forecasting horizon extends and local temporal patterns            module. K determines the complexity of the global peri-
+become more uncertain.                                                 odic structures the model can reconstruct. For datasets with
+                                                                       prominent and complex periodicity, such as PhysioNet, a
+For varying lookback lengths, the experimental results are il-
+                                                                       larger K (e.g., 32 or 64) is generally beneficial for capturing
+lustrated in Figure 6. We maintain the forecast horizons used
+                                                                       high-frequency components that represent rapid physiologi-
+in 1 and vary the lookback lengths across three scales for
+                                                                       cal changes. However, for datasets with simpler underlying
+each dataset: (1) 12, 24, and 36 hours for MIMIC and Phys-
+                                                                       patterns or higher noise levels, increasing K beyond a cer-
+ioNet; (2) 1000, 2000, and 3000 milliseconds for Human Ac-
+                                                                       tain threshold (e.g., 16) does not yield further gains and may
+tivity; and (3) 1, 2, and 3 years for USHCN. As shown in the
+                                                                       even introduce spectral noise, leading to slight performance
+figures, the forecasting performance of TFMixer generally
+                                                                       fluctuations. This suggests that TFMixer effectively concen-
+improves as the lookback length increases, benefiting from
+                                                                       trates the most significant energy in a small subset of the
+the richer historical context. Notably, TFMixer exhibits a
+                                                                       frequency spectrum, demonstrating the robustness of our
+more stable improvement trend compared to baselines like
+                                                                       NUDFT-based spectral extraction.
+tPatchGNN, as its query-based patch attention can adap-
+tively aggregate information from longer histories without
+being overwhelmed by the increased sparsity or noise. One
+exception occurs in the MIMIC dataset, where performance
+gains plateau or slightly diminish when the lookback length
+reaches 36 hours. This phenomenon suggests that for in-
+tensive care scenarios, excessively long historical windows
+might introduce distribution shifts or irrelevant temporal
+dependencies that challenge current modeling paradigms.
+
+B.3. Parameter Sensitivity
+We also conduct parameter sensitivity studies of TFMixer.
+We make the following observations: 1) Figure 7 shows
+the impact of the model dimension D varies significantly
+with the dataset scale. Smaller datasets, such as Human
+Activity and USHCN, tend to perform better with lower di-
+mensions (e.g., 32 or 64); excessive dimensionality in these
+cases often leads to performance degradation due to overfit-
+ting. Conversely, larger datasets like PhysioNet and MIMIC
+require higher dimensions (e.g., 128 or 256) to provide suf-
+ficient representational capacity for data fitting. 2) Figure 8
+demonstrates the influence of the number of learnable query
+patches, W . We observed that both excessively small and
+large patch counts negatively impact performance. A small
+W fails to capture sufficient semantic information, while an
+overly large W results in fragmented and highly coupled
+semantic information. The optimal value typically resides
+at 8 or 16. 3) Figure 9 illustrates the sensitivity of TFMixer
+to the patch size P . We find that the model’s performance
+is sensitive to the granularity of local temporal partitioning.
+When P is too small (e.g., 4 or 8), the model tends to cap-
+ture excessive local noise and increases the computational
+burden of the attention mechanism, potentially leading to
+
+                                                                  13
+             Bridging Time and Frequency: A Joint Modeling Framework for Irregular Multivariate Time Series Forecasting
+
+
+
+              ×                                                    ×                                                     ×                                                    ×  
+                                                                                                                                                                                                       
+
+                                                                                                                                                                                   
+ 0 6 (
+
+
+
+
+                                                            0 6 (
+
+
+
+
+                                                                                                                        0 6 (
+
+
+
+
+                                                                                                                                                                                   0 6 (
+                                                                                                                                                                                   
+                                                                                                                                                                                   
+                                                                                                                                                                
+                         0 R G H O  ' L P H Q V L R Q                              0 R G H O  ' L P H Q V L R Q                               0 R G H O  ' L P H Q V L R Q                              0 R G H O  ' L P H Q V L R Q
+              (a) Human Activity                                               (b) USHCN                                                  (c) PhysioNet                                                (d) MIMIC
+                                                                             Figure 7. Effect of different model dimensions.
+
+
+
+
+              ×                                                    ×                                                     ×                                                    ×  
+                                                                                                                                                                                                       
+
+
+                                                                                                                                                                                   
+ 0 6 (
+
+
+
+
+                                                            0 6 (
+
+
+
+
+                                                                                                                        0 6 (
+
+
+
+
+                                                                                                                                                                                   0 6 (
+                                                                                                                                                                                   
+                                                                                                                                                                                   
+                                                                                                                                                                                              
+                                    :                                                           :                                                          :                                                          :
+              (a) Human Activity                                               (b) USHCN                                                  (c) PhysioNet                                                (d) MIMIC
+                                                           Figure 8. Effect of different number of learnable query patches W.
+
+
+
+
+              ×                                                    ×                                                     ×                                                    ×  
+                                                                                                                                                                                                       
+
+
+                                                                                                                                                                                   
+ 0 6 (
+
+
+
+
+                                                            0 6 (
+
+
+
+
+                                                                                                                        0 6 (
+
+
+
+
+                                                                                                                                                                                   0 6 (
+
+                                                                                                                                                                                   
+                                                                                                                                                                                   
+                                                                                                                                                                                          
+                              3 D W F K  6 L ] H                                         3 D W F K  6 L ] H                                        3 D W F K  6 L ] H                                        3 D W F K  6 L ] H
+              (a) Human Activity                                               (b) USHCN                                                  (c) PhysioNet                                                (d) MIMIC
+                                                                                       Figure 9. Effect of different patch sizes.
+
+
+
+
+              ×                                                    ×                                                     ×                                                    ×  
+                                                                                                                                                                                                       
+
+                                                                                                                                                                                   
+ 0 6 (
+
+
+
+
+                                                            0 6 (
+
+
+
+
+                                                                                                                        0 6 (
+
+
+
+
+                                                                                                                                                                                   0 6 (
+
+
+
+
+                                                                                                                                                                                   
+                                                                                                                                                                                   
+                                                                                                                                                                    
+                        ) U H T X H Q F \  1 X P E H U                            ) U H T X H Q F \  1 X P E H U                             ) U H T X H Q F \  1 X P E H U                            ) U H T X H Q F \  1 X P E H U
+              (a) Human Activity                                               (b) USHCN                                                  (c) PhysioNet                                                (d) MIMIC
+                                                                            Figure 10. Effect of different frequency numbers.
+
+
+
+
+                                                                                                                   14
+

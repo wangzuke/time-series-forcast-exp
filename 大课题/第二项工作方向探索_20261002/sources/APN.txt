@@ -1,0 +1,594 @@
+                                            Rethinking Irregular Time Series Forecasting: A Simple yet Effective Baseline
+                                                                        Xvyuan Liu* 1 , Xiangfei Qiu* 1 , Xingjian Wu* 1 , Zhengyu Li1 ,
+                                                                                Chenjuan Guo1 , Jilin Hu1,2† , Bin Yang1
+                                                             1
+                                                               School of Data Science and Engineering, East China Normal University, Shanghai, China
+                                                            2
+                                                            Engineering Research Center of Blockchain Data Management, Ministry of Education, China
+                                                           {xvyuanliu, xfqiu, xjwu, lizhengyu}@stu.ecnu.edu.cn, {cjguo, jlhu, byang}@dase.ecnu.edu.cn
+
+
+                                                                                                                       Sparse Patch          Dense Patch   Inappropriate Segmentation
+                                                                        Abstract
+arXiv:2505.11250v4 [cs.LG] 17 Nov 2025
+
+
+
+
+                                           The forecasting of irregular multivariate time series (IMTS)
+                                           is crucial in key areas such as healthcare, biomechanics, cli-
+                                           mate science, and astronomy. However, achieving accurate
+                                           and practical predictions is challenging due to two main fac-
+                                           tors. First, the inherent irregularity and data missingness in ir-
+                                           regular time series make modeling difficult. Second, most ex-
+                                           isting methods are typically complex and resource-intensive.
+                                           In this study, we propose a general framework called APN
+                                           to address these challenges. Specifically, we design a novel
+                                                                                                                        (a) Fixed Patching                    (b) Adaptive Patching
+                                           Time-Aware Patch Aggregation (TAPA) module that achieves
+                                           adaptive patching. By learning dynamically adjustable patch                Figure 1: Fixed Patching vs. Adaptive Patching.
+                                           boundaries and a time-aware weighted averaging strategy,
+                                           TAPA transforms the original irregular sequences into high-
+                                           quality, regularized representations in a channel-independent
+                                           manner. Additionally, we use a simple query module to effec-         to uneven information density among patches. For example,
+                                           tively integrate historical information while maintaining the        sparse patches (where the number of observations is lim-
+                                           model’s efficiency. Finally, predictions are made by a shallow       ited) may result in insufficient feature extraction, yet dense
+                                           MLP. Experimental results on multiple real-world datasets            patches (where the number of observations is abundant) may
+                                           show that APN outperforms existing state-of-the-art methods          contain redundant information or noise, thereby impairing
+                                           in both efficiency and accuracy.
+                                                                                                                the extracted features. 2) Inappropriate Segmentation of Key
+                                                                                                                Semantic Information: Fixed Patching risks splitting criti-
+                                                                1   Introduction                                cal dynamic information, which hampers the model’s abil-
+                                         Irregular Multivariate Time Series (IMTS) data are widely              ity to capture the complete semantic context. Therefore, the
+                                         observed in various domains such as healthcare, biome-                 first challenge is how to design an adaptive patching ap-
+                                         chanics, climate science, and astronomy (Yao, Bi, and Chen             proach that can adapt to the local information density vari-
+                                         2018; Brouwer et al. 2019; Kidger et al. 2020; Qiu et al.              ations of irregular multivariate time series and capture com-
+                                         2025c,d; Wu et al. 2025b; Gao et al. 2025; Hu et al. 2024).            plete semantic information.
+                                         Irregular Multivariate Time Series Forecasting (IMTSF) is a               Meanwhile, existing IMTSF models generally suffer from
+                                         crucial research task that provides valuable insights for early        high computational costs and long running times. For exam-
+                                         warning and proactive decision-making. However, the inher-             ple, neural-ODE-based models (Chen et al. 2018; Rubanova,
+                                         ent irregularity of observations and missing data (Yalavarthi          Chen, and Duvenaud 2019; Gravina et al. 2024) require
+                                         et al. 2024; Zhang et al. 2024) in IMTS poses significant              computationally intensive numerical solvers to accurately
+                                         challenges to IMTSF modeling.                                          model continuous-time dynamics (Shukla and Marlin 2021;
+                                            To address this challenge, recent IMTSF methods, such               Chen et al. 2018). GNN-based models (Yalavarthi et al.
+                                         as tPatchGNN (Zhang et al. 2024) and TimeCHEAT (Liu,                   2024; Zhang et al. 2024) are hindered by the overhead of
+                                         Cao, and Chen 2025), have adopted the Fixed Patching                   complex graph construction and multi-round node informa-
+                                         approach—see Figure 1a. This approach divides the time                 tion aggregation (Wu et al. 2021); Transformer-based mod-
+                                         series into fixed-length patches with equal intervals among            els (Chen et al. 2023; Zhang et al. 2023), which utilize multi-
+                                         them. However, this approach has notable limitations: 1) Un-           layer self-attention mechanisms and feedforward networks,
+                                         even Information Density Across Patches: Fixed Patching                often result in large parameter scales (Kim et al. 2024).
+                                         struggles to adapt to local variations in data density, leading        These models typically construct computationally intensive
+                                                                                                                and parameter-heavy complex architectures to effectively
+                                            * These authors contributed equally.                                handle the intricate dependencies and dynamic changes in
+                                            †
+                                                Corresponding Author.                                           IMTS. While this design enhances the model’s performance
+to some extent, it also incurs high computational costs and       stochastic differential equations (ODE/SDE) to adapt to ir-
+long runtimes, limiting its practical application in resource-    regular sampling points. For instance, Neural Flows (Bi-
+constrained scenarios. Notably, in regular time series fore-      los et al. 2021a) proposes directly modeling the solution
+casting tasks, models such as SparseTSF (Lin et al. 2024b),       curves of ODEs, thereby avoiding the costly numerical inte-
+and CycleNet (Lin et al. 2024a) have significantly reduced        gration steps in traditional ODE solvers. GRU-ODE-Bayes
+computational overhead and achieved competitive predic-           (Brouwer et al. 2019) innovatively combines the idea of
+tion accuracy by adopting simple architectures with fewer         Gated Recurrent Units (GRU) with ODEs and effectively
+parameters. Therefore, the second challenge is how to de-         handles sparse observational data through a Bayesian update
+sign an efficient model for IMTSF.                                mechanism. Other models leverage graph neural networks
+   To address the above challenges, we propose a gen-             and attention mechanisms (Yalavarthi et al. 2024; Zhang
+eral framework called APN. Specifically, we design a              et al. 2024; Liu, Cao, and Chen 2025) to capture complex
+novel Time-Aware Patch Aggregation (TAPA) module that             dependencies in IMTS. For example, GraFITi (Yalavarthi
+achieves adaptive patching—see Figure 1b. By learning dy-         et al. 2024) transforms IMTS into sparse bipartite graphs and
+namically adjustable patch boundaries and a time-aware            predicts edge weights through GNNs. tPatchGNN (Zhang
+weighted averaging strategy, TAPA transforms the original         et al. 2024) innovatively segments irregular sequences into
+irregular sequences into high-quality, regularized represen-      time-aligned patches and combines Transformer and adap-
+tations in a channel-independent manner. Based on the rep-        tive GNNs to handle intra-patch and inter-patch dependen-
+resentations, we use a simple query module to effectively in-     cies, respectively.
+tegrate historical information while maintaining the model’s
+efficiency. Finally, predictions are made by a shallow MLP.       2.2   Progress in Patch-based Irregular
+Results on multiple real-world datasets show that APN out-              Multivariate Time Series Forecasting
+performs existing SOTA methods in both efficiency and ac-
+curacy.                                                           The patch-based strategy, which has proven successful for
+   The contributions of our paper are summarized as follows:      regular time series (Nie et al. 2023; Wang et al. 2022; Wu
+                                                                  et al. 2025a; Qiu et al. 2025a,e; Lu et al. 2026; Wang et al.
+  • To address IMTSF, we propose a general framework              2025), has been adapted for IMTS Forecasting (IMTSF).
+    named APN. This framework leverages adaptive patch-           Initial adaptations, such as tPatchGNN (Zhang et al. 2024)
+    ing to generate high-quality and regular initial patch rep-   and TimeCHEAT (Liu, Cao, and Chen 2025), employed a
+    resentations. Based on these representations, we employ       fixed-span patching strategy. However, this rigid segmen-
+    a simple query module to integrate contextual informa-        tation is ill-suited for the non-uniform data distribution of
+    tion, ensuring the effective design of the framework.         IMTS. It often creates patches with highly variable informa-
+  • We design a novel TAPA module to achieve adap-                tion content—some being too sparse for meaningful feature
+    tive patching. By learning dynamically adjustable             extraction, while others may be overly dense with redundant
+    patch boundaries and a time-aware weighted averag-            data.
+    ing strategy, TAPA transforms the original irregular se-         To overcome this, adaptive patching emerged as a natu-
+    quences into high-quality, regularized representations        ral evolution. One prominent approach, primarily explored
+    in a channel-independent manner, effectively adapting         in the context of regular time series (e.g., HDMixer (Huang
+    to local variations in information density and capturing      et al. 2024)), involves learning flexible patch boundaries and
+    complete semantics.                                           then generating regularized patch representations through
+  • We conduct experiments on multiple datasets. The re-          interpolation-based resampling. While effective for dense,
+    sults show that APN outperforms existing SOTA base-           regular data, this methodology is fundamentally flawed for
+    lines in both forecasting accuracy and computational ef-      IMTS. Interpolating across sparse or missing intervals can
+    ficiency. Additionally, all datasets and code are available   fabricate misleading data points, introducing significant ar-
+    at: https://github.com/decisionintelligence/APN.              tifacts and undermining model reliability.
+                                                                     In contrast, our work proposes a distinct aggregation-
+                                                                  based adaptive patching paradigm, specifically designed for
+                   2    Related Work                              the challenges of IMTS. Instead of creating new, artificial
+2.1   Progress in Irregular Multivariate Time                     data points, our TAPA module learns dynamic “soft win-
+      Series Forecasting                                          dows” and computes each patch representation by perform-
+                                                                  ing a direct, weighted aggregation of all original obser-
+IMTSF is crucial for key domains such as healthcare and cli-      vations. This strategy provides two critical advantages for
+mate science. The inherent characteristics of IMTS, such as       IMTS: (1) Data Fidelity: It exclusively uses the original,
+non-uniform sampling intervals and asynchronous channels,         observed data, thereby avoiding the distortions and poten-
+present significant challenges to regular time series fore-       tial inaccuracies of interpolation. (2) Complete Information
+casting models. To address these characteristics, researchers     Coverage: The soft-weighting mechanism ensures that ev-
+have proposed various IMTSF models. Some models em-               ery data point contributes to the representation of relevant
+ploy approaches based on continuous-time dynamics (Chen           patches, mathematically precluding the information loss that
+et al. 2018; Rubanova, Chen, and Duvenaud 2019; Schirmer          can occur when observations fall between the hard bound-
+et al. 2022; Brouwer et al. 2019), utilizing ordinary or          aries of other methods.
+                    3    Methodology                               lowing it to aggregate information from all observations in a
+3.1   Problem Definition                                           temporally aware manner.
+                                                                       This paradigm shift is realized through a cohesive,
+An Irregular Multivariate Time Series (IMTS) O consists of         two-step process executed independently for each channel
+N univariate sequences {on1:Ln }N                         n
+                                   n=1 . Each sequence o1:Ln       on1:Ln = {(tni , vin )}L n
+                                 n n                                                      i=1 . First, in Adaptive Patching, the
+comprises Ln observations (ti , vi ), where the intervals          model learns the dynamic temporal characteristics—the cen-
+between timestamps tni are irregular, and sampling across          ter and scale—of each patch’s field of influence. Second,
+different variables is typically asynchronous. The IMTS            in Weighted Aggregation, it computes a representation for
+forecasting task is defined as: given historical observations      each patch by performing a direct, weighted aggregation of
+O and a set of prediction queries for all variables Q =            all raw observations, where the weights are determined by
+{[qjn ]Q    N
+       j=1 }n=1 , construct and optimize a prediction model
+        n
+                                                                   each observation’s temporal relevance to the patch’s learned
+F(·) capable of accurately predicting future observed val-         characteristics. This entire process transforms the irregular
+ues V̂ = {[v̂jn ]Q    N                                n           input sequence into a regularized, information-rich sequence
+                 j=1 }n=1 corresponding to each query qj , i.e.,
+                  n
+
+                                                                   of patch representations H n = [hn1 , . . . , hnP ].
+                        F(O, Q) → V̂                        (1)    Adaptive Patching: Learning Dynamic Temporal Win-
+                                                                   dows The first step is to define the temporal scope of each
+3.2   Framework Overview                                           patch. Instead of imposing predefined, rigid boundaries,
+The architectural design of APN is guided by a core princi-        TAPA learns a dynamic temporal window, [tlef      p
+                                                                                                                       t,n right,n
+                                                                                                                          , tp     ],
+ple: decoupling the challenge of handling irregularity from        for each target patch p. This dynamism is the core mech-
+the task of forecasting. As illustrated in Figure 2, instead       anism by which TAPA adapts to the non-uniform distribu-
+of relying on a monolithic, complex model, APN adopts a            tion of data. For instance, in a sparse but critical region, the
+strategic two-stage pipeline.                                      model can learn to expand a window’s width to ensure sparse
+    The cornerstone of this pipeline is the Time-Aware Patch       yet vital signals are encompassed. Conversely, in a dense re-
+Aggregation (TAPA) module (Section 3.3). Operating in              gion with redundant data, a window can be strategically nar-
+a channel-independent manner, its sole yet critical pur-           rowed to focus on the most salient signals, thus preventing
+pose is to transform the raw, irregular observations into a        dilution from less informative points.
+high-quality, regularized sequence of patch representations.          This adaptive process empowers the model to carve out
+Through its novel use of Adaptive Patching and Weighted            semantically coherent segments from the raw time series,
+Aggregation, TAPA robustly adapts to local information             based on the data’s inherent structure. To achieve this, for
+density and captures complete semantic units. Crucially, it        each patch p and channel n, TAPA learns two key param-
+achieves this without resorting to interpolation, thereby pre-     eters: a positional adjustment δpn and a log-scale width pa-
+serving data fidelity and sidestepping the introduction of ar-     rameter λnp . The window boundaries are then computed as:
+tificial artifacts.                                                                                    Sinit
+    The success of this initial transformation is pivotal, as it                     tlef
+                                                                                       p
+                                                                                          t,n
+                                                                                              = cp −         + δpn               (2)
+                                                                                                         2
+enables the subsequent use of a remarkably efficient and
+                                                                                    tright,n
+                                                                                     p        = tlef
+                                                                                                 p
+                                                                                                     t,n
+                                                                                                         + exp(λnp ),            (3)
+lightweight architecture. A concise Query-based Aggrega-
+tion module (Section 3.4) then effectively summarizes the          where Tobs is the time span of the historical observation win-
+historical context from these regularized patches for each         dow, with cp = (p − 0.5) · (Tobs /P ) and Sinit = Tobs /P
+variable. Finally, this compact representation is fed into a       representing the initial reference center and width, respec-
+simple MLP-based Forecasting Decoder (Section 3.5) for             tively. The use of exp(λnp ) is a deliberate design choice, en-
+the final prediction.                                              suring the learned window width remains strictly positive
+    In essence, APN strategically front-loads the complex-         throughout optimization. This dynamic windowing mecha-
+ity of handling irregularity into the novel TAPA module.           nism allows the model to adaptively frame regions of inter-
+By producing information-rich, regularized representations         est, laying the foundation for a more meaningful and robust
+upfront, it obviates the need for computationally expensive        aggregation in the subsequent step.
+back-end models, achieving state-of-the-art performance            Weighted Aggregation: From Raw Observations to Rich
+through an elegant and efficient design.                           Representations With the dynamic temporal windows de-
+                                                                   fined, the next step is to generate patch representations by
+3.3   Time-Aware Patch Aggregation (TAPA)                          aggregating information from the raw observations.
+At the heart of APN lies the Time-Aware Patch Aggrega-                Enriching Observations with Temporal Context. To fully
+tion (TAPA) module, a novel mechanism designed to fun-             leverage temporal information, we first enrich each raw ob-
+damentally reframe how we process irregular time series.           servation. A learnable time embedding T E(tni ) ∈ RDte is
+Traditional methods rely on a paradigm of “hard segmen-            generated for each timestamp tni in channel n. This embed-
+tation,” imposing rigid, fixed-span boundaries that are ill-       ding, composed of linear layers for scale and sine-activated
+suited to the non-uniform nature of IMTS. In stark contrast,       layers for periodicity, captures both the absolute position and
+TAPA introduces a “soft aggregation” paradigm. Instead of          periodic patterns in time. It is then concatenated with the
+discretely assigning observations to patches, it conceptual-       original value vin to form an augmented representation:
+izes each patch as a soft, overlapping field of influence, al-                       ṽin = Concat(vin , T E(tni ))             (4)
+Figure 2: The overall framework of APN, which initially divides each univariate irregular time series into a series of unfixed
+patches using the Adaptive Patching Module. Then the Weighted Aggregation Module generates high-quality and regular initial
+patch representations. Based on the representations, the Query-based Aggregation Module is utilized to incorporate contextual
+information. Finally, the Forecasting Decoder outputs the final forecasting results. The Adaptive Patching Module and Weighted
+Aggregation Module collectively form the Time-Aware Patch Aggregation Module.
+
+
+  The Soft Window Function. We then employ a time-aware            Every observation contributes to the representation of ev-
+                                                         n
+soft window function to calculate the relevance weight, αi,p ,     ery patch (albeit with varying degrees of influence), inher-
+of each observation i to each patch p. The function is ele-        ently preventing the information loss that plagues all hard-
+gantly constructed as the product of two Sigmoid functions:        segmentation methods, where observations can be inadver-
+                               !                      !            tently discarded.
+      n
+                tright,n
+                 p       − tni         tni − tlef
+                                              p
+                                                  t,n
+                                                                      Final Aggregation. The final representation for the p-th
+     αi,p = σ                    ·σ                      (5)
+                Softplus(κn )         Softplus(κn )                patch, h̄np , is computed as a normalized weighted average of
+                                                                   all augmented observation features:
+Here, the first Sigmoid term models a smooth “falloff” from
+the right boundary, while the second models a smooth “rise”                               PLn n
+                                                                                                αi,p · ṽin
+from the left boundary. Their product creates a continu-                            h̄p = Pi=1
+                                                                                      n
+                                                                                            Ln
+                                                                                                            ∈ R1+Dte ,       (6)
+                                                                                                α n +ϵ
+ous, bell-shaped weighting curve centered within the patch’s                                i=1   i,p
+learned range. The term Softplus(κn ) is a learnable, strictly
+                                                                   where the summation spans all Ln observations, and ϵ en-
+positive temperature that controls the softness of the window
+                                                                   sures numerical stability. Finally, to enhance expressiveness
+edges. A smaller temperature leads to sharper, more defined
+                                                                   and align dimensions, we project h̄np into the model’s uni-
+boundaries, while a larger temperature creates gentler, more
+overlapping fields of influence, granting the model further        form hidden space via a linear layer: hnp = LinearD (h̄np ).
+adaptive flexibility.                                              Through this entire process, each univariate irregular se-
+   A Crucial Design Choice for Information Integrity. The          quence is transformed into a refined, structurally regularized
+choice of this soft window function is critical. Since the Sig-    sequence H n = [hn1 , . . . , hnP ] ∈ RP ×D .
+moid function σ(x) is strictly positive for all real inputs, the
+resulting weight αi,pn
+                       is also guaranteed to be positive for       3.4   Query-based Aggregation
+any observation i and any patch p. This property is not a          The TAPA module delivers a sequence of high-quality, regu-
+mere side effect; it is a fundamental design principle that        larized patch representations H n = [hn1 , . . . , hnP ]. This suc-
+mathematically guarantees complete information coverage.           cessfully concludes the first stage of our pipeline: handling
+irregularity. The second stage, contextualization and fore-         Dataset         # Variables   # samples   Avg # Obs.   Max Length
+casting, can now proceed with remarkable efficiency. To this        PhysioNet           36         11,981       308.6          47
+end, we employ a concise query-based aggregation mech-              MIMIC               96         21,250       144.6          96
+                                                                    HumanActivity       12         1,359        362.2         131
+anism to distill the entire historical sequence into a single,      USHCN                5          1,114       313.5         337
+potent context vector Hcn .
+   First, to preserve the sequential order of the patches,                           Table 1: Dataset statistics.
+standard positional encodings (P E) are added, yielding
+                                    n
+position-aware representations Hpe    = H n + P E. Then, in-
+stead of resorting to complex inter-patch interactions like                             4     Experiments
+multi-head self-attention, we introduce a single learnable
+query vector q n ∈ RD for each channel. This query acts as         4.1   Setup
+a task-specific lens, dynamically assessing the importance         Datasets: To evaluate the model’s performance, we se-
+of each patch for the final forecast. The importance scores        lect four widely used IMTS datasets, including PhysioNet,
+snp are computed via a simple dot product, normalized into         MIMIC, HumanActivity, and USHCN. These datasets span
+weights β n via Softmax, and used to compute the final con-        multiple domains such as healthcare, biomechanics, and cli-
+text vector Hcn as a weighted sum:                                 mate science. Table 1 summarizes the key statistical features
+                                                                   of these datasets. The PhysioNet Challenge 2012 dataset
+                 q n · (hnpe,p )T                                  provides clinical time series from the first 48 hours of ICU
+           snp =       √           for p = 1, . . . , P      (7)
+                         D                                         stays. MIMIC is a large database containing de-identified
+           β n = Softmax({snp }P                                   health data from ICU patients. The HumanActivity dataset
+                                  p=1 )                      (8)
+                                                                   consists of biomechanics data with 3D positional variables
+                   P
+                   X                                               captured from subjects performing various activities. For cli-
+          Hcn =          βpn hnpe,p                          (9)   mate science, the USHCN dataset includes historical mete-
+                   p=1                                             orological data from stations across the United States. All
+                                                                   datasets are partitioned into training, validation, and test sets
+The resulting summary representations for all channels,
+                                                                   using a standard 80%, 10%, and 10% ratio, respectively.
+[Hc1 , . . . , HcN ], form the final representation matrix Hc ∈
+                                                                   Baselines: To evaluate the performance of APN, we com-
+RN ×D . A layer normalization is then applied to stabilize the
+                                                                   pare it with eleven baseline models. These baseline models
+input for the decoder. This lightweight aggregation mecha-
+                                                                   can be broadly categorized into two groups: (1) IMTS Clas-
+nism is a direct testament to our design philosophy: by front-
+                                                                   sification/Imputation Models: including PrimeNet (Chowd-
+loading the complexity into TAPA, the subsequent modules
+                                                                   hury et al. 2023), SeFT (Horn et al. 2020), mTAN (Shukla
+can be elegantly simple yet powerful.
+                                                                   and Marlin 2021), GRU-D (Che et al. 2016), Raindrop
+                                                                   (Zhang et al. 2022), and Warpformer (Zhang et al. 2023).
+3.5   Forecasting Decoder                                          (2) IMTS Forecasting Models: including NeuralFlows (Bi-
+The final step of the APN framework is the ultimate demon-         los et al. 2021b), CRU (Schirmer et al. 2022), GNeuralFlow
+stration of its architectural elegance. Having distilled the en-   (Mercatali, Freitas, and Chen 2024), tPatchGNN (Zhang
+tire irregular history into a powerful, fixed-size representa-     et al. 2024), GraFITi (Yalavarthi et al. 2024).
+tion Hcn , the forecasting task becomes remarkably straight-       Implementation Details: All our experiments were con-
+forward.                                                           ducted on a server equipped with an NVIDIA A800 GPU
+   The prediction for a query time qkn is made by a sim-           and implemented using the PyTorch 2.6.0+cu124 frame-
+ple two-layer MLP decoder. This decoder takes the concate-         work. All models are trained using the Mean Squared Error
+nated summary representation Hcn and the learnable tempo-          (MSE) as the loss function and optimized with the AdamW
+ral encoding of the query time, T E(qkn ), as input to produce     optimizer. We set the maximum number of training epochs
+the final value v̂kn :                                             to 200 and employ an early stopping strategy, where training
+                                                                   is terminated if the model’s performance on the validation
+          v̂kn = MLP(Concat(Hcn , T E(qkn ))) ∈ R           (10)   set does not improve for 10 consecutive epochs. To ensure
+                                                                   a fair comparison, we primarily adopted the hyperparameter
+The ability to use such a simple decoder is not a limitation       settings reported in the original papers for the baseline mod-
+but a feature, underscoring the richness of the representation     els. Building on these configurations, we conducted a further
+crafted by TAPA and the query aggregator.                          comprehensive search and fine-tuning of key hyperparame-
+   The model is trained end-to-end by minimizing the stan-         ters on the validation set for all models, including our pro-
+dard Mean Squared Error (MSE) loss between the predicted           posed APN, to ensure each achieved a competitive level of
+values v̂kn and the ground truth values vkn across all channels    performance. To ensure reproducibility and mitigate the ef-
+and query points:                                                  fects of randomness, each experiment is run independently
+                                    Qn
+                                  N X                              with five different random seeds (from 2024 to 2028), and
+                         1        X
+                                                                   we report the mean and standard deviation. Detailed hyper-
+            L = PN                       (v̂kn − vkn )2 ,   (11)
+                     n=1 Qn n=1 k=1
+                                                                   parameter configurations for all models are provided in our
+                                                                   code repository. We do not apply the “Drop Last” trick (Qiu
+where Qn is the number of query points for each channel.           et al. 2024, 2025b) to ensure a fair comparison.
+ Dataset                     HumanActivity                         USHCN                         PhysioNet                       MIMIC
+
+ Metric                  MSE              MAE               MSE            MAE             MSE               MAE           MSE             MAE
+
+ PrimeNet          4.2507±0.0041     1.7018±0.0011     0.4930±0.0015   0.4954±0.0018   0.7953±0.0000   0.6859±0.0001   0.9073±0.0001   0.6614±0.0001
+ NeuralFlows       0.1722±0.0090     0.3150±0.0094     0.2087±0.0258   0.3157±0.0187   0.4056±0.0033   0.4466±0.0027   0.6085±0.0101   0.5306±0.0066
+ CRU               0.1387±0.0073     0.2607±0.0092     0.2168±0.0162   0.3180±0.0248   0.6179±0.0045   0.5778±0.0031   0.5895±0.0092   0.5151±0.0048
+ mTAN              0.0993±0.0026     0.2219±0.0047     0.5561±0.2020   0.5015±0.0968   0.3809±0.0043   0.4291±0.0035   0.9408±0.1126   0.6755±0.0459
+ SeFT              1.3786±0.0024     0.9762±0.0007     0.3345±0.0022   0.4083±0.0084   0.7721±0.0021   0.6760±0.0029   0.9230±0.0015   0.6628±0.0008
+ GNeuralFlow       0.3936±0.1585     0.4541±0.0841     0.2205±0.0421   0.3286±0.0412   0.8207±0.0310   0.6759±0.0100   0.8957±0.0209   0.6450±0.0072
+ GRU-D             0.1893±0.0627     0.3253±0.0485     0.2097±0.0493   0.3045±0.0305   0.3419±0.0029   0.3992±0.0011   0.4759±0.0100   0.4526±0.0055
+ Raindrop          0.0916±0.0072     0.2114±0.0072     0.2035±0.0336   0.3029±0.0264   0.3478±0.0019   0.4044±0.0020   0.6754±0.1829   0.5444±0.0868
+ Warpformer        0.0449±0.0010     0.1228±0.0018     0.1888±0.0598   0.2939±0.0591   0.3056±0.0011   0.3661±0.0016   0.4302±0.0035   0.4025±0.0014
+ tPatchGNN         0.0443±0.0009     0.1247±0.0031     0.1885±0.0403   0.3084±0.0479   0.3133±0.0053   0.3697±0.0049   0.4431±0.0115   0.4077±0.0088
+ GraFITi           0.0437±0.0005     0.1221±0.0017     0.1691±0.0093   0.2777±0.0248   0.3075±0.0015   0.3637±0.0036   0.4359±0.0455   0.4142±0.0297
+
+ APN (Ours)        0.0421±0.0001     0.1159±0.0006     0.1590±0.0137   0.2611±0.0167   0.3093±0.0011   0.3650±0.0026   0.4292±0.0027   0.4016±0.0016
+
+
+Table 2: Forecasting performance on four IMTS datasets. Overall performance is evaluated by MSE and MAE (mean ± std).
+The best and second-best results are highlighted in bold and with an underline, respectively.
+
+
+              Method               MIMIC                USHCN                    4.3    Ablation Studies
+            APN (Ours)          0.4292 ± 0.0027      0.1590 ± 0.0137
+                                                                                 We perform ablation studies to isolate and validate the con-
+            w/o Adaptive                                                         tribution of each primary component of APN. The experi-
+              Patching          0.4309 ± 0.0048      0.1717 ± 0.0283
+                                                                                 ments, summarized in Table 3, yield three key observations.
+            w/o Weighted
+            Aggregation         0.4388 ± 0.0086      0.1863 ± 0.0486             First, replacing the Query-Based Aggregation with a basic
+           w/o Query-based                                                       linear layer leads to the most significant performance degra-
+                                0.4672 ± 0.0051      0.1981 ± 0.0327
+             Aggregation                                                         dation. This demonstrates that a simple summarization is in-
+                                                                                 sufficient and that our sophisticated query mechanism is es-
+Table 3: Ablation studies for APN (MSE). Results are re-                         sential for dynamically identifying and prioritizing the most
+ported as mean ± std. Best results are highlighted in bold.                      salient historical patterns for the forecasting task. Second,
+                                                                                 ablating the Weighted Aggregation scheme and reverting to
+                                                                                 a simple average over hard-cut patches also results in a sub-
+4.2     Main results                                                             stantial decline in performance. This empirically confirms
+                                                                                 that our soft-aggregation design is critical for preventing in-
+We compare the APN model with eleven baseline mod-                               formation loss at patch boundaries and ensuring complete
+els on four challenging datasets—see Table 2. We have                            information coverage. Finally, removing the Adaptive Patch-
+the following observations: 1) APN achieves leading pre-                         ing mechanism in favor of fixed, randomly partitioned win-
+diction accuracy across the board. On all datasets, APN                          dows consistently diminishes performance, highlighting the
+achieves optimal or highly competitive forecasting perfor-                       value of learning dynamic, data-driven temporal boundaries
+mance. Compared to the second-best performing model,                             over imposing rigid, arbitrary ones.
+GraFITi, APN achieves significant reductions in MSE and
+MAE metrics by approximately 2.64% and 3.61%, respec-                            4.4    Parameter Sensitivity
+tively. 2) APN demonstrates exceptional cross-domain gen-                        To gain a deeper understanding of the impact of key hy-
+eralization capability and robustness. Whether on IMTS                           perparameters on the performance of the APN model, we
+datasets with different characteristics in healthcare (Phys-                     conduct parameter sensitivity analyses, focusing primarily
+ioNet, MIMIC), biomechanics (HumanActivity), or climate                          on the number of patches (P ), the model’s hidden dimen-
+science (USHCN), APN consistently performs excellently.                          sion (D), and the time encoding dimension (Dte )—see Fig-
+The outstanding performance of APN can be attributed to                          ure 3. We have the following observations: 1) Figure 3c re-
+its TAPA module, which generates superior patch represen-                        veals the impact of the model’s hidden dimension (D). For
+tations by directly performing a soft-aggregation over raw                       most datasets, performance remains relatively stable across
+observations within adaptively learned temporal windows.                         different dimensions, indicating that an excessively large di-
+This approach effectively captures salient local dynamics                        mension does not bring significant improvement. This sug-
+without the potential distortion from interpolation. Building                    gests that a moderately sized D is sufficient to capture ef-
+on these high-quality representations, the streamlined query                     fective information without unnecessary complexity. 2) Fig-
+module and MLP decoder ensure a lightweight yet powerful                         ure 3d shows the influence of the time encoding dimension
+framework.                                                                       (Dte ). The model exhibits greater sensitivity to this param-
+                                                                                                                                                                                                                                                                                               
+                                                                                                                                                                                                                                                             + X P D Q $ F W L Y L W \                                                                                               
+                                                                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                    
+                                                                                                                      8 6 + & 1                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                      3 K \ V L R 1 H W                                                                                                                                                            
+                                                                                                                  0 , 0 , &
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                          0 6 (
+                                                                                                                                                                                                                                                                                                                                                                                 
+
+
+
+
+                                                                                                                                                                                                                                                                                             0 6 (
+               0 6 (
+
+
+
+
+                                                                                                                                                                               0 6 (
+                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                    + X P D Q $ F W L Y L W \                                                + X P D Q $ F W L Y L W \
+                                                                                                                                                                                                                                                                                                                                                                               
+                                                                                                                                                                                                                                                                                                                                8 6 + & 1                                                                8 6 + & 1
+                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                    3 K \ V L R 1 H W                                                        3 K \ V L R 1 H W
+                                                                                                                                                                                                                                                                                                                              0 , 0 , &                                                             0 , 0 , &
+                                                                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                                                                                                                                        
+                                                                                             3 D W F K  1 X P E H U                                                                                                                  3 D W F K  1 X P E H U                                                          + L G G H Q  ' L P H Q V L R Q                                            ' L P H Q V L R Q  R I  7 (
+
+                                                                         (a) Patch Number                                                                                                                          (b) Patch Number                                                                             (c) Hidden Dimension                                                        (d) Dimension of TE
+
+                                                                                                                                   Figure 3: Parameter sensitivity studies of main hyperparameters in APN.
+
+                                                                                                                                                                                                           
+ 3 H D N  * 3 8  0 H P R U \   * % 
+
+
+
+
+                                                                                                                                                                                                                                                                                                   acteristics of the dataset.
+                                                                                                                                            3 D U D P H W H U  & R X Q W   0 
+
+
+
+
+                                                                                           
+                                                                                                                                                                                               
+                                                        
+                                                                                                                                                                                                                                                                                                    4.5           Scalability and Efficiency Analysis
+                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                 To comprehensively evaluate the potential of APN in prac-
+                                                                                                                                                                                               
+                                                                                                                                                                                                                                                                                                    tical deployment, we conduct a comparative analysis of
+                                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                   computational efficiency and resource consumption between
+                                                                            * 1 1  & 5 8  * U D ) , 7 L  $ 3 1                                                                                                         7 L              1  5 8
+                                                                                                                                                                                                             * U D ) ,  W 3 D W F K * 1  &                         $ 3 1
+                                                               W 3 D W F K                                                                                                                                                                                                                             APN and three representative baseline models (GraFITi
+                                                                                                                                                                                                                                                                                                       (Yalavarthi et al. 2024), CRU (Schirmer et al. 2022),
+                                          (a) Peak GPU Memory (GB)                                                                                                                                          (b) Parameters (M)                                                                         tPatchGNN (Zhang et al. 2024)) on the USHCN dataset,
+                                                                                                                                                                                         
+                                                                                                                                            , Q I H U H Q F H  6 W H S  7 L P H   P V 
+
+
+
+
+                                                                                                                                                                                                                                                                                                    with the batch size uniformly set to 32—see Figure 4. The
+     7 U D L Q L Q J  6 W H S  7 L P H   P V 
+
+
+
+
+                                                                                                                                                                                             
+                                                                                                                                                                                                                                                                                                       results demonstrate that APN exhibits significant advantages
+                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                       across all key efficiency metrics. This is attributed to its
+                                                                                                                                                                                                                                                                                              core TAPA module, which efficiently generates information-
+                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                       condensed and regularized initial representations. These rep-
+                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                               resentations support a highly streamlined information ag-
+                                                                                                                                                                                                                                                                                                     gregation and prediction architecture, ultimately achieving
+                                                                          & 5 8  * U D ) , 7 L  D W F K * 1 1  $ 3 1                                                                                          & 5 8                  7 L              1  3 1
+                                                                                                                                                                                                                           * U D ) ,  W 3 D W F K * 1  $
+                                                                                            W 3                                                                                                                                                                                                        a lightweight and highly efficient model design.
+                                                (c) Training Step Time (ms)                                                                                                      (d) Inference Step Time (ms)
+                                                                                                                                                                                                                                                                                                                                                          5     Conclusion
+           Figure 4: Comparison of computational efficiency for APN
+           and three representative baselines. We evaluate four key                                                                                                                                                                                                                                    This paper addresses the challenges of IMTS forecasting
+           metrics: (a) peak GPU memory (GB) during a single training                                                                                                                                                                                                                                  by proposing a general and efficient framework, APN. The
+           step, (b) total number of parameters (M), (c) average train-                                                                                                                                                                                                                                core of APN lies in its novel Time-Aware Patch Aggregation
+           ing time per step (ms), and (d) average inference time per                                                                                                                                                                                                                                  (TAPA) module. This module introduces an aggregation-
+           step (ms). All experiments are conducted on the USHCN                                                                                                                                                                                                                                       based paradigm, distinct from methods that rely on fixed
+           dataset with a consistent batch size of 32 to ensure a fair                                                                                                                                                                                                                                 patching or interpolation. By learning dynamic boundaries
+           comparison. For all metrics, a lower value indicates better                                                                                                                                                                                                                                 and applying a time-aware soft-weighting strategy, TAPA
+           performance.                                                                                                                                                                                                                                                                                directly aggregates information from all raw observations
+                                                                                                                                                                                                                                                                                                       to generate high-quality, regularized patch representations.
+                                                                                                                                                                                                                                                                                                       This design choice not only ensures full data coverage and
+                                                                                                                                                                                                                                                                                                       robustly handles information density variations but also en-
+           eter, as performance on datasets like PhysioNet and MIMIC                                                                                                                                                                                                                                   ables a streamlined and efficient overall architecture. Lever-
+           degrades significantly when Dte becomes too large. This in-                                                                                                                                                                                                                                 aging these superior representations, APN employs a con-
+           dicates that a moderate Dte is optimal for providing effective                                                                                                                                                                                                                              cise query module and a shallow MLP to make predictions.
+           temporal information, while a higher dimension may intro-                                                                                                                                                                                                                                   Extensive experiments on multiple public IMTS benchmark
+           duce noise. 3) From Figures 3a and 3b, we observe the effect                                                                                                                                                                                                                                datasets demonstrate that APN significantly outperforms ex-
+           of the patch number (P ). For most datasets, model perfor-                                                                                                                                                                                                                                  isting state-of-the-art methods in both prediction accuracy
+           mance is not highly sensitive to the number of patches, sug-                                                                                                                                                                                                                                and computational efficiency.
+           gesting that the model can robustly capture local features
+           across a reasonable range of P values. 4) The APN model
+           exhibits a certain sensitivity to these core hyperparameters,
+                                                                                                                                                                                                                                                                                                                                           6              Acknowledgments
+           especially Dte , but it generally achieves competitive results                                                                                                                                                                                                                              This work was partially supported by the National Natural
+           within a reasonable range. In practical applications, appro-                                                                                                                                                                                                                                Science Foundation of China (No.62472174) and the Fun-
+           priate tuning should be performed based on the specific char-                                                                                                                                                                                                                               damental Research Funds for the Central Universities.
+                        References                                 Lu, J.; Chen, P.; Guo, C.; Shu, Y.; Wang, M.; and Yang,
+Bilos, M.; Sommer, J.; Rangapuram, S. S.; Januschowski,            B. 2026. Towards Non-Stationary Time Series Forecasting
+T.; and Günnemann, S. 2021a. Neural Flows: Efficient Al-           with Temporal Stabilization and Frequency Differencing. In
+ternative to Neural ODEs. In NeurIPS 2021, 21325–21337.            AAAI 2026.
+Bilos, M.; Sommer, J.; Rangapuram, S. S.; Januschowski,            Mercatali, G.; Freitas, A.; and Chen, J. 2024. Graph Neural
+T.; and Günnemann, S. 2021b. Neural Flows: Efficient Al-           Flows for Unveiling Systemic Interactions Among Irregu-
+ternative to Neural ODEs. In NeurIPS 2021, 21325–21337.            larly Sampled Time Series. In NeurIPS 2024.
+Brouwer, E. D.; Simm, J.; Arany, A.; and Moreau, Y. 2019.          Nie, Y.; Nguyen, N. H.; Sinthong, P.; and Kalagnanam, J.
+GRU-ODE-Bayes: Continuous Modeling of Sporadically-                2023. A Time Series is Worth 64 Words: Long-term Fore-
+Observed Time Series. In NeurIPS 2019, 7377–7388.                  casting with Transformers. In ICLR 2023.
+Che, Z.; Purushotham, S.; Cho, K.; Sontag, D. A.; and Liu,         Qiu, X.; Cheng, H.; Wu, X.; Hu, J.; and Guo, C. 2025a. A
+Y. 2016. Recurrent Neural Networks for Multivariate Time           Comprehensive Survey of Deep Learning for Multivariate
+Series with Missing Values. CoRR, abs/1606.01865.                  Time Series Forecasting: A Channel Strategy Perspective.
+Chen, T. Q.; Rubanova, Y.; Bettencourt, J.; and Duvenaud,          arXiv preprint arXiv:2502.10721.
+D. 2018. Neural Ordinary Differential Equations. In                Qiu, X.; Hu, J.; Zhou, L.; Wu, X.; Du, J.; Zhang, B.; Guo,
+NeurIPS 2018, 6572–6583.                                           C.; Zhou, A.; Jensen, C. S.; Sheng, Z.; and Yang, B. 2024.
+Chen, Y.; Ren, K.; Wang, Y.; Fang, Y.; Sun, W.; and Li, D.         TFB: Towards Comprehensive and Fair Benchmarking of
+2023. ContiFormer: Continuous-Time Transformer for Ir-             Time Series Forecasting Methods. In Proc. VLDB Endow.
+regular Time Series Modeling. In NeurIPS 2023.                     2024, 2363–2377.
+Chowdhury, R. R.; Li, J.; Zhang, X.; Hong, D.; Gupta, R. K.;       Qiu, X.; Li, Z.; Qiu, W.; Hu, S.; Zhou, L.; Wu, X.; Li, Z.;
+and Shang, J. 2023. PrimeNet: Pre-training for Irregular           Guo, C.; Zhou, A.; Sheng, Z.; Hu, J.; Jensen, C. S.; and
+Multivariate Time Series. In AAAI 2023, 7184–7192.                 Yang, B. 2025b. TAB: Unified Benchmarking of Time Se-
+Gao, H.; Shen, W.; Qiu, X.; Xu, R.; Yang, B.; and Hu, J.           ries Anomaly Detection Methods. In Proc. VLDB Endow.
+2025. SSD-TS: Exploring the potential of linear state space        2025, 2775–2789.
+models for diffusion models in time series imputation. In          Qiu, X.; Wu, X.; Cheng, H.; Liu, X.; Guo, C.; Hu, J.; and
+SIGKDD 2025.                                                       Yang, B. 2025c. DBLoss: Decomposition-based Loss Func-
+Gravina, A.; Zambon, D.; Bacciu, D.; and Alippi, C. 2024.          tion for Time Series Forecasting. In NeurIPS 2025.
+Temporal Graph ODEs for Irregularly-Sampled Time Series.           Qiu, X.; Wu, X.; Lin, Y.; Guo, C.; Hu, J.; and Yang, B.
+In IJCAI 2024, 4025–4034.                                          2025d. DUET: Dual Clustering Enhanced Multivariate Time
+Horn, M.; Moor, M.; Bock, C.; Rieck, B.; and Borgwardt,            Series Forecasting. In SIGKDD 2025, 1185–1196.
+K. M. 2020. Set Functions for Time Series. In ICML 2020,
+                                                                   Qiu, X.; Zhu, Y.; Li, Z.; Cheng, H.; Wu, X.; Guo, C.; Yang,
+volume 119 of Proceedings of Machine Learning Research,
+                                                                   B.; and Hu, J. 2025e. DAG: A dual causal network for time
+4353–4363.
+                                                                   series forecasting with exogenous variables. arXiv preprint
+Hu, S.; Zhao, K.; Qiu, X.; Shu, Y.; Hu, J.; Yang, B.; and          arXiv:2509.14933.
+Guo, C. 2024. MultiRC: Joint Learning for Time Series
+Anomaly Prediction and Detection with Multi-scale Recon-           Rubanova, Y.; Chen, T. Q.; and Duvenaud, D. 2019. Latent
+structive Contrast. arXiv preprint arXiv:2410.15997.               Ordinary Differential Equations for Irregularly-Sampled
+                                                                   Time Series. In NeurIPS 2019, 5321–5331.
+Huang, Q.; Shen, L.; Zhang, R.; Cheng, J.; Ding, S.; Zhou,
+Z.; and Wang, Y. 2024. HDMixer: Hierarchical Dependency            Schirmer, M.; Eltayeb, M.; Lessmann, S.; and Rudolph, M.
+with Extendable Patch for Multivariate Time Series Fore-           2022. Modeling Irregular Time Series with Continuous Re-
+casting. In AAAI 2024, 12608–12616.                                current Units. In ICML 2022, volume 162 of Proceedings of
+                                                                   Machine Learning Research, 19388–19405.
+Kidger, P.; Morrill, J.; Foster, J.; and Lyons, T. J. 2020. Neu-
+ral Controlled Differential Equations for Irregular Time Se-       Shukla, S. N.; and Marlin, B. M. 2021. Multi-Time Atten-
+ries. In NeurIPS 2020.                                             tion Networks for Irregularly Sampled Time Series. In ICLR
+Kim, D.; Park, J.; Lee, J.; and Kim, H. 2024. Are                  2021.
+Self-Attentions Effective for Time Series Forecasting? In          Wang, Q.; Wu, Y.; Long, Y.; Huang, J.; Ran, F.; Su, B.; and
+NeurIPS 2024.                                                      Xu, H. 2025. A Plug-and-Play Bregman ADMM Module
+Lin, S.; Lin, W.; Hu, X.; Wu, W.; Mo, R.; and Zhong,               for Inferring Event Branches in Temporal Point Processes.
+H. 2024a. CycleNet: Enhancing Time Series Forecasting              In AAAI 2025.
+through Modeling Periodic Patterns. In NeurIPS 2024.               Wang, W.; Yao, L.; Chen, L.; Lin, B.; Cai, D.; He, X.; and
+Lin, S.; Lin, W.; Wu, W.; Chen, H.; and Yang, J. 2024b.            Liu, W. 2022. CrossFormer: A Versatile Vision Transformer
+SparseTSF: Modeling Long-term Time Series Forecasting              Hinging on Cross-scale Attention. In ICLR 2022.
+with *1k* Parameters. In ICML 2024.                                Wu, X.; Qiu, X.; Cheng, H.; Li, Z.; Hu, J.; Guo, C.; and
+Liu, J.; Cao, M.; and Chen, S. 2025. TimeCHEAT: A Chan-            Yang, B. 2025a. Enhancing time series forecasting through
+nel Harmony Strategy for Irregularly Sampled Multivariate          selective representation spaces: A patch perspective. arXiv
+Time Series Analysis. In AAAI 2025, 18861–18869.                   preprint arXiv:2510.14510.
+Wu, X.; Qiu, X.; Gao, H.; Hu, J.; Yang, B.; and Guo, C.
+2025b. K2 VAE: A Koopman-Kalman Enhanced Variational
+AutoEncoder for Probabilistic Time Series Forecasting. In
+ICML 2025.
+Wu, Z.; Pan, S.; Chen, F.; Long, G.; Zhang, C.; and Yu, P. S.
+2021. A Comprehensive Survey on Graph Neural Networks.
+IEEE Trans. Neural Networks Learn. Syst., 32(1): 4–24.
+Yalavarthi, V. K.; Madhusudhanan, K.; Scholz, R.; Ahmed,
+N.; Burchert, J.; Jawed, S.; Born, S.; and Schmidt-Thieme,
+L. 2024. GraFITi: Graphs for Forecasting Irregularly Sam-
+pled Time Series. In AAAI 2024, 16255–16263.
+Yao, Z.; Bi, J.; and Chen, Y. 2018. Applying Deep Learning
+to Individual and Community Health Monitoring Data: A
+Survey. Int. J. Autom. Comput., 15(6): 643–655.
+Zhang, J.; Zheng, S.; Cao, W.; Bian, J.; and Li, J. 2023.
+Warpformer: A Multi-scale Modeling Approach for Irreg-
+ular Clinical Time Series. In KDD 2023, 3273–3285.
+Zhang, W.; Yin, C.; Liu, H.; Zhou, X.; and Xiong, H. 2024.
+Irregular Multivariate Time Series Forecasting: A Trans-
+formable Patching Graph Neural Networks Approach. In
+ICML 2024.
+Zhang, X.; Zeman, M.; Tsiligkaridis, T.; and Zitnik, M.
+2022. Graph-Guided Network for Irregularly Sampled Mul-
+tivariate Time Series. In ICLR 2022.
+

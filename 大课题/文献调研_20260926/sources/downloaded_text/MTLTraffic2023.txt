@@ -1,0 +1,854 @@
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 24, NO. 4, APRIL 2023                                                          4189
+
+
+
+
+                     Traffic Prediction With Missing Data:
+                       A Multi-Task Learning Approach
+    Ao Wang , Yongchao Ye , Student Member, IEEE, Xiaozhuang Song , Shiyao Zhang , Member, IEEE,
+                                               and James J. Q. Yu , Senior Member, IEEE
+
+   Abstract— Traffic speed prediction based on real-world traffic               leverage the traffic forecasting results to make operational
+data is a classical problem in intelligent transportation systems               decisions, e.g., congestion control, traffic resource allocation,
+(ITS). Most existing traffic speed prediction models are proposed               personalized travel recommendations, etc.
+based on the hypothesis that traffic data are complete or have
+rare missing values. However, such data collected in real-world                    Among all traffic forecasting problems, traffic speed pre-
+scenarios are often incomplete due to various human and natural                 diction is broadly considered indispensable for ITS research.
+factors. Although this problem can be solved by first estimating                Traffic speed forecasting has been extensively studied in the
+the missing values with an imputation model and then applying                   past decades. Classical methods can be generally categorized
+a prediction model, the former potentially breaks critical latent               into parametric methods (Autoregressive Integrated Moving
+features and further leads to the error accumulation issues.
+To tackle this problem, we propose a graph-based spatio-                        Average [2], Kalman Filtering [3], etc.) and non-parametric
+temporal autoencoder that follows an encoder-decoder structure                  methods (K-Nearest Neighbors algorithm [4], Support Vector
+for spatio-temporal traffic speed prediction with missing values.               Regression [5], etc.). However, the methods mentioned above
+Specifically, we regard the imputation and prediction as two                    only utilize the raw data for regression modeling without
+parallel tasks and train them sequentially to eliminate the                     extracting the data’s latent high-dimensional features, thereby
+negative impact of imputation on raw data for prediction and
+accelerate the model training process. Furthermore, we utilize                  being unsatisfactory in prediction performance. In addition,
+graph convolutional layers with a self-adaptive adjacency matrix                traffic changes are dynamic and complex, i.e., different roads
+for spatial dependencies modeling and apply gated recurrent                     interact with each other, and traffic speed on the same
+units for temporal learning. To evaluate the proposed model,                    road is also time-variant, rendering the necessity for more
+we conduct comprehensive case studies on two real-world traffic                 advanced methods. The development of deep learning tech-
+datasets with two different missing patterns and a wide and
+practical missing rate range from 20% to 80%. Experimental                      niques provides researchers and field engineers with new
+results demonstrate that the model consistently outperforms the                 tools for predicting traffic speed more accurately. Contributed
+state-of-the-art traffic prediction with missing values methods                 by the powerful fine-grained feature extraction capability of
+and achieves steady performance in the investigated missing                     deep neural networks (DNN), researchers have embarked
+scenarios and prediction horizons.                                              on introducing the Convolutional Neural Network (CNN) to
+  Index Terms— Traffic speed prediction, missing data, spatio-                  extract the spatial dependency in traffic data [6]. However,
+temporal modeling, deep learning, multi-task learning.                          CNN has limitations on processing traffic data, which is
+                                                                                naturally sampled in non-Euclidean space, i.e., along with
+                          I. I NTRODUCTION                                      traffic networks. Considering the similarity between traffic
+                                                                                networks and graphs, Graph Neural Networks (GNN) has
+T    RAFFIC speed prediction is among the essential func-
+     tions of modern intelligent Transportation Systems
+(ITS) [1]. An accurate traffic prediction model based on
+                                                                                been proposed to capture the complex spatial dependencies
+                                                                                from graph topology [7], [8], [9]. GNN-based approaches have
+geographically interconnected traffic sensor data is the back-                  achieved state-of-the-art performance in extracting dependency
+bone of transportation management. For instance, authorities                    from traffic data and predicting future traffic speeds [10].
+                                                                                Besides, considering the temporal dependency in the traffic
+  Manuscript received 30 March 2022; revised 9 September 2022; accepted
+29 December 2022. Date of publication 9 January 2023; date of current version   data, researchers have focused on the variants of Recurrent
+29 March 2023. This work was supported in part by the Stable Support Plan       Neural Networks (RNN) [11] such as Long Short-Term Mem-
+Program of Shenzhen Natural Science Fund under Grant 20200925155105002,         ory (LSTM) [12] and Gated Recurrent Units (GRU) [13]
+in part by the General Program of Guangdong Basic and Applied Basic
+Research Foundation under Grant 2019A1515011032, and in part by the             to extract traffic dynamics features among the time series
+Guangdong Provincial Key Laboratory under Grant 2020B121201001. The             data [7], [9], [14].
+Associate Editor for this article was J. A. Barria. (Corresponding author:         However, there is a notable and practical research gap in
+James J. Q. Yu.)
+  Ao Wang, Yongchao Ye, Xiaozhuang Song, and James J. Q. Yu                     the aforementioned methods, especially when the traffic data
+are with the Guangdong Provincial Key Laboratory of Brain-inspired              are incomplete or corrupted. The majority of existing traffic
+Intelligent Computation, Department of Computer Science and Engineering,        prediction methods are proposed based on the hypothesis
+Southern University of Science and Technology, Shenzhen 518055, China
+(e-mail: 12132359@mail.sustech.edu.cn; 12032868@mail.sustech.edu.cn;            that the traffic data are complete or have seldom missing
+shawnsxz97@gmail.com; yujq3@sustech.edu.cn).                                    values. Nevertheless, they are incapable of or inferior in
+  Shiyao Zhang is with the Research Institute for Trustworthy Autonomous        traffic prediction when there are a larger number of missing
+Systems, Southern University of Science and Technology, Shenzhen 518055,
+China (e-mail: zhangsy@sustech.edu.cn).                                         values; see [15], [16], [17] for examples. Taking the Attention
+  Digital Object Identifier 10.1109/TITS.2022.3233890                           Based Spatial-Temporal Graph Convolutional Networks (AST-
+                       1558-0016 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+4190                                              IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 24, NO. 4, APRIL 2023
+
+
+
+                                                                    autoencoder structure, which combines the Graph Convolu-
+                                                                    tional Networks (GCN) with adaptive adjacent matrix and
+                                                                    GRU to extract the complex spatio-temporal dependencies
+                                                                    in traffic data. Inspired by multi-task learning [25], GSTAE
+                                                                    treats imputation and prediction as two parallel tasks rather
+                                                                    than standalone and consecutive tasks to eliminate the impact
+                                                                    of imputation results on prediction. The encoder module of
+Fig. 1. The 60 min-ahead speed prediction of ASTGCN model on the    GSTAE extracts the generalized representation from traffic
+PEMSD7 dataset with different missing rates.                        data with missing values. It is capable of handling differ-
+                                                                    ent downstream tasks by connecting with different decoder
+                                                                    models. For the training process, we design a two-stage
+GCN) [18] as an example, its prediction performance shown           training paradigm to achieve multi-task training and improve
+in Fig. 1 experiences notable degradation as the missing rate       prediction accuracy. Specifically, the training starts with an
+increases, e.g., MAPE rises from 8.18% to 12.20% as the             imputation task, which trains an encoder that extracts dense
+missing rate is increased from 20% to 80%. Besides, the             representation from traffic data with missing values. Then, the
+data missing is a practical and common problem for traffic          prediction task is trained based on the pre-trained encoder
+data collected in practice due to various factors. For example,     to utilize the domain-specific information in the imputation
+considering the hardware failure and communication error            training process and save computational effort. After the
+[16], [19], approximately 5% of all traffic data are missing        pre-trained encoder extracts the generalized representation
+in PeMS, and the missing rate can reach up to 90% in                from traffic data with missing values, the decoder module
+extreme cases in Alberta, Canada [20]. In practical scenarios,      makes predictions directly to eliminate the error accumu-
+the performance of most existing traffic prediction models          lation issue. The primary contributions are summarized as
+fluctuates on multiple datasets because of the missing data,        follows:
+which is a common and unpredictable phenomenon in real                 • We propose a novel multi-task learning deep neural net-
+life. Therefore, we need novel methods to handle the task                work model which follows an encoder-decoder structure
+of traffic prediction with missing values and achieve stable             and treats the imputation and prediction as two parallel
+performance.                                                             tasks to eliminate the impact of imputation on the pre-
+   For traffic speed prediction with missing values, a straight-         diction task.
+forward solution is first to estimate the missing values using an      • We design a two-stage training paradigm to achieve multi-
+imputation method and then feed the imputed data into a pre-             task training and improve performance on the imputation
+diction model [17], [21]. Although recent years have witnessed           and prediction tasks.
+a plethora of traffic data imputation approaches [22], [23],           • We evaluate the proposed GSTAE with comprehensive
+directly stacking imputation and prediction models has the               case studies on two real-world traffic datasets and exhaus-
+following limitations. First, the instance-level representations         tive missing scenarios. The results indicate that GSTAE
+learned in the imputation process are insufficient for the down-         consistently outperforms recent methods for traffic pre-
+stream task, which needs fine-grained representations. For               diction with missing values, which also verifies the
+example, imputation methods tend to use the average value to             model’s generalization ability.
+estimate the missing position, leading to over-smoothed impu-          • We investigate the impact of the imputed results on the
+tation results, especially for methods based on tensor decom-            prediction models. The result shows that simple splicing
+position [23]. Over-smoothed results may lose the dynamics               well-performed imputation and prediction models are not
+feature in the traffic data and further render the adverse error         feasible for traffic prediction with missing data.
+accumulation on the downstream tasks, i.e., traffic speed pre-         The rest of the paper is structured as follows. Sec. II
+diction. Second, the impact of imputation results on prediction     briefly reviews the recent prediction and imputation methods.
+tasks has not been well-studied, namely, whether accurate           Sec. III presents the formulation of traffic speed prediction
+imputed data improve prediction performance. Although there         with missing values. Sec. IV introduces the proposed model
+exists research on traffic prediction with missing values [15],     GSTAE and gives a detailed training scheme. Sec. V presents
+[16], [17], [19], [24], using traditional training methods and      comprehensive case studies on real-world datasets with dif-
+simply concatenating loss functions may undermine prediction        ferent missing scenarios. Finally, the paper is concluded in
+accuracy as well as model interpretability. Furthermore, the        Sec. VI.
+performance comparison with conventional prediction base-
+lines in simple scenarios is insufficient to demonstrate their
+                                                                                         II. R ELATED W ORK
+superiority.
+   To jointly tackle the above issues and bridge the research       A. Traffic Prediction
+gaps, we propose a novel deep learning model Graph-based               In traffic prediction studies, deep learning models have
+Spatio-Temporal AutoEncoder (GSTAE) for traffic speed pre-          generated state-of-the-art performance in the past decade.
+diction with missing values. The major focus of this work           RNN, together with its modern variants LSTM and GRU, can
+is to improve traffic prediction performance when historical        effectively extract traffic dynamics features among the time
+traffic data contains missing values. GSTAE employs the             series data. In addition to temporal correlation, traffic data
+WANG et al.: TRAFFIC PREDICTION WITH MISSING DATA: A MULTI-TASK LEARNING APPROACH                                                  4191
+
+
+
+also contain complex spatial dependencies. GNN, which can           constructed multiple graphs to simulate the dynamic correla-
+effectively learn non-Euclidean topological correlation, has        tion of the transportation network [17]. Although these studies
+shown its advantage in capturing complex spatial correlation        integrate imputation and prediction tasks, it is complicated for
+in traffic graphs. Conventional spectral graph convolution          these models to achieve good performance in imputation and
+is extensively applied in traffic prediction, see [8], [26] for     prediction due to the lack of a suitable training method or loss
+examples. Further studies improved graph convolution by an          function [25], [38], [39]. Moreover, performance comparison
+adaptive dependency matrix [27]. Other studies perform spa-         conducted on simple scenarios is insufficient to demonstrate
+tial convolutions by propagating information to adjacencies.        their superiority. Specifically, these studies only select some
+For instance, Li et al. utilized bidirectional random walks on      prediction methods for comparison but do not complete the
+graphs and designed an encoder-decoder to capture the spatio-       data through the state-of-the-art imputation methods before
+temporal dependencies [9], Zheng et al. [28] applied the atten-     the comparison.
+tion mechanism to extra the spatio-temporal dependencies.              Inspired by previous studies, in this paper, we propose a new
+   While the aforementioned approaches have achieved                multi-task learning deep neural network model — GSTAE —
+remarkable performance in traffic prediction, these forecasting     based on the simple yet effective encoder-decoder structure
+solutions have a non-negligible limitation: they rely on fully      to predict traffic speed with missing values. To facilitate the
+complete raw traffic data for prediction, while such data           multi-task nature of traffic speed imputation and prediction
+collected in real-world scenarios inevitably has missing values.    tasks, they are trained sequentially since the prediction is intu-
+                                                                    itively considered complex and challenging over imputation.
+B. Traffic Data Imputation
+                                                                                      III. P ROBLEM D EFINITION
+   Data imputation methods that estimate missing values by
+analyzing the sampled traffic data are proposed to address          A. Traffic Speed Prediction
+the missing data issue. Compared to time series imputation             The objective of traffic speed prediction is to forecast
+methods designed for general purposes [29], [30], [31], traf-       the future traffic speed based on historical data measured
+fic data imputation methods pay more attention to spatio-           from sensor nodes in urban traffic networks. Generally, this
+temporal modeling and can be broadly grouped into two               objective can be expressed by
+categories, namely, tensor decomposition and deep learning.
+                                                                                                        f (·)
+Tensor decomposition methods utilized low-rank matrix fac-                      [X (t −Th +1):(t ) , G] −−→ X (t +1):(t +T p ) ,   (1)
+torization and additional spatial constraints to impute the
+missing traffic data [32], [33]. Besides, Chen et al. improved      where X (t −Th +1):(t ) ∈ RTh ×N is the historical traffic speed
+imputation performance by applying Bayesian inference to the        of N sensors from time step (t − Th + 1) to t. The traffic
+matrix factorization model [23]. For deep learning methods,         prediction model needs to establish a function f to predict
+a conventional scheme is to capture spatio-temporal corre-          the traffic speed of the next T p steps based on Th steps in the
+lations with CNN layers by converting the traffic data into         past.
+pictures [34], [35]. In order to extract local information on
+graph topology directly and improve imputation accuracy, fur-
+                                                                    B. Traffic Network Graph
+ther researches try to apply GNN to the traffic imputation task.
+For some examples, Ye et al. incorporated the graph attention         In this paper, we denote the urban traffic network by
+mechanism and an encoder-decoder structure for traffic data         G = (V, E) to represent prior geo-information [7], [40], where
+imputation [36]. Wu et al. utilized graph convolution layers        V is the set of traffic sensors, and E is the set of edges,
+and kriging interpolation to handle the imputation task on          which represents the connectivity between sensors. The adja-
+unsampled sensors [37]. Despite the respective outstanding          cent matrix A ∈ R N×N of graph G represents the relation-
+performance, these methods primarily focus on the imputation        ship among sensors, which is generated by the thresholded
+task. They do not yet investigate the impact of imputed             Gaussian kernel following the well-recognized approach pre-
+results on downstream traffic data analytic tasks, e.g., traffic    sented in [7]:
+prediction. For the traffic imputation and prediction tasks, they                  ⎧     2                  2
+                                                                                   ⎨       d                    d
+are closely associated, and the impact of imputation results on                      exp − σi2j , i = j and − σi2j ≥ 
+                                                                         A(i j ) =                                         ,   (2)
+prediction performance is non-negligible. Nevertheless, there                      ⎩
+                                                                                     0,           otherwise.
+is a notable gap between these two primary ITS applications.
+                                                                    where di j is the Euclidean distance between sensor nodes i
+                                                                    and j , σ is the standard deviation of distance, and  (set to
+C. Forecasting With Missing Values
+                                                                    0.5 by default [40]) is the threshold that controls the sparsity
+   It is reported that missing data may compromise the per-         of weight matrix A, respectively.
+formance of traffic prediction methods [15]. However, few
+studies focused on this issue and proposed methods for traffic
+prediction with missing data. Cui et al. proposed a stacked         C. Traffic Speed Prediction With Missing Values
+bidirectional LSTM to capture the temporal information and             For time step t, the traffic speed data can be represented by
+forecast traffic state, e.g., speed and volume [24]. Zhong et al.   X (t ) ∈ R N , which is observed on all N sensors in the traffic
+4192                                                          IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 24, NO. 4, APRIL 2023
+
+
+
+                                                                                 extracts the complex spatio-temporal dependencies from the
+                                                                                 historical traffic data with missing values and represents them
+                                                                                 as a generalized dense representation suitable for downstream
+                                                                                 tasks. The decoder is coupled to perform specific downstream
+                                                                                 tasks, e.g., imputation and prediction, using the generalized
+                                                                                 representation from the encoder module.
+                                                                                    For the training process, it is possible to train the task of
+                                                                                 traffic prediction with missing values directly. However, the
+                                                                                 task from historical traffic speed data with missing values to
+                                                                                 future traffic speed data is challenging and complicated for
+                                                                                 the model to train. It is true that we can split the task into
+                                                                                 two sub-tasks, one for processing historical data with missing
+Fig. 2. Diagram of different missing patterns. The grey blocks represent the
+missing positions.                                                               values and imputing historical data and another for process-
+                                                                                 ing imputed traffic data and predicting future traffic speed.
+                                                                                 Nonetheless, the accumulation of imputation and prediction
+network. A missing mask M(t ) ∈ B N that records the missing                     errors can adversely affect the combined performance. Inspired
+positions is defined by                                                          by [42], we treat the encoder module as a unified framework
+                                                                                to extract features from input data, which is suitable for
+                        1, if X (ti ) is observed
+              M(t ) =
+                 i
+                                                  .      (3)                     various downstream tasks, e.g., imputation and prediction.
+                        0, if X (ti ) is missing
+                                                                                 As prediction and imputation have different characteristics,
+   Following the common practice in previous studies [22],                       imputation and prediction tasks are trained sequentially. It can
+[23], we investigate two representative missing patterns in                      be regarded as a trade-off between predicting the future
+this study, namely, Random Missing (RM) and Non-Random                           traffic speed from historical data with missing values and
+Missing (NRM) [22], [23], which are defined as follows:                          splitting this task into imputation and prediction sub-tasks.
+   • Random Missing (RM): Missing values appear randomly                         First, we train the model with the imputation task to enable
+     and independently. Fig. 2a is an example of the Random                      the encoder to extract dense representations from the original
+     Missing pattern, where the grey cells denote the masked                     data with missing values. In other words, the imputation is
+     (missing) values and the white ones are the observed                        an auxiliary task that speeds up and improves the subsequent
+     values.                                                                     prediction. We view the encoder as a unified framework for
+   • Non-Random Missing (NRM): In practice, sensor nodes                         extracting dense representations of data suited for various
+     may fail for a notable period of time, rendering data                       downstream tasks. Thus, the encoder extracts features from
+     loss. Fig. 2b is an example of such Non-Random Missing                      the original data while not bringing additional features tailored
+     patterns.                                                                   for specific tasks. For traffic imputation, existing methods
+   For the task of traffic speed prediction with missing values,                 tend to smoothen the imputed traffic dynamics, which may
+we need to learn a function g(·) which is capable of predicting                  not be suitable for subsequent traffic prediction. After the
+the traffic speed of the next T p steps based on the graph G,                    encoder module is trained by the imputation task, it extracts
+historical Th steps traffic speed X, and corresponding mask                      the generalized representation from traffic data with missing
+matrix M. Compared to Eq. (1), g(·) considers the missing                        values. The pre-trained encoder can speed up and improve the
+items in the traffic data, and its relationship can be expressed                 subsequent prediction training.
+as                                                                                  In summary, we propose an encoder-decoder-based model
+                                                g(·)
+                                                                                 called GSTAE to extract generalized dense representations
+       [X (t −Th +1):(t ), M(t −Th +1):(t ), G] −−→ X (t +1):(t +T p ) ,   (4)   from traffic data with missing values and handle two down-
+                                                                                 stream tasks, namely, traffic data imputation and prediction.
+where X (t −Th +1):(t ), M(t −Th +1):(t ) ∈ RTh ×N and X (t +1):(t +T p)
+                                                                                    1) Traffic Data Imputation: As models that follow the
+∈ RT p ×N .
+                                                                                 encoder-decoder structure have shown superiority in learning
+  IV. G RAPH -BASED S PATIO -T EMPORAL AUTO E NCODER                             the hidden representation and reconstructing the data [42],
+                                                                                 [43], we design GSTAE following the encoder-decoder struc-
+  In this section, we elaborate on the proposed GSTAE in                         ture. We first train the proposed GSTAE with the imputation
+depth. We begin by introducing the overview of the model                         task to extract representations from the original data with
+and design of each constituting component. Following that,                       missing values. After the training process, the GSTAE model
+we detail each sub-module and its components. Finally, we dis-                   can handle the traffic imputation task. We hypothesize that the
+cuss the unique training scheme of the proposed model.                           encoder has extracted good representations from the original
+                                                                                 data with missing values, and the pre-trained encoder can be
+A. GSTAE Overview                                                                transferred to accelerate the prediction training process.
+   Fig. 3a illustrates the overall structure of the proposed                        Due to the fact that the traffic data are time series, the
+GSTAE. The model is structured as an encoder-decoder struc-                      historical traffic state imposes a notable influence on the future
+ture, which has achieved state-of-the-art performance in a vari-                 dynamics, rendering future states to reflect the historical ones.
+ety of sequence-to-sequence tasks [41]. The encoder module                       Additionally, traffic data contain complex spatial dependencies
+WANG et al.: TRAFFIC PREDICTION WITH MISSING DATA: A MULTI-TASK LEARNING APPROACH                                                                4193
+
+
+
+
+Fig. 3. Structure of the proposed GSTAE. (a) The model consists of an encoder and decoder. The encoder consists of the forward and backward recurrent
+ST-Blocks, the decoder consists of forward recurrent ST-Blocks. (b) The ST-Block is composed of GCN and GRU layers and can be stacked.
+
+
+
+within the traffic network topology. As a result, we devise
+and employ bidirectional recurrency — ST-Blocks as will be
+introduced in Sec. IV-B — to extract the correlated spatio-
+temporal dependencies. For the decoder structure, we use
+forward recurrent ST-Blocks to generate the prediction output
+auto-regressively.
+   Let X (t −Th +1):(t ), M(t −Th +1):(t ) and η ∈ RTh ×N be the input
+of the model, where X m = X (t −Th +1):(t )  M(t −Th +1):(t ) is the
+historical traffic speed data with missing values,  denotes
+element wise multiplication. Before feeding X m to the encoder,
+                                                                            Fig. 4.   Diagram of L layers of ST-Blocks.
+a random noise η sampled from the standard distribution
+N (0, 0.01) is first added to historical traffic data X m based
+on the design principle of denoising auto-encoder [43]. Next,                                                        (l−1)
+                                                                            time step. And the input data H(t )              is processed based on
+since the location information of missing data is non-negligible            the following propagation rule:
+for the model to extract the dense representation [29]. We com-
+bine the noisy input with M(t −Th +1):(t ) to assist the model                                 H(t(l)) = STB H(t(l−1)   (l)
+                                                                                                                  ) , h (t −1) ,                 (6)
+in identifying the missing positions of the historical input
+data and get the combined input X comb ∈ RTh ×N×2 . Finally,                where H(t(l)) is the output of l-th ST-Block, which is the same
+                                                         (0)
+we transform the combined input X comb to H(t −Th +1):(t ) ∈
+                                                                            as the updated h (l)
+                                                                                               (t ) and will be proposed to the next layer of
+RTh ×N×D through two fully-connected layers to combine                      ST-Block.
+the historical traffic information and the observation location                The last hidden state h f in the forward ST-Block and h b in
+information as follows:                                                     the backward ST-Block are combined and transformed to h dec
+          (0)                                                               through a fully-connected layer to combine features from two
+       H(t −Th +1):(t ) = FCs (X comb )
+                                                                           directions and keep the feature dimension of h dec consistent
+                        = FCs [X m + η] ⊕ M(t −Th +1):(t ) ,         (5)    with h f and h b . The resulting h dec is subsequently passed to
+                                                            (0)
+                                                                            the decoder module.
+where ⊕ denotes the concatenate operation. Next, H(t −Th +1):(t )              Different from the aforementioned encoder, the decoder
+is passed to the encoder module to extract the dense represen-              only contains the forward ST-Blocks to generate the output
+tation. The encoder module consists of a forward ST-Block                   auto-regressively as follows:
+and a backward ST-Block stacked L layers of ST-Blocks.
+Their structures and input are the same but with different                                     X̂ (t ) = Dec h (t −1) , X̃ (t −1) ,              (7)
+data processing directions. The forward ST-Block processes
+       (0)
+the H(t −Th +1):(t ) from step (t − Th + 1) to t, and the backward          where X̂ (t ) is the estimated traffic speed of time step t.
+ST-Block processes from step t to (t − Th + 1). Fig. 4 demon-               Next, by filling the missing values in X (t ) with corresponding
+strates L layers of ST-Blocks that extract spatio-temporal                  values in X̂ (t ), we can get the imputed traffic speed X̃ (t ) =
+                                   (0)
+dependencies. For the input H(t ) of time step t, the proposed              M(t )  X (t ) + (1 − M(t ) )  X̂ (t ) , and  denotes elementwise
+model extracts the hidden spatio-temporal representation by L               multiplication. To initialize the decoder, we set the h (0) = h dec
+layers of ST-Blocks. Then, features of different time steps are             and X̃ (0) = 0. Finally, the output of the decoder X̃ (t −Th +1):(t ) ∈
+aggregated by updating the hidden state of the GRU module in                RTh ×N , which denotes the imputed traffic speed, has the same
+ST-Blocks step by step. Taking the l-th ST-Block in forward                 data shape as the input data X (t −Th +1):(t ).
+ST-Block and time step t as an example, h (l)    (t −1) is the hidden         Regarding the purpose of this model, namely, extracting the
+state of the GRU module in l-th ST-Block from the previous                  dense representation of input data with missing values and
+4194                                                             IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 24, NO. 4, APRIL 2023
+
+
+
+reconstructing the data X (t −Th +1):(t ), the model is trained by                graph structures due to their irregularity, e.g., the number of
+minimizing the following reconstruction loss:                                     adjacent sections is different for each road section. To perform
+             Th                                                                   the convolution operation in the non-Euclidean space, GCN
+ L(θ, ϑ) =         ||(X (t −Th +i) − X̃ (t −Th +i) )  (1 − M(t −Th +i) )||2 ,    is proposed to capture the complex spatial dependencies in
+             i=1
+                                                                                  the graph data. Kipf and Welling [45] proposed the first-order
+                                                                            (8)   approximation of Chebyshev spectral filter [46]. Let the road
+                                                                                  sections be the nodes in the traffic network G. For each road
+where θ and ϑ are the parameters of the encoder and decoder,                      section, its adjacent sections denote neighbors. GCN model
+respectively. For the training process of the model, it needs                     learns node embedding through aggregating information from
+to adjust the parameters, so that given the input, the model                      neighbors based on the traffic network structure. Given the
+can generate an output that is the same as the label or as                        input data X ∈ R N×D , where N and D denote the number
+close as possible. Because the loss function L(θ, ϑ) represents                   of nodes and the feature dimension, respectively, the output
+the difference between the model output X̃ (t −Th +i) and label                   YG ∈ R N×D is produced based on the following propagation
+X (t −Th +i) , for one layer of the model, we can update the                      rule:
+weights by computing the partial derivative of L(θ, ϑ) with
+                                                                                                     YG = σ D̃ − 2 Ã D̃ − 2 X W ,
+                                                                                                                  1      1
+respect to each weight. This updating process can be executed                                                                                  (10)
+sequentially from the top layer to the bottom layer so that the
+output of the model is getting increasingly closer to the label.                  where Ã ∈ R N×N is the weight adjacent matrix with self-
+See [44] for more detailed information.                                           connection, and D̃ is the degree matrix of Ã, and D̃ii =
+                                                                                     j Ã i j . W ∈ R
+                                                                                                      D×D is the parameter matrix of the GCN
+    2) Traffic Speed Prediction: After the model is capable of
+handling data imputation, we may conclude that the compris-                       module. σ (·) denotes the nonlinear activation function, which
+ing encoder module can extract the dense representation from                      is set to ReLU by default in GSTAE. For the GCN module
+input data, thereby benefiting the traffic prediction training                    in the l-th layer of ST-Block, the input of time step t
+process. As a result, we connect this pre-trained encoder to                      is H(t(l−1)
+                                                                                          ) .
+a new decoder module with the same structure and train the                           However, the widely recognized geography-defined adjacent
+new combined model on the traffic prediction task.                                matrix cannot contain the complete spatial dependency cor-
+    In this process, we still employ the same noisy traffic data                  relation. For instance, two nodes have similar traffic states
+X (t −Th +1):(t ) + η as the input, making the output to be the                   but are far away from each other. Even though we can stack
+traffic speed of the next T p time steps X̂ (t +1):(t +T p ) . In order           and construct a deep GCN model to make them aggregate
+to minimize the difference between the predicted traffic speed                    information from each, too many layers of GCN can lead to
+X̂ (t +1):(t +T p ) and the observation X (t +1):(t +T p) , we train the          node embedding indistinguishable and over-smooth problems.
+model with the following mean squared error loss:                                 In addition, this approach cannot be applied to other problems
+                            Tp
+                                                                                  without the knowledge of graph structure. Recent studies
+                                                                                  have resolved this issue by applying a self-adaptive adjacent
+                   L(δ) =         ||X (t +i) − X̂ (t +i) ||2 ,              (9)
+                                                                                  matrix and achieving state-of-the-art performance [27], [47].
+                            i=1
+                                                                                  Following the design principle, we utilize a self-adaptive
+where δ is the set of training parameters in the new decoder.                     adjacent matrix Ãadp defined as follows:
+
+B. Spatio-Temporal Block                                                                         Ãadp = SoftMax ReLU(E 1 × E 2T ) ,           (11)
+   Fig. 3 shows the overview of ST-Block, which consists of
+a GCN layer and a GRU one. Taking the forward ST-Block                            where E 1 , E 2T ∈ R N×C are learnable parameters which are
+                                                             (0)                  initialized randomly before the training process.
+in the encoder module as an example, at time step t, H(t ) ∈
+                                                                                     Since both the geography-defined and the self-adaptive
+R N×D is the input, where N is the number of sensor nodes,
+                                                                                  adjacent matrix are essential for extracting geographic and
+and D is the hidden feature dimension. Through the process
+                                                                                  hidden spatial dependencies in traffic data, we combine
+of extracting the correlated spatio-temporal dependencies, the
+                                                                                  the geography-defined normalized adjacent matrix Adef =
+output of ST-Block H(t(l)) is generated. Additionally, in order to                    1      1
+prevent the over-smooth issues, we apply a residual connection                    D̃ − 2 Ã D̃ − 2 , which represents the relationship between dif-
+at the end of ST-Block. For each ST-Block, we ensure that the                     ferent nodes, and the self-adaptive matrix Ãadp . Through the
+input and output data dimensions are identical to allow the                       combination of Adef and Ãadp , the GCN module can extract
+residual connection operation. In the following, we introduce                     more complete spatial correlation information and achieve
+the GCN and GRU modules, respectively.                                            better performance than only using Adef . Besides, during
+   1) Graph Convolution Layer: Traffic data contain complex                       the training process, the geography-defined traffic network
+spatial correlation because the traffic state of a road section is                ensures the GCN operation can extract spatial dependency
+affected by adjacent sections. Traditional CNN can capture the                    and stabilizes the training process before the model learns
+spatial dependency through a small kernel, which constrains                       the correct and sufficient hidden spatial information. And the
+the operation range and provides the weight of information                        graph convolution process can be expressed as:
+aggregation. It performs convolution operations in Euclidean
+space. However, such a uniform shape is not suitable for                                         YG = σ Adef X Wdef + Ãadp X Wadp .           (12)
+WANG et al.: TRAFFIC PREDICTION WITH MISSING DATA: A MULTI-TASK LEARNING APPROACH                                                        4195
+
+
+
+   In summary, we can make each node gather information                      Training scheme:
+from not only its first-order neighbors but also other correlated            1) Initialize the model parameters θ , ϑ, and the training
+nodes through one layer of GCN. Besides, the process in                          dataset of the imputation task. Input is traffic speed
+which traffic conditions influence each other will not terminate                 data with missing values X  M, and the label is the
+after one-hop propagation, which indicates that only using one                   corresponding completed traffic speed data X.
+layer of the GCN module is insufficient to extract the spatial               2) Use the Adam optimization algorithm [51] to update the
+correlations [48]. This issue can be solved by stacking GCN                      model parameters θ and ϑ based on the loss function
+layers to extend the aggregation. However, stacking too many                     L(θ, ϑ).
+GCN layers may bring a massive computational burden and                      3) Freeze the encoder module and connect with a new
+lead to “over-smooth” issues [49]. Thus, in order to expand                      decoder module whose parameters are δ. Initialize the
+the coverage of information gathering and prevent the over-                      training dataset of the prediction task. Input is historical
+smoothing issue, we use three layers of ST-Block to extract                      traffic speed data with missing values X (t −Th +1):t 
+the complex spatial correlation in traffic data [50].                            M(t −Th +1):t , and the label is the traffic speed data of
+   2) Gated Recurrent Unit: After extracting spatial features                    the next T p time steps X (t +1):(t +T p ) .
+by GCN layers, we apply recurrent layers to learn the temporal               4) Use the Adam optimization algorithm to update the
+characteristics in traffic data. The RNNs are effective tools                    decoder parameters δ based on the loss function L(δ).
+to process the sequence data and model temporal depen-                       In summary, considering the complexity of the imputation
+dency. However, RNNs have limitations in processing the                   and prediction tasks being quite different, the imputation and
+long sequence data because of the gradient vanishing and                  prediction tasks are trained sequentially instead of training
+explosion problem. In ST-Block, we leverage GRU [13] to                   together. Besides, through the first training of the imputation
+learn the temporal dependency, which is a simple and effective            task, the encoder module can obtain a suitable parameter set
+variant of RNNs. GRU introduces the concept of gate units that            to extract the dense representation from input data. It can
+control the flow of information to solve gradient problems,               speed up the training process of the subsequent prediction task,
+and the structure of GRU is more simple than LSTM [12]                    which is much more complex than the imputation task.
+relatively. Specifically, the gate units consist of two types,
+namely, reset gate and update gate, to control how much state
+information of previous time steps can be remembered and                                         V. C ASE S TUDIES
+passed to the current time step:                                             In this section, we comprehensively evaluate the perfor-
+                                                                          mance of the proposed GSTAE with two real-world datasets.
+           u (t ) = σ (Wz [X (t ) , h (t −1)] + bu ),
+                                                                          We first assess the efficacy of traffic prediction and imputa-
+           r (t ) = σ (Wr [X (t ), h (t −1) ] + br ),                     tion tasks under a variety of missing scenarios and compare
+           c(t ) = tanh(W [X (t ) , r (t )  h (t −1)] + bc ),            the proposed model with state-of-the-art approaches. Then,
+           h (t ) = u (t )  h (t −1) + (1 − u (t ) )  c(t ),    (13)    we conduct a series of ablation tests to reveal the effectiveness
+                                                                          of GSTAE sub-modules. Finally, we analyze the sensitivity of
+where h (t ) is the hidden state at time t, X (t ) is the input feature   hyperparameters on the model performance.
+of step t, r (t ) is the reset gate, and u (t ) is the update gate,
+respectively. Because the GCN and GRU modules are stacked
+                                                                          A. Dataset and Configurations
+consecutive, the input of GRU X (t ) = YG is the output of the
+GCN module. By sequentially incorporating traffic data into                  All case studies are conducted on two real-world datasets:
+the model, GRU is capable of capturing the dynamic temporal               PEMSD7 [40] and METR-LA [9]. PEMSD7 is a popular
+dependency inherent in traffic time series.                               traffic speed prediction dataset collected from Caltrans Perfor-
+                                                                          mance Measurement System (PeMS) by over 39 000 sensor
+                                                                          stations on highways in California, United States. We follow
+C. Training and Inference                                                 the data processing method in [40] and adopt weekday traffic
+   Since GSTAE is proposed to handle two sub-tasks, namely,               data from May 1st, 2012 to June 30th, 2012. METR-LA
+imputation and prediction, the typical end-to-end training                data was collected from 207 sensors along the Los Angeles
+scheme is not suitable for GSTAE. Moreover, due to the                    Freeway during weekdays between March 1st, 2012 and June
+complexity of the imputation and prediction tasks being quite             30th, 2012. These two datasets share the same sampling
+different, the common multi-task training strategy, such as               interval of 5 min, i.e., each sensor generates 288 data points
+training together by computing the loss function for all sub-             per day. All missing data in the ground truth of these two
+tasks, is also not suitable for GSTAE. We treat the prediction            datasets are imputed by linear interpolation and are excluded
+task as the main task and the imputation task as the auxiliary            in the evaluation stage, following the common practice in
+task to solve these issues and train the model through a                  literature [7], [18], [40].
+two-stage training paradigm. First, the imputation task is                   In this study, we investigate two missing patterns, as pre-
+trained to enable the encoder module of GSTAE to extract                  viously mentioned in Sec. III, and a wide missing rate range
+dense representations from the original data with missing                 from 20% to 80% with 20% as the interval. For each sample,
+values. After the imputation training process, the GSTAE                  the missing values are masked according to the specific
+model is trained with the traffic prediction task.                        missing pattern. For cross-validation, each dataset is grouped
+4196                                                   IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 24, NO. 4, APRIL 2023
+
+
+
+into non-overlapping training, validation, and testing subsets             • BTMF (50) [22]: To get better imputation accuracy,
+with 60%, 20%, and 20% of the complete dataset, respectively.                we set the matrix rank to 50 in BTMF based on prelim-
+   All case studies are conducted on an Intel Xeon E5 CPU                    inary experiments against the default 10 as used above.
+and an nVidia GTX 2080 Ti GPU. The proposed model                       For the traffic prediction models, we employ
+and all baselines use the historical traffic speed of the past             • Diffusion Convolutional Recurrent Neural Network
+Th = 12 time steps (60 min) to predict that of T p = 3, 6, 12                (DCRNN) [9]: DCRNN embeds the graph by bidirec-
+time steps (15, 30, 60 min) ahead. For NRM, we set the                       tional random walks and applies gated recurrent units into
+length of mask block l = 4 as introduced in Sec. III-C.                      an encoder-decoder model to capture the spatio-temporal
+Unless otherwise specified, the number of ST-Block layers in                 dependencies.
+each recurrent sub-modules is set to L = 3, and the output                 • ASTGCN [18]: ASTGCN introduces the spatial and
+dimension of each ST-Block is set to D = 64. For the fully-                  temporal attention mechanisms to extract the dynamic
+connected layers that process the input data and generate the                spatio-temporal dependencies and considers the historical
+output, the hidden dimension is set to K = 256. The proposed                 data with a more extended range (e.g., historical traffic
+GSTAE is trained with the efficient stochastic optimization                  data one day ago, one week ago).
+method Adam, which updates the model parameter based on                    • Graph Multi-Attention Network (GMAN) [28]: GMAN
+the first-order gradients with the weight decay of 0.7 for every             utilizes a new spatio-temporal attention mechanism which
+five epochs. The maximum epoch is 200, the initial learning                  is calculated through input data and pre-defined spatio-
+rate is 0.001, and the batch size is 32. To avoid the overfitting            temporal embedding information to extract the complex
+problem, we apply the early stopping in the training process                 spatio-temporal correlations.
+and set the patience to 10.                                                • Fully Connected Gated Graph Architecture (FC-GAGA)
+   To evaluate the prediction performance, we employ Root                    [52]: FC-GAGA builds the hard graph gate mecha-
+Mean Square Error (RMSE), Mean Absolute Error (MAE),                         nism to extract spatial dependency without requiring the
+and Mean Absolute Percentage Error (MAPE) as evaluation                      geographic-knowledge and extracts temporal dependency
+metrics, which are defined as follows:                                       through the time gate mechanism.
+                         
+                          n
+                         1                                                Furthermore, we also implement recent studies on traffic
+              RMSE =            (X i − X̂ i )2 ,                       prediction with missing values based on the introductions and
+                           n
+                                  i=1                                   configurations from their original proposals.
+                              n                                          • Graph Convolutional Bidirectional Recurrent Neural Net-
+                         1                    
+               MAE =               X i − X̂ i  ,                           work (GCBRNN) [16]: GCBRNN combines the GCN
+                         n
+                             i=1
+                              n 
+                                                                           and GRU modules to build the graph convolutional gated
+                                                
+                    1               X i − X̂ i                             recurrent bidirectional unit, which imputes historical data
+             MAPE =                             × 100%,        (14)
+                    n               Xi                                     and make prediction consecutively.
+                             i=1
+                                                                           • Recurrent Imputation based Heterogeneous Graph Con-
+where X i is the real traffic speed at time step i , and X̂ i is the         volution Network (RIHGCN) [17]: RIHGCN utilizes het-
+predicted speed at time step i , respectively.                               erogeneous graph structure and LSTM to extract dynamic
+                                                                             spatio-temporal correlations.
+B. Prediction Accuracy                                                     Table I and II summarize the simulation results on the
+                                                                        PEMSD7 and METR-LA datasets respectively. Generally, the
+   We first compare the prediction accuracy of the proposed             proposed GSTAE outperforms all baselines in most missing
+GSTAE with baselines. A common practice for traffic pre-                scenarios and prediction lengths. Especially for the NRM
+dicting with missing data is to impute incomplete data with             missing type, a more complex missing type than RM, GSTAE
+an external imputation model and then feed the imputed data             is better than other baseline models for all missing rates. This
+into prediction models [17], [21]. Thus, we combine state-of-           is because the bidirectional ST-Block proposed in GSTAE
+the-art traffic imputation and prediction methods to develop            can extract the dynamic temporal correlation in the traffic
+baselines of the typical two-phase traffic predictors. For the          data. At the same time, the GCN model in the ST-Block
+imputation methods, we adopt                                            module can capture the complex spatial correlation, and the
+   • Bidirectional Recurrent Imputation for Time Series                 introduced adaptive adjacency matrix can also learn the hid-
+     (BRITS) [29]: BRITS is a general imputation model for              den spatial information outside the network topological map.
+     time series data. It utilizes the bidirectional recurrent net-     Furthermore, the two-step training method used in the training
+     work for time series modeling. To get better imputation            process ensures that the encoder module can extract enough
+     performance, we set the dimension of the RNN hidden                spatio-temporal information to process downstream tasks and
+     state to 64 based on offline preliminary experiments.              alleviates the error accumulation issues.
+   • Bayesian temporal matrix factorization (BTMF) [22]:                   For RM missing, there are three cases where the proposed
+     BTMF employs the matrix factorization method with                  GSTAE slightly underperforms the baseline models based on
+     Bayesian inference to capture the temporal dependency              ASTGCN or GMAN. This is because that ASTGCN has a
+     and has remarkable performance compared to other impu-             broader receptive field. It can obtain important information
+     tation methods based on tensor decomposition.                      from historical data one day and one week before. At the
+WANG et al.: TRAFFIC PREDICTION WITH MISSING DATA: A MULTI-TASK LEARNING APPROACH                                            4197
+
+
+
+                                                             TABLE I
+P ERFORMANCE C OMPARISON W ITH D IFFERENT P REDICTION L ENGTHS (15 min / 30 min / 60 min) ON PEMSD7 D ATASET W ITH MAPE. MAPE I S
+                                                   R EPORTED IN P ERCENTAGE (%)
+
+
+
+
+same time, the multi-layer attention mechanism introduced by       without designing a suitable training method or loss function,
+GMAN performs well in extracting spatio-temporal correla-          which complicates the optimization process of the model.
+tions from traffic data and making predictions. Nevertheless,         For the PEMSD7 dataset, when the missing type is RM, the
+the proposed GSTAE achieves superior results to all baselines      performance of DCRNN-based baseline models is the worst.
+in most missing scenarios and prediction lengths. Although         Only processing data in the forward direction based on the
+there are two scenarios where the proposed GSTAE performs          encoder-decoder model makes the DCRNN most susceptible
+worse than GMAN or ASTGCN, the performance gap is                  to missing data. From the perspective of imputation methods,
+negligible. In general, the proposed GSTAE is more capable         the performance of the baseline models based on BTMF (50)
+of extracting complex spatio-temporal correlation informa-         is generally better than that of the baseline models based on
+tion from historical traffic data with missing values and has      BTMF. This is because increasing the model’s hyperparameter
+more obvious advantages in long-term traffic speed prediction      (rank of the matrix) improves the model’s capabilities. The
+tasks.                                                             baseline models based on BRITS have the best performance
+   For all missing scenarios and prediction lengths, using         when the missing rate is relatively small (from 20% to
+FC-GAGA as the prediction model has clearly overfits. One          60%), but the advantage over BTMF and variant is gradually
+possible reason is that the missing data makes the feature         narrowing. When the missing type is NRM, there is no change
+difference between nodes negligible, complicating the hard         in the relative performance of each baseline model. However,
+graph gate mechanism to learn spatial dependencies. Com-           since NRM is a more complex type of missing data than RM,
+pared with combinations of imputation and prediction methods       all models’ absolute prediction performance observes a slight
+(e.g., ASTGCN-based and GMAN-based ones), the GCBRNN               decrease. On the METR-LA dataset, the performance rela-
+and RIHGCN, which focus on traffic prediction with missing         tionship of different baseline models has changed compared
+values, have lower accuracy. This is due to the fact that these    with the results on PEMSD7. BTMF (50) is better than that
+methods merely integrate the imputation and prediction task        of the baseline models based on BRITS for any missing rate.
+4198                                             IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 24, NO. 4, APRIL 2023
+
+
+
+                                                            TABLE II
+P ERFORMANCE C OMPARISON W ITH D IFFERENT P REDICTION L ENGTHS (15 min / 30 min / 60 min) ON METR-LA D ATASET W ITH MAPE. MAPE I S
+                                                   R EPORTED IN P ERCENTAGE (%)
+
+
+
+
+The baseline model BRITS+GMAN has obvious overfitting             is also consistent with the comparison results of the traffic
+problems.                                                         prediction task on the PEMSD7 dataset in Table I.
+                                                                     This is due to the different implementation principles of
+C. Imputation Accuracy                                            different models. The BRITS imputes data based on a bidi-
+   In addition, we compare the imputation performance of the      rectional recurrent network, which means that BRITS can
+proposed GSTAE with the imputation baselines mentioned in         only remember hidden features for a period of time. With the
+the previous section. Table III shows the comparison result       missing rate increasing, the complexity of BRITS in extracting
+on PEMSD7 and METR-LA datasets. Generally, the proposed           spatio-temporal correlation information and imputing accurate
+GSTAE outperforms other imputation baseline models. This          values will increase significantly. Compared with BRITS,
+is because the GCN module in ST-Block and bidirectional           the proposed GSTAE is advantageous in processing traffic
+ST-Block structure benefits from mining spatio-temporal cor-      data because of the proposed GCN module in ST-Block. For
+relations from traffic data with missing values. Compared to      the BTMF method, it performs matrix decomposition and
+BTMF, the performance of BTMF (50) is better. When the            reconstruction of the entire data for each iteration. Therefore,
+missing rate is small (from 20% to 60%), the imputation           compared to BRITS, BTMF is easier to grasp the overall
+performance of BRITS is better than BTMF and BTMF (50).           characteristics of the data but more time-consuming.
+When the missing rate is 80%, the performance of BRITS is            In addition to simply comparing the performance of the
+inferior to that of BTMF and BTMF (50). Because of the com-       models on the imputation task, we also investigate the relation-
+plexity of the model optimization objective, the performance      ship between imputation and prediction. If we only pay atten-
+of GCBRNN and RIHGCN is inferior to other baselines,              tion to the imputation and prediction results of the PEMSD7
+which only focus on the imputation task. From the perspective     dataset, we can easily conclude that the prediction results
+of imputation performance changing trend, as the missing          obtained based on the data imputed by the well-performing
+rate increases, BRITS deteriorates rapidly, while the average     imputation model have to be accurate. This is also consistent
+performance of BTMF-driven models declines slowly. This           with our basic cognition.
+WANG et al.: TRAFFIC PREDICTION WITH MISSING DATA: A MULTI-TASK LEARNING APPROACH                                                        4199
+
+
+
+                                                                     TABLE III
+                  I MPUTATION P ERFORMANCE OF D IFFERENT M ISSING R ATE W ITH RM M ISSING T YPE . (MAE / MAPE (%) / RMSE)
+
+
+
+
+Fig. 5.   Performance comparison of ablation models on PEMSD7 dataset for 60 min-ahead prediction with RM missing type.
+
+
+   However, when we pay attention to the prediction results of                •   No-Res: The residual connections in the ST-Blocks is
+the METR-LA dataset, we will find that it conflicts with the                      removed.
+conclusions we got before. When the missing rate is small,
+since the imputation effect of BRITS is better, the prediction              For a fair comparison, all variants are trained with the same
+performance of the baseline models based on BRITS should                    setting as introduced in Sec. V-A. The simulations are con-
+also be better. However, we found that the performance of                   ducted on the PEMSD7 dataset for 60 min-ahead prediction
+baseline models based on BRITS is worse than the baseline                   with RM missing type.
+models based on BTMF (50). Therefore, we can conclude                          Fig. 5 shows the prediction performance comparison of
+that the prediction results obtained based on the data imputed              GSTAE with its variants. To summarize, the proposed GSTAE
+by the well-performing imputation model are not necessarily                 has the best performance compared to the other variants over
+good. In other words, we cannot simply splice an existing                   all missing rates, demonstrating each sub-module’s contribu-
+model with the best imputation performance and another                      tion. Among the four variants, both GRU units and GCN layers
+model with the best prediction performance to assemble a new                contribute the most to the accuracy, indicating that extracting
+model and subjectively think it can handle the traffic speed                spatio-temporal relationships plays a crucial role in the traffic
+prediction task with missing values.                                        prediction task. Besides, thanks to the aid of the self-adaptive
+                                                                            adjacency matrix, the model can learn additional spatial depen-
+                                                                            dence and further enhance its performance. Lastly, residual
+D. Ablation Test
+                                                                            connections in ST-blocks have the most negligible impact
+  In this study, we conduct ablation tests to verify the contri-            on the accuracy since residual connections are designed to
+bution of each GSTAE sub-module to the overall performance.                 reduce computational costs in training and prevent the model
+The following four variants of the GSTAE are investigated:                  from overfitting. Compared to the No-Res model, the average
+  • No-adp: For graph convolution layers, the self-adaptive                 computation time per epoch of the proposed GSTAE model
+     adjacent matrix Ãadp is removed.                                      decreases from 49.71 s to 43.84 s.
+  • No-GCN: For graph convolution layers, the self-adaptive                    Furthermore, through the two-stage training paradigm, the
+     adjacent matrix Ãadp is removed and the widely                        proposed GSTAE can achieve a faster training process and
+     geography-defined matrix Adef is replaced with an iden-                convergence than training the prediction task directly (e.g.,
+     tity matrix.                                                           the average training time per epoch decreases from 92.65 s
+  • No-GRU: The gated recurrent units is replaced with linear               to 43.84 s, and the average number of training iterations
+     layers.                                                                required for GSTAE to converge decreases from 102 to 40).
+4200                                                     IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 24, NO. 4, APRIL 2023
+
+
+
+
+Fig. 6.   Performance comparison of different hyperparameters on PEMSD7 dataset for 60 min-ahead prediction with RM missing type.
+
+
+This is because the pre-trained encoder module can extract                  structure to handle the task of traffic speed prediction with
+dense representation from traffic data through the previous                 missing values and eliminate the error accumulation issues
+imputation training process, which subsequently accelerates                 during the imputation and prediction process. Specifically, the
+the subsequent prediction training process.                                 model consists of multiple ST-Block modules that combine
+                                                                            GCN layer with an adaptive adjacency matrix for spatial
+E. Hyperparameter Test                                                      modeling and GRU unit for temporal learning. We treat the
+   The hyperparameters of the proposed GSTAE are empir-                     imputation and prediction as two parallel tasks rather than
+ically set, since they are critical to the model performance.               standalone and consecutive tasks so as to eliminate the error
+In this section, we investigate the sensitivity and influence               accumulation issue from performing imputation and prediction
+of three important hyperparameters, i.e., the dimension of                  sequentially. Additionally, we design a two-stage training para-
+ST-Block D, the number of stacked ST-Blocks L, and the                      digm to accelerate the prediction training process and improve
+hidden dimension of the fully connected layers K . Specifi-                 performance. Concretely, the imputation task is trained first to
+cally, these hyperparameters are set to D ∈ {16, 32, 64, 128},              make the encoder extract dense representation from the input
+L ∈ {1, 2, 3, 4}, and K ∈ {64, 128, 256, 512} for evaluation,               with missing values. We subsequently train the task of traffic
+respectively. Additionally, all the simulations are conducted               speed prediction with missing values based on the pre-trained
+with RM missing type and 60 min-ahead prediction on the                     encoder.
+PEMSD7 dataset.                                                                To evaluate the performance of the proposed GSTAE,
+   As shown in Fig. 6, we have the following observations.                  we conduct comprehensive experiments on two real-world traf-
+First, three hyperparameters generally show the same trend:                 fic datasets with various missing scenarios, i.e., two different
+increasing the values improves prediction accuracy. The reason              missing patterns and a wide missing rate range from 20% to
+is that enlarging model parameters can improve the learning                 80%. Compared to the state-of-the-art traffic prediction with
+capacity of latent features (e.g., D increases from 16 to 64).              missing values methods, the proposed model shows superiority
+However, overly large model parameters may lead to overfit-                 and stable performance. In addition, the proposed GSTAE also
+ting and result in performance degradation (e.g., D increases               shows the state-of-the-art performance on imputation task as a
+from 64 to 128). Taking the number of stacked ST-Blocks L as                side effect. Simulation results on the imputation task show that
+an example, stacking ST-Blocks deepens each recurrent sub-                  an accurate imputation result does not necessarily positively
+module with GCN, which means that the range of information                  impact prediction, which falsifies the common assumption in
+obtained by each node based on the network topology is                      the literature.
+enlarged. As a result, each node can aggregate more informa-                   Through the two-stage training paradigm, the proposed
+tion, and the model accordingly makes more accurate speed                   multi-task learning deep neural network model GSTAE
+predictions. However, if too many GCN modules are stacked,                  achieves superiority and stable performance on both sub-tasks,
+it increases the difficulty for each node to distinguish the                namely, traffic data imputation and traffic prediction with
+importance of various neighbor nodes (e.g., which nodes                     missing values. However, since GRU modules process data
+are closer to itself and which are far away). Furthermore,                  iteratively and can not be parallelized, a great computational
+the excessive GCNs offset the critical function of the GCN                  effort is needed when adopting the proposed model on large-
+module in extracting local information. Second, D has the                   scale datasets and predicting long-term traffic speed. In the
+most significant impact on prediction accuracy among the                    future, we will accelerate the training process by improving
+three hyperparameters, with MAPE fluctuating from approx.                   the model structure using modules like CNN and Temporal
+11% to approx. 8%. This is consistent with the ablation results             Convolution layer (TCN). Besides, long-term traffic prediction
+in Sec. V-D that GCN layers and GRUs in ST-Blocks have a                    with missing values is also a direction worth studying.
+more significant impact on prediction accuracy.
+                                                                                                          R EFERENCES
+                          VI. C ONCLUSION
+                                                                             [1] M. Veres and M. Moussa, “Deep learning for intelligent transportation
+  In this paper, we propose a new multi-task learning deep                       systems: A survey of emerging trends,” IEEE Trans. Intell. Transp. Syst.,
+neural network model GSTAE that follows an encoder-decoder                       vol. 21, no. 8, pp. 3152–3168, Aug. 2019.
+WANG et al.: TRAFFIC PREDICTION WITH MISSING DATA: A MULTI-TASK LEARNING APPROACH                                                                          4201
+
+
+
+ [2] S. Lee and D. Fambro, “Application of subset autoregressive integrated      [26] J. Bruna, W. Zaremba, A. Szlam, and Y. LeCun, “Spectral networks and
+     moving average model for short-term freeway traffic volume forecast-             locally connected networks on graphs,” 2014, arXiv:1312.6203.
+     ing,” Transp. Res. Rec., J. Transp. Res. Board, vol. 1678, pp. 179–188,     [27] L. Bai, L. Yao, C. Li, X. Wang, and C. Wang, “Adaptive graph
+     Jan. 1999, doi: 10.3141/1678-22.                                                 convolutional recurrent network for traffic forecasting,” in Proc. Adv.
+ [3] J. Guo, W. Huang, and B. M. Williams, “Adaptive Kalman filter                    Neural Inf. Process. Syst., vol. 33, 2020, pp. 17804–17815.
+     approach for stochastic short-term traffic flow rate prediction and         [28] C. Zheng, X. Fan, C. Wang, and J. Qi, “GMAN: A graph
+     uncertainty quantification,” Transp. Res. C, Emerg. Technol., vol. 43,           multi-attention network for traffic prediction,” in Proc. 34th
+     pp. 50–64, Jun. 2014.                                                            AAAI Conf. Artif. Intell., (AAAI). New York, NY, USA:
+ [4] H. Yu, N. Ji, Y. Ren, and C. Yang, “A special event-based K-nearest              AAAI        Press,    2020,     pp. 1234–1241.     [Online].    Available:
+     neighbor model for short-term traffic state prediction,” IEEE Access,            https://aaai.org/ojs/index.php/AAAI/article/view/5477
+     vol. 7, pp. 81717–81729, 2019.                                              [29] W. Cao, D. Wang, J. Li, H. Zhou, L. Li, and Y. Li, “BRITS: Bidi-
+ [5] C.-H. Wu, J.-M. Ho, and D. T. Lee, “Travel-time prediction with support          rectional recurrent imputation for time series,” in Proc. Adv. Neural Inf.
+     vector regression,” IEEE Trans. Intell. Transp. Syst., vol. 5, no. 4,            Process. Syst., vol. 31. Montreal, QC, Canada: Curran Associates, 2018,
+     pp. 276–281, Dec. 2004.                                                          pp. 6776–6786.
+ [6] J. Zhang, Y. Zheng, D. Qi, R. Li, and X. Yi, “DNN-based prediction          [30] J. Yoon, J. Jordon, and M. Van Der Schaar, “GAIN: Missing data
+     model for spatio-temporal data,” in Proc. 24th ACM SIGSPATIAL Int.               imputation using generative adversarial nets,” in Proc. 35th Int. Conf.
+     Conf. Adv. Geographic Inf. Syst., New York, NY, USA, Oct. 2016,                  Mach. Learn. (ICML), J. G. Dy and A. Krause, Eds. Stockholm,
+     pp. 1–4, doi: 10.1145/2996913.2997016.                                           Sweden: PMLR, 2018, pp. 5675–5684.
+ [7] C. Zhang, J. J. Q. Yu, and Y. Liu, “Spatial–temporal graph attention        [31] Y. Luo, Y. Zhang, X. Cai, and X. Yuan, “E2 GAN: End-to-end gener-
+     networks: A deep learning approach for traffic forecasting,” IEEE                ative adversarial network for multivariate time series imputation,” in
+     Access, vol. 7, pp. 166246–166256, 2019.                                         Proc. 28th Int. Joint Conf. Artif. Intell., Macao, China, Aug. 2019,
+ [8] J. J. Q. Yu and J. Gu, “Real-time traffic speed estimation with graph            pp. 3094–3100.
+     convolutional generative autoencoder,” IEEE Trans. Intell. Transp. Syst.,   [32] Y. Wang, Y. Zhang, X.-L. Piao, H. Liu, and K. Zhang, “Traffic data
+     vol. 20, no. 10, pp. 3940–3951, Oct. 2019.                                       reconstruction via adaptive spatial–temporal correlations,” IEEE Trans.
+ [9] Y. Li, R. Yu, C. Shahabi, and Y. Liu, “Diffusion convolutional recurrent         Intell. Transp. Syst., vol. 20, no. 4, pp. 1531–1543, Aug. 2018.
+     neural network: Data-driven traffic forecasting,” in Proc. Int. Conf.       [33] Z. Zhang, M. Li, X. Lin, and Y. Wang, “Network-wide traffic flow
+     Learn. Represent. (ICLR), Vancouver, BC, Canada, 2018, pp. 1–16.                 estimation with insufficient volume detection and crowdsourcing data,”
+[10] W. Jiang and J. Luo, “Graph neural network for traffic forecasting: A            Transp. Res. C, Emerg. Technol., vol. 121, Dec. 2020, Art. no. 102870.
+     survey,” 2021, arXiv:2101.11174.                                            [34] O. Benkraouda, B. T. Thodi, H. Yeo, M. Menéndez, and S. E. Jabari,
+[11] W. Zaremba, I. Sutskever, and O. Vinyals, “Recurrent neural network              “Traffic data imputation using deep convolutional neural networks,”
+     regularization,” 2014, arXiv:1409.2329.                                          IEEE Access, vol. 8, pp. 104740–104752, 2020.
+[12] S. Hochreiter and J. Schmidhuber, “Long short-term memory,”                 [35] Y. Zhuang, R. Ke, and Y. Wang, “Innovative method for traffic data
+     Neural Comput., vol. 9, no. 8, pp. 1735–1780, 1997, doi:                         imputation based on convolutional neural network,” IET Intell. Transp.
+     10.1162/neco.1997.9.8.1735.                                                      Syst., vol. 13, no. 4, pp. 605–613, Apr. 2019.
+[13] J. Chung, C. Gülçehre, K. Cho, and Y. Bengio, “Empirical evaluation
+                                                                                 [36] Y. Ye, S. Zhang, and J. J. Q. Yu, “Spatial–temporal traffic data imputa-
+     of gated recurrent neural networks on sequence modeling,” 2014,
+                                                                                      tion via graph attention convolutional network,” in Proc. Artif. Neural
+     arXiv:1412.3555.
+                                                                                      Netw. Mach. Learn. (ICANN), vol. 12891. Bratislava, Slovakia: Springer,
+[14] X. Meng et al., “D-LSTM: Short-term road traffic speed prediction
+                                                                                      2021, pp. 241–252.
+     model based on GPS positioning data,” IEEE Trans. Intell. Transp. Syst.,
+                                                                                 [37] Y. Wu, D. Zhuang, A. Labbe, and L. Sun, “Inductive graph neural
+     vol. 23, no. 3, pp. 2021–2030, Mar. 2022.
+                                                                                      networks for spatiotemporal Kriging,” in Proc. 35th AAAI Conf. Artif.
+[15] Y. Zhu, M. Zhang, B. Jiang, H. Jin, J. Huang, and X. Wang, “Networked
+                                                                                      Intell., vol. 35, no. 5, 2021, pp. 4478–4485.
+     time series prediction with incomplete data,” 2021, arXiv:2110.02271.
+[16] Z. Zhang, X. Lin, M. Li, and Y. Wang, “A customized deep learning           [38] O. Sener and V. Koltun, “Multi-task learning as multi-objective opti-
+     approach to integrate network-scale online traffic data imputation and           mization,” in Proc. Annu. Conf. Neural Inf. Process. Syst., S. Bengio,
+     prediction,” Transp. Res. C, Emerg. Technol., vol. 132, Nov. 2021,               H. M. Wallach, H. Larochelle, K. Grauman, N. Cesa-Bianchi, and
+     Art. no. 103372.                                                                 R. Garnett, Eds. Montreal, QC, Canada: Curran Associates, 2018,
+                                                                                      pp. 525–536.
+[17] W. Zhong, Q. Suo, X. Jia, A. Zhang, and L. Su, “Heterogeneous spatio-
+     temporal graph convolution network for traffic forecasting with missing     [39] M. Luong, Q. V. Le, I. Sutskever, O. Vinyals, and L. Kaiser, “Multi-
+     values,” in Proc. IEEE 41st Int. Conf. Distrib. Comput. Syst. (ICDCS),           task sequence to sequence learning,” in Proc. 4th Int. Conf. Learn.
+     Washington, DC, USA, Jul. 2021, pp. 707–717.                                     Represent. (ICLR), Y. Bengio and Y. LeCun, Eds. San Juan, Puerto
+[18] S. Guo, Y. Lin, N. Feng, C. Song, and H. Wan, “Attention based                   Rico: OpenReview.net, May 2016, pp. 1–10.
+     spatial–temporal graph convolutional networks for traffic flow forecast-    [40] B. Yu, H. Yin, and Z. Zhu, “Spatio-temporal graph convolutional
+     ing,” in Proc. 33rd AAAI Conf. Artif. Intell., (AAAI). Honolulu, HI, USA:        networks: A deep learning framework for traffic forecasting,” in Proc.
+     AAAI Press, 2019, pp. 922–929, doi: 10.1609/aaai.v33i01.3301922.                 27th Int. Joint Conf. Artif. Intell., J. Lang, Ed. Stockholm, Swe-
+[19] Z. Cui, L. Lin, Z. Pu, and Y. Wang, “Graph Markov network for                    den: International Joint Conferences on Artificial Intelligence Organi-
+     traffic forecasting with missing data,” Transp. Res. C, Emerg. Technol.,         zation, Jul. 2018, pp. 3634–3640, doi: 10.24963/ijcai.2018/505.
+     vol. 117, Aug. 2020, Art. no. 102671.                                       [41] I. Sutskever, O. Vinyals, and Q. V. Le, “Sequence to sequence learning
+[20] H. Tan, G. Feng, J. Feng, W. Wang, Y.-J. Zhang, and F. Li, “A tensor-            with neural networks,” in Proc. Adv. Neural Inf. Process. Syst., vol. 27,
+     based method for missing traffic data completion,” Transp. Res. C,               Montreal, QC, Canada, Sep. 2014, pp. 3104–3112.
+     Emerg. Technol., vol. 28, pp. 15–27, Mar. 2013.                             [42] G. Zerveas, S. Jayaraman, D. Patel, A. Bhamidipaty, and C. Eickhoff,
+[21] Z. Che, S. Purushotham, K. Cho, D. Sontag, and Y. Liu, “Recurrent                “A transformer-based framework for multivariate time series represen-
+     neural networks for multivariate time series with missing values,” 2016,         tation learning,” in Proc. 27th ACM SIGKDD Conf. Knowl. Discovery
+     arXiv:1606.01865.                                                                Data Mining, New York, NY, USA, Aug. 2021, pp. 2114–2124.
+[22] X. Chen and L. Sun, “Bayesian temporal factorization for multidimen-        [43] P. Vincent, H. Larochelle, Y. Bengio, and P.-A. Manzagol, “Extracting
+     sional time series prediction,” IEEE Trans. Pattern Anal. Mach. Intell.,         and composing robust features with denoising autoencoders,” in Proc.
+     vol. 44, no. 9, pp. 4659–4673, Sep. 2022.                                        25th Int. Conf. Mach. Learn. (ICML), New York, NY, USA, 2008,
+[23] X. Chen, Z. He, and L. Sun, “A Bayesian tensor decomposition                     pp. 1096–1103, doi: 10.1145/1390156.1390294.
+     approach for spatiotemporal traffic data imputation,” Transp. Res. C,       [44] D. E. Rumelhart, G. E. Hinton, and R. J. Williams, “Learning repre-
+     Emerg. Technol., vol. 98, pp. 73–84, Jan. 2019. [Online]. Available:             sentations by back-propagating errors,” Nature, vol. 323, pp. 533–536,
+     https://www.sciencedirect.com/science/article/pii/S0968090X1830799X              Oct. 1986, doi: 10.1038/323533a0.
+[24] Z. Cui, R. Ke, Z. Pu, and Y. Wang, “Stacked bidirectional and uni-          [45] T. N. Kipf and M. Welling, “Semi-supervised classification with graph
+     directional LSTM recurrent neural network for forecasting network-               convolutional networks,” in Proc. 5th Int. Conf. Learn. Represent.
+     wide traffic state with missing values,” Transp. Res. C, Emerg. Technol.,        (ICLR), Toulon, France, Apr. 2017, pp. 1–14.
+     vol. 118, Sep. 2020, Art. no. 102674.                                       [46] M. Defferrard, X. Bresson, and P. Vandergheynst, “Convolutional neural
+[25] S. Ruder, “An overview of multi-task learning in deep neural networks,”          networks on graphs with fast localized spectral filtering,” in Proc. NIPS,
+     2017, arXiv:1706.05098.                                                          Barcelona, Spain, vol. 29, 2016, pp. 3837–3845.
+4202                                                         IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 24, NO. 4, APRIL 2023
+
+
+
+[47] Z. Wu, S. Pan, G. Long, J. Jiang, and C. Zhang, “Graph WaveNet for                                     Xiaozhuang Song received the B.Eng. degree in
+     deep spatial–temporal graph modeling,” in Proc. 28th Int. Joint Conf.                                  digital media technology from the Beijing University
+     Artif. Intell., S. Kraus, Ed. Macao, China: International Joint Confer-                                of Posts and Telecommunications, Beijing, China,
+     ences on Artificial Intelligence Organization, Aug. 2019, pp. 1907–1913.                               in 2015, and the M.S. degree in computer science
+[48] F. Wu, A. Souza, T. Zhang, C. Fifty, T. Yu, and K. Weinberger, “Sim-                                   and technology from the Southern University of
+     plifying graph convolutional networks,” in Proc. 36th Int. Conf. Mach.                                 Science and Technology, Shenzhen, China, in 2022.
+     Learn., Long Beach, CA, USA, vol. 97, Jun. 2019, pp. 6861–6871.                                        His research interests include graph neural networks
+[49] Z. Wu, S. Pan, F. Chen, G. Long, C. Zhang, and S. Y. Philip, “A com-                                   and intelligent transportation systems.
+     prehensive survey on graph neural networks,” IEEE Trans. Neural Netw.
+     Learn. Syst., vol. 32, no. 1, pp. 4–24, Mar. 2020.
+[50] J. J. Q. Yu, C. Markos, and S. Zhang, “Long-term urban traffic speed
+     prediction with deep learning on graphs,” IEEE Trans. Intell. Transp.
+                                                                                                            Shiyao Zhang (Member, IEEE) received the B.S.
+     Syst., vol. 9, no. 20, pp. 1–12, Apr. 2021.
+                                                                                                            degree (Hons.) in electrical and computer engineer-
+[51] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+                                                                                                            ing from Purdue University, West Lafayette, IN,
+     2014, arXiv:1412.6980.
+                                                                                                            USA, in 2014, the M.S. degree in electrical engi-
+[52] B. N. Oreshkin, A. Amini, L. Coyle, and M. J. Coates, “FC-GAGA:
+                                                                                                            neering from the University of Southern California,
+     Fully connected gated graph architecture for spatio-temporal traffic
+                                                                                                            Los Angeles, CA, USA, in 2016, and the Ph.D.
+     forecasting,” in Proc. AAAI, 2021, pp. 9233–9241.
+                                                                                                            degree from The University of Hong Kong, Hong
+                                                                                                            Kong. He was a Post-Doctoral Research Fellow with
+                                                                                                            the Academy for Advanced Interdisciplinary Stud-
+                                                                                                            ies, Southern University of Science and Technology,
+                         Ao Wang received the B.Eng. degree in computer                                     from 2020 to 2022, where he is currently a Research
+                         science and technology from the Southern Univer-         Assistant Professor with the Research Institute for Trustworthy Autonomous
+                         sity of Science and Technology, Shenzhen, China,         Systems. His research interests include smart cities, smart energy systems,
+                         in 2021, where he is currently pursuing the master’s     intelligent transportation systems, optimization theory and algorithms, and
+                         degree with the Department of Computer Science           deep learning applications.
+                         and Engineering. His research interests include smart
+                         city, intelligent transportation systems, and deep
+                         learning.                                                                           James J. Q. Yu (Senior Member, IEEE) received the
+                                                                                                             B.Eng. and Ph.D. degrees in electrical and electronic
+                                                                                                             engineering from The University of Hong Kong,
+                                                                                                             Hong Kong, in 2011 and 2015, respectively. He was
+                                                                                                             a Post-Doctoral Fellow with The University of
+                                                                                                             Hong Kong from 2015 to 2018. He is currently an
+                         Yongchao Ye (Student Member, IEEE) received the                                     Assistant Professor with the Department of Com-
+                         B.Eng. degree in computer science and technology                                    puter Science and Engineering, Southern University
+                         from Ningbo University, Ningbo, China, in 2020.                                     of Science and Technology, Shenzhen, China, and an
+                         He is currently pursuing the master’s degree with                                   Honorary Assistant Professor with the Department
+                         the Department of Computer Science and Engineer-                                    of Electrical and Electronic Engineering, The Uni-
+                         ing, Southern University of Science and Technol-         versity of Hong Kong. His research is mainly on forecasting and decision
+                         ogy, Shenzhen, China. His research interests include     making of future transportation systems and basic artificial intelligence
+                         spatio-temporal data mining in smart city, intelligent   techniques for industrial applications. His research interests include smart city
+                         transportation systems, and federated learning.          and urban computing, deep learning, intelligent transportation systems, and
+                                                                                  smart energy systems. He was ranked World’s Top 2% Scientists of 2019 and
+                                                                                  2020 by Stanford University. He is an Editor of the IET Smart Cities journal.
+

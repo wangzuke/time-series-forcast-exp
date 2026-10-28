@@ -1,0 +1,196 @@
+[
+  {
+    "key": "VSF2022",
+    "url": "https://arxiv.org/pdf/2206.12626",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 1042171,
+    "sha256": "ea3c0ab6364e964a069f0029760d60b8f95f0b9054d20ee00fc1f456d6dd6de4",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/VSF2022.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/VSF2022.txt"
+  },
+  {
+    "key": "TRF2024",
+    "url": "https://www.ijcai.org/proceedings/2024/0228.pdf",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 791298,
+    "sha256": "37d4680c2fe10bec778989fe01744586c86b8dd82d64df8ba9541b6faae78ec4",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/TRF2024.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/TRF2024.txt"
+  },
+  {
+    "key": "GCNM2023",
+    "url": "https://arxiv.org/pdf/2212.06419",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 1200267,
+    "sha256": "d0ccac9ca895873ca51664b39791ca95e21c36f4046cfd060ad90cb2ccd5f630",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/GCNM2023.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/GCNM2023.txt"
+  },
+  {
+    "key": "MTLTraffic2023",
+    "url": "https://file.jqyu.me/pub/traffic-prediction-with-missing-data-a-multi-task-learning-approach.pdf",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 1391290,
+    "sha256": "564e0cf5e065520eca88767ad99a03a6ebbd7756852bbad63327437e881e70d9",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/MTLTraffic2023.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/MTLTraffic2023.txt"
+  },
+  {
+    "key": "UATraffic2023",
+    "url": "https://arxiv.org/pdf/2309.06800",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 2987084,
+    "sha256": "22059ee0eb783ee6209a4d9a0735eab172c9345d77e5bbfad8617b024484c730",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/UATraffic2023.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/UATraffic2023.txt"
+  },
+  {
+    "key": "HiPatch2025",
+    "url": "https://raw.githubusercontent.com/mlresearch/v267/main/assets/luo25r/luo25r.pdf",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 2087319,
+    "sha256": "d3e2bffce5238ed0f9b5d1a6474be5c35926a89c9f7289f52d49567015a98895",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/HiPatch2025.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/HiPatch2025.txt"
+  },
+  {
+    "key": "CSDI2021",
+    "url": "https://arxiv.org/pdf/2107.03502",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 5523698,
+    "sha256": "4d5e4402b98af8cb60a77a6fd3cd942d98b6314776b709d425cd87233ff3c809",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/CSDI2021.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/CSDI2021.txt"
+  },
+  {
+    "key": "PriSTI2023",
+    "url": "https://arxiv.org/pdf/2302.09746",
+    "access_date": "2026-09-26",
+    "status": "unavailable",
+    "error": "The read operation timed out"
+  },
+  {
+    "key": "SSSD2023",
+    "url": "https://arxiv.org/pdf/2208.09399",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 3301740,
+    "sha256": "29ed65edf1fec7d641f3143a741cac8596ae986334f017f7ab0e193735f13b2c",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/SSSD2023.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/SSSD2023.txt"
+  },
+  {
+    "key": "TSDiff2023",
+    "url": "https://arxiv.org/pdf/2307.11494",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 1863093,
+    "sha256": "68c1f6044e24bdef0f201741672c153f29fabef4e5fbdfe49a7dcda30f24176a",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/TSDiff2023.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/TSDiff2023.txt"
+  },
+  {
+    "key": "CRU2022",
+    "url": "https://proceedings.mlr.press/v162/schirmer22a/schirmer22a.pdf",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 1270899,
+    "sha256": "bb068b3e46bced14abb015730ad57cb18ba21ab0f3f6af992e2e25756ab88466",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/CRU2022.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/CRU2022.txt"
+  },
+  {
+    "key": "NeuralFlows2021",
+    "url": "https://arxiv.org/pdf/2110.13040",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 691364,
+    "sha256": "26439f0f0534f670b9d0a63aa957d74f4ac8895cfe9be2596db37ccd352cc91c",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/NeuralFlows2021.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/NeuralFlows2021.txt"
+  },
+  {
+    "key": "AirBayes2025",
+    "url": "https://arxiv.org/pdf/2511.02175",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 35467368,
+    "sha256": "7fd77731c3fda1574424bdb078d490b288fcc57514dfbb0e415706636ed88525",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/AirBayes2025.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/AirBayes2025.txt"
+  },
+  {
+    "key": "AirQualityBench2026",
+    "url": "https://arxiv.org/pdf/2605.05854",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 2942411,
+    "sha256": "9f7608496bddbb160b1c1be370223e65e7e05c7e63532ecfc45d38bb536761d1",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/AirQualityBench2026.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/AirQualityBench2026.txt"
+  },
+  {
+    "key": "Survey2025",
+    "url": "https://www.ijcai.org/proceedings/2025/1187.pdf",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 384422,
+    "sha256": "2b2523e04bad5dd83fff611d63c36d550e6649e9fbd9812ca6ea312d2a67eea8",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/Survey2025.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/Survey2025.txt"
+  },
+  {
+    "key": "NuwaTS2024",
+    "url": "https://arxiv.org/pdf/2405.15317",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 3835320,
+    "sha256": "42c745f2a2973344f0cca64e5bf14b2050362a718e8de3cb5e051400f4e82fd2",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/NuwaTS2024.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/NuwaTS2024.txt"
+  },
+  {
+    "key": "Seq2Seq2021",
+    "url": "https://eprints.bournemouth.ac.uk/35723/1/ICAC2021_Accepted_version.pdf",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 2231576,
+    "sha256": "36ccfce4d9b45324905f8d6fd41469a988f53f0b3696466a39679a456032740c",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/Seq2Seq2021.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/Seq2Seq2021.txt"
+  },
+  {
+    "key": "SAITS2023",
+    "url": "https://arxiv.org/pdf/2202.08516",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 1069526,
+    "sha256": "234ee64b75f730a663827d116df783c11780968d4be61ad5d6b51bc7e0d0956b",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/SAITS2023.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/SAITS2023.txt"
+  },
+  {
+    "key": "GRIN2022",
+    "url": "https://arxiv.org/pdf/2108.00298",
+    "access_date": "2026-09-26",
+    "status": "downloaded",
+    "bytes": 929663,
+    "sha256": "0ef8db1011a1e208ae2ed3b7f1c85b8f0b8d68201ed156dea34b97e252e65583",
+    "pdf": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_pdf/GRIN2022.pdf",
+    "text": "/media/data1/wangzk/time-series-forcast-exp/docs/literature_review_20260926/sources/downloaded_text/GRIN2022.txt"
+  },
+  {
+    "key": "SPIN2022",
+    "url": "https://openreview.net/pdf?id=YXHoPO33rk",
+    "access_date": "2026-09-26",
+    "status": "unavailable",
+    "error": "HTTP Error 403: Forbidden"
+  }
+]

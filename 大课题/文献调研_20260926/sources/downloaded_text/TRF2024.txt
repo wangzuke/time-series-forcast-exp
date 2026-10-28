@@ -1,0 +1,758 @@
+                         Proceedings of the Thirty-Third International Joint Conference on Artificial Intelligence (IJCAI-24)
+
+
+
+
+    Reconstructing Missing Variables for Multivariate Time Series Forecasting via
+                           Conditional Generative Flows
+             Xuanming Hu1 , Wei Fan2 , Haifeng Chen3 , Pengyang Wang4⇤ , Yanjie Fu1⇤
+                1
+                  School of Computing and Augmented Intelligence, Arizona State University
+                              2
+                                Medical Sciences Division, University of Oxford
+                                       3
+                                         NEC Laboratories America Inc
+                           4
+                             Department of CIS, SKL-IOTSC, University of Macau
+             {solomonhxm, yanjie.fu}@asu.edu, wei.fan@wrh.ox.ac.uk, haifeng@nec-labs.com,
+                                            pywang@um.edu.mo
+
+                          Abstract
+     The Variable Subset Forecasting (VSF) problem,
+     where the majority of variables are unavailable in
+     the inference stage of multivariate forecasting, has                        V1                             V1
+     been an important but under-explored task with                              V2                             V2
+                                                                                 V3                             V3
+     broad impacts in many real-world applications.                              V4                             V4
+     Missing values, absent inter-correlation, and the                           V5                             V5
+                                                                                  Lookback Window Horizon Window Lookback Window Horizon Window
+     impracticality of retraining largely hinder the abil-                     Time                             Time
+     ity of multivariate forecasting models to capture                                  (a) Training Phase                      (a) Inference Phase
+     inherent relationships among variables, impacting
+     their performance However, existing approaches                           Figure 1: Setting of Variable Subset Time-series Forecast: During
+     towards these issues either heavily rely on local                        training, Variables V1 through V5 are given whereas during the in-
+     temporal correlation or face limitations in fully re-                    ference phase, only V1, V2, V4 are accessible.
+     covering missing information from the unavailable
+     subset, accompanied by notable computational ex-
+     penses. To address these problems, we propose a                          2022]. This can be generalized as the task of Variable Sub-
+     novel density estimation solution to recover the in-                     set time-series Forecast (VSF). Figure 1 shows the VSF task
+     formation of missing variables via flows-based gen-                      has two steps: 1) in the training step, a multivariate time se-
+     erative framework. In particular, a novel genera-                        ries forecasting model can access to all variables for training;
+     tive network for time series, namely Time-series                         2) in the inference step, only a subset of variables are avail-
+     Reconstruction Flows (TRF), is proposed to es-                           able and the other variables are missing. The objective is to
+     timate and reconstruct the missing variable sub-                         forecast the future values of the available variable subset.
+     set. In addition, a novel meta-training framework,                          The VSF task introduce two unique issues for existing
+     Variable-Agnostic Meta Learning, has been devel-                         multivariate time series forecasting literature: 1) Issue 1:
+     oped to enhance the generalization ability of TRF,                       incomplete inter-variable correlation awareness: Due to
+     enabling it to adapt to diverse missing variables sit-                   the unavailability of variables, existing multivariate time se-
+     uations. Finally, extensive experiments are con-                         ries forecasting models is incapable of modeling the inter-
+     ducted to demonstrate the superiority of our pro-                        dependency between missing variables and available vari-
+     posed method compared with baseline methods.                             ables. The incomplete correlation awareness hinder fore-
+                                                                              casting performance [Guo et al., 2019; Bai et al., 2018]; 2)
+1   Introduction                                                              Issue 2: variable subset agnostic generalization: In a dy-
+                                                                              namic open environment, it is usually unlikely to know which
+Multivariate time series forecasting is critical in many real                 variables will be absent during inference/testing in advance.
+world applications, such as traffic prediction [Bai et al.,                   Once available variable subset is changed, we have to retrain
+2020], tourism demand analysis [Du Preez and Witt, 2003]                      forecasting models, which is inefficient and untimely. More-
+and air quality estimation [Du et al., 2019]. However, real                   over, training many subset-specific forecasting models over
+world multivariate time series data are usually imperfect and                 all possible variable combinations is computationally costly
+incomplete. For instance, in wind speed forecasting, when                     and impractical in real world deployment.
+there are malfuncitoning sensors, long term data unavailabil-
+ity arises; when there are dynamic fluctuations in resource                      To tackle the two issues of VSF, an intuitive idea is to im-
+availability, resource domain shifts arise [Chauhan et al.,                   pute missing data. Prior imputation techniques capture both
+                                                                              inter-variable and intra-variable correlation to impute miss-
+*   Corresponding authors                                                     ing values [Luo et al., 2018; Tang et al., 2020]. However,
+
+
+
+                                                                       2063
+                         Proceedings of the Thirty-Third International Joint Conference on Artificial Intelligence (IJCAI-24)
+
+
+
+the complete absence (not partial) of variables impedes their                 new missing variable subset, a small number of gradient steps
+ability to capture inter-variable information (Issue 1), mak-                 will yield good generalization performance, allowing TRF to
+ing such techniques unsuitable for the VSF setting. VSF                       quickly adapt to this new scenario and tackle Issue 2.
+remained understudied until the work in [Chauhan et al.,                        In summary, we reformulate the VSF problem from a novel
+2022] introduced a wrapper approach, i.e., Forecast Distance                  density estimation perspective. We propose a novel flow-
+Weighting (FDW), to recover missing variables from the                        based framework TRF to recover the information of miss-
+nearest neighbors selected by ensemble weighting. However,                    ing variable subset. To improve the generalization ability
+top-K neighbors based recovery only consider partial infor-                   of TRF, we design a training framework, namely Variable-
+mation and could suffer if any top-K neighbor is biased, and                  Agnostic Meta Learning. Ultimately, we conduct extensive
+the hyper parameter K is not generalizable. Moreover, FDW                     experiments to indicate the effectiveness of our framework.
+needs to re-search neighbors whenever the missing variable
+subset changes (Issue 1 & 2).                                                 2     Related Works
+   To address the issues, we develop deep time series gener-
+ative reconstruction flow for VSF. Our approach builds upon                   Variable Subset Time-series Forecasting. Multivariate
+two major contributions:                                                      time series forecasting has been an abiding research topic
+   First, Time-series Reconstruction Flows (TRF) for re-                      since last century [Yi et al., 2024b; Yi et al., 2024a; Hu et al.,
+covering missing subset. To address the first issue, we pro-                  2023; Fan et al., 2023; Ren et al., 2022; Fan et al., 2022]. To
+pose to reformulate the missing variable reconstruction prob-                 model temporal patterns and pairwise dependencies among
+lem as deep collective generative task that model the dynamic                 variables, researchers has proposed several GNN-based mod-
+temporal pattern of time series data. This generative reformu-                els, such as DCRNN [Li et al., 2017], MTGNN [Wu et al.,
+lation inspires a density estimation perspective to generate the              2020], and ASTGCN [Guo et al., 2019]. However, Vari-
+missing variables. Specifically, based on the available vari-                 able Subset Time-series Forecast is underexplored. Miss-
+able subset, we intend to estimate the unknown conditional                    ing several variables in the inference phase will consider-
+density of unavailable variables via generative networks and                  ably hinder the ability of GNN-based models to capture the
+rebuild the missing variables by leveraging the estimated                     inter-dependencies among variables. To tackle this problem,
+                                                                              [Chauhan et al., 2022] propose their wrapper technique by
+distribution. Inspired by human reasoning [Byrne, 2019;
+Hu et al., 2024], which seeks to convey complex ideas                         borrowing data from training set. However, they fail to con-
+through the use of familiar and simple objects, we can ex-                    sider the distribution shift of time series and make an impre-
+press the intricate density of inaccessible variables by trans-               cise estimation of the missing variables. In this work, we uti-
+forming a simple distribution via a set of mapping func-                      lize a deep learning method to estimate the density of missing
+tion. To implement the mapping process, we introduce invert-                  variables and the empirical results demonstrate the effective-
+ible Time-series Reconstruction Flows (TRF), a conditional                    ness and superiority of our proposed solution.
+flows-based generative framework, to reconstruct the miss-                    Normalizing Flows. Normalizing flows are a set of bijec-
+ing variables for multivariate forecasting. The fully invert-                 tive mapping functions which are designed to model an un-
+ible flow structure of TRF can ensure accurate reconstruction                 known distribution based on the given data [Dinh et al., 2014;
+by mapping any distribution of missing variable subset to the                 Dinh et al., 2016]. For example, based on the coupling layer
+Gaussian distribution through forward transformation and re-                  proposed by [Dinh et al., 2016], Glow [Kingma and Dhari-
+building it with the inverse transformation. In addition, we                  wal, 2018] is constructed with more complex structure and
+incorporate the available subset as the conditional input, en-                achieves superior performance. MAF, proposed by [Papa-
+abling us to effectively constrain the generation of missing                  makarios et al., 2017], utilizes the autoregressive mechanism
+variables by leveraging the inter-variable correlation between                for better density estimation.
+the missing and available variable subset. To update TRF, we                  Meta-learning. Dissimilar to traditional machine learn-
+utilize a log-likelihood training schema. This proves advan-                  ing methods, meta-learning algorithms aim to acquire gen-
+tageous for our framework as it facilitates learning the gen-                 eralizable information and transfer the knowledge to new
+eration process without introducing extensive constraints or                  tasks [Vanschoren, 2018]. For instance, MAML algorithm
+losses, making our framework easy to train.                                   proposed by [Finn et al., 2017] can prompt faster training
+   Second, Variable-Agnostic learning paradigm for TRF.                       in new tasks by a small number of gradient steps with a
+Retraining forecasting models for a dynamic available vari-                   small amount of training data. Reptile [Nichol and Schul-
+able subset and iterating through all possible variable subset                man, 2018] initials the parameters of a neural network via
+combinations are both impractical and costly. In response, we                 stochastic gradient descent on each task.
+propose a meta-learning based training framework, Variable-
+Agnostic Meta Learning, to help TRF to quickly adapt to
+new available variables subsets. Specifically, we regard di-                  3     Problem Formulations
+                                                                                      (N )
+verse variable subsets as different meta-learning tasks. For                  Let Xt     2 RN denote the recording of N distinct vari-
+each epoch, we sample a batch of variable subsets and update                  ables at time-step t, we define historical L values as the
+the parameters of TRF for each variable subset. We aggre-                                         (N )       (N )          (N )
+                                                                              lookback window Xt L:t = {Xt L+1 , · · · , Xt }, and de-
+gate the subset-specific parameters and update the TRF by                                                                             (N )
+this aggregated parameters. Hence, the parameters of TRF                      fine the future H values as the horizon window Xt:t+H =
+                                                                                  (N )           (N )
+can be more generalized for all possible variable subset. For a               {Xt+1 , · · · , Xt+H }. For the classical setting of multivariate
+
+
+
+                                                                       2064
+                              Proceedings of the Thirty-Third International Joint Conference on Artificial Intelligence (IJCAI-24)
+
+
+
+                  Outer loop optimization stage                                         density estimation perspective in Section 4.1. We recon-
+       Query
+      Query                                                                             struct the missing variables via density estimation and gen-
+       Output
+     Query                                              !!
+      Output                                                                            eration. Then, we concretely propose a novel generative net-
+     Output                                                        Query
+                    Support
+                  Support                                         Query                 work, Time-series Reconstruction Flows (TRF) to recover
+                    Output
+                 Support         Search                            Output
+                                                                 Query
+       Meta        Output                                         Output                the information of absent variables and elaborate how to in-
+                 Output         Direction                        Output
+    Optimizer                                                                           tegrate our framework and forecasting models in Section 4.2.
+                     t                                                                  To further improve the generalization ability of the model, we
+    Inference      uc
+               nstr Time-series Reconstruction                                          propose meta training framework, Variable-Agnostic Meta
+
+
+
+
+                                                                    Sampling
+                                                                    Random
+      stage eco               Flows
+             R                                                                          Learning, to TRF in Section 4.3.
+                                           (')      ()#')
+                                          " "#$:" " "#$:"
+                   Flow Step                                                            4.1   Density Estimation and Generation for
+                    Flow Step
+                                                                  Domain of                   Variable Subset of Time Series
+                                          Conditional             Variables
+                                         Autoregressive            Subsets              In VSF problem, the unavailability of the majority variables
+                          …
+                                            Layers                                      (i.e., |N | |S|) would lead to the missing values and absent
+                                                                                        inter-dependencies between variables in S and N \S during
+
+
+
+                                                                    Sampling
+                                                                    Random
+                   Flow Step
+                                             Batch                                      the inference, which largely hinder their forecasting perfor-
+    Forecasting                           Normalization                                 mances. For this problem, previous VSF work [Chauhan et
+      Model
+                                                                                        al., 2022] used fixed assumption of similarity and retrieved
+                                                            !!
+                                                                   Support
+                                                                                        neighbors of available variables for imputation. However, it
+     Compute           Evaluate                                   Support               encounters constraints in completely recovering information
+    parameters         gradient                                      Set
+                                                                 Support
+                                                                    Set                 that is missing from the unavailable subset, along with signif-
+                                                                   Set
+                  Inner loop optimization stage                                         icant computational costs of measuring pair-wise similarity.
+                                                                                        In this paper, we reconsider the VSF problem from a novel
+Figure 2: An overview of our proposed methods, consisting of our                        density estimation perspective. We can fully recover the miss-
+Time-series Reconstruction Flows and the training framework of                          ing information by leveraging generative models to simulta-
+Variable-Agnostic Meta Learning.                                                        neously reconstruct all the unavailable variables, without in-
+                                                                                        troducing additional computational cost.
+                                                                                           Formally, given the fully observable training data, we try
+time series forecasting, we intend to find a mapping function                           to estimate the unknown conditional density pX (X N \S |X S )
+F✓ to project lookback window into horizon window, which                                of the missing variables X N \S and available subset data
+                           (N )            (N )
+can be formulated as: Xt:t+H = F✓ (Xt L:t ).                                            X S , where X is the input space. Inspired by the hu-
+   However, in real life, the data collection for time series can                       man’s logic of explaining intricate things via understand-
+meet a common issue: due to the long-term unavailability of                             able objects ,we express the density of missing variables
+data [Yick et al., 2008] and resource domain shift in time se-                          via Gaussian distribution pZ . As a result, we utilize
+ries [Hamid and Wibowo, 2018], chances are that only partial                            a set of bijective functions f✓ to learn the dependencies
+variables are available in the future [Chauhan et al., 2022].                           of time series data and transform the original density into
+Accordingly, this problem of time series forecasting with par-                          pZ , i.e., f✓ : X ! Z. Hence, we can express the
+tial variables during inference is formulated as Variable Sub-                          conditional density pX (X N \S |X S ) by the change of vari-
+set Forecasting (VSF) problem. Under such settings, we de-                              ables formula [Dinh et al., 2014]: pX (X N \S |X S ) =
+note the available variable subset as S and the universe of
+variables as N , i.e., S ⇢ N and |S| ⌧ |N |, where N is de-                             pZ (f✓ (X N \S ; X S )) det @X@fN✓\S (X N \S ; X S ) .
+noted as the set of N integers, [[1...N ]]. In the training phase,
+               (N )                                                                     4.2   Time-series Reconstruction Flows
+each input Xt is a vector in R|N |⇥D while in the inference
+                                                   (S)                                  To estimate the intricate density of high dimensional data,
+phase, each data point can be represented as Xt 2 R|S|⇥D .                              there are a lot of generative networks such as GAN [Good-
+In other words, though the models can take all variables in                             fellow et al., 2014], VAE [Kingma and Welling, 2013].
+training, only a small subset of variables is considered in in-                         However, GAN-based models suffer from model collapse and
+ference; formally, the VSF problem can be written as:                                   VAE-based model cannot estimate temporal density accu-
+                    (S)                  (S)                                            rately by maximizing the lower bound of likelihood, so they
+                  Xt:t+H = F✓ (Xt L:t ), t 2 Ttest ,                                    are not suitable for time series data with complex temporal
+                                                                               (1)
+                    (N )                 (N )
+          while Xt:t+H = F✓ (Xt L:t ), t 2 Ttrain                                       dependencies. Inspired by current normalizing flows [Dinh et
+                                                                                        al., 2016; Papamakarios et al., 2017], we propose Time-series
+where Ttrain and Ttest are sets of the time-step of training                            Reconstruction Flows (TRF), a conditional flows-based gen-
+data and test data.                                                                     erative model to estimate the density of missing variables of
+                                                                                        time series. Specifically, along the conditional generation for-
+                                                                                        mulation as proposed in Section 4.1, we consider observed
+4    Methodology                                                                        variables as conditional subset embedding to reconstruct the
+We introduce our proposed framework for VSF problem.                                    missing variables, so that our generation framework can bet-
+First, we formulate VSF problem from a novel generative                                 ter access the information of available subset.
+
+
+
+                                                                                 2065
+                           Proceedings of the Thirty-Third International Joint Conference on Artificial Intelligence (IJCAI-24)
+
+
+
+Algorithm 1 Variable-Agnostic Meta Learning                                        To implement the function f✓,s  n
+                                                                                                                     i
+                                                                                                                       and f✓,b
+                                                                                                                             n
+                                                                                                                                i
+                                                                                                                                  , we utilize the
+Input: Dvariables : Domain of the variables subsets, ↵, :                       masking technique of MADE Germain et al., 2015]. For the
+                                                                                                                 [
+    step size hyperparameters                                                   nth , then general form of masking matrix can be formulated
+ 1: Randomly initialize the parameter ✓ of the TRFlows f✓                       as MkW0 ,k = 1mn (k0 ) mn 1 (k) , where k and k 0 are the hidden
+ 2: while not done do                                                           unit index, and the values of mn (k) for each hidden layer
+ 3:    Sample batch of variables subset Si ⇠ Dvariables                         n 2 {1, · · · , N } are sampled uniformly. And for the last
+ 4:    for all Si do                                                            layer, the masking rule is Mk,d V
+                                                                                                                   = 1d>mN (k) . With the help
+ 5:      Evaluate r✓ LSi (f✓ ) with respect to N variables.                     of MADE, we can estimate the density without the sequential
+ 6:      Compute adapted parameters with the gradient de-                       loop, and accelerate the training process of TRFlows.
+         scent: ✓i0 = ✓ ↵r✓ LSi (f✓ )                                              We utilize batch normalization to further improve the prop-
+ 7:    end for               P                                                  agation of signal. With batch normalization, we can not only
+ 8:    Update ✓      ✓   r✓ Si ⇠Dvariables LSi (f✓i0 )                          stabilize the training process, but also train a deeper stack of
+ 9: end while                                                                   coupling layers to model more complex conditional distribu-
+                                                                                tion. The procedure of normalization of nth layer can be writ-
+                                                                                                 n
+                                                                                                    e
+                                                                                ten as hn 7! phe2 +✏µ
+                                                                                                      . Here, µe and e2 are the estimated batch
+Conditional Subset Embedding
+To model the complex density of time series, the generative                     mean and variance. We 1can calculate the Jacobian determi-
+                                                                                           Q
+network needs to capture the temporal dependency among                          nant as          2
+                                                                                             i ei + ✏
+                                                                                                          2
+                                                                                                            . To update TRF, we can derive the
+data. While directly modeling the dependencies of the whole                     negative log-likelihood as the loss function by applying chain
+long time series is unrealistic, we cooperate generation with                   rules to Equation 2:
+the forecasting models, and design window based subset em-                                                                   (N   S)   (S)
+bedding for the variables. Formally, we utilize linear layers                                L(f✓ ) =       logpZ (f✓ (Xt L:t ; Xt L:t )
+to obtain the embedding conditional vector HS as: HS =                                                  N
+                                                                                                        X1                                        (4)
+               (S)                                    (S)                                                                @f✓n n (S)
+Projection(Xt L:t ), where H S 2 RT ⇥S⇥D and Xt L:t is                                                        log det        (h ; Xt L:t )
+                                                                                                                         @hn
+lookback window of available subset S.                                                                  n=0
+
+Conditional TRF                                                                 Forecasting Process
+We construct our window-based TRF consisting of condi-                          In the inference stage of VSF, we randomly sample noisy
+tional autoregressive layers and batch normalization [Ioffe                     vectors from Gaussian distribution and employ the in-
+and Szegedy, 2015]. Conditional autoregressive layers aim to                    verse function of equation 3 to recursively reconstruct
+estimate the distribution pX of missing variables via a couple                  missing variables, which can be written as: hni =
+of invertible transformation functions. Formally, we input the                          n
+                                                                                exp( f✓,s i
+                                                                                            (hn+1      S       n+1
+                                                                                              1:i 1 ; H )) · (hi
+                                                                                                                    n
+                                                                                                                   f✓,b i
+                                                                                                                          (hn+1
+                                                                                                                            1:i 1 ; H )). We
+                                                                                                                                     S
+                                         (N S)
+horizon window of missing variables Xt L:t and accessible                       denote the final reconstructed missing variables as X̂t L:t .
+                                                                                                                                             (N   S)
+           (S)            (N S)              (S)
+variables Xt L:t , where Xt L:t 2 N \S, and Xt L:t 2 S.                         We concatenate the available variables and reconstructed
+We can rewrite the expression the original density with hori-                   missing variables in the inference stage of the multivariate
+zon windows as:                                                                 time series forecasting models for prediction, which can be
+                                                                                                  (N )                      (S)      (N S)
+           (N   S)   (S)                     (N    S)    (S)                    formulated as: Xt:t+H = F✓ (CONCAT(Xt L:t , X̂t L:t )).
+    pX (Xt L:t |Xt L:t ) = pZ (f✓ (Xt L:t |Xt L:t )
+                                                                                It should be noted that our proposed method is applicable to
+                              @f✓          (N     S)    (S)
+                                                                      (2)       any forecasting models that leverage inter-correlation.
+                     det     (N S)
+                                       (Xt L:t ; Xt L:t )
+                           @Xt L:t                                              4.3     Variable-Agnostic Meta Learning
+We can further express the conditional probability by the                       Reconstructing missing variables set N \S is challenging
+                                         (N S)   (S)
+chain rule of probability as pX (Xt L:t |Xt L:t , ✓) =                          since the subset S is randomly chosen, and training one spe-
+Q           (N S)    (N S)     (S)                                              cific generative model for every possible combination of vari-
+    i pXi (Xi     |X1:i 1 , Xt L:t , ✓). Due to the dynamic                     able subsets is unrealistic. As a result, we need to improve
+pattern of time series data, the transformation process is dif-                 the generalization ability of TRFlows f✓ to make a precise
+ficult and requires a couple of layers, i.e., f✓ = f✓0 f✓1                      estimation of all possible combination of missing variables.
+· · · f✓N . So for the forward calculation, we define the input                 Inspired by the meta-learning technique [Finn et al., 2017],
+                                      (N S)
+of the first flows layer as h0 := Xt L:t , and the output of                    we design Variable-Agnostic Meta Learning as the training
+the last layer as h . We can utilize the following recursion
+                    N                                                           framework to learn the common information and transfer the
+to construct the nth layer:                                                     knowledge to new variable subset.
+                                                                                   Formally, we define the domain of the variables subsets as
+ hn+1
+  i   = hni · exp(f✓,s
+                   n
+                         (hn1:i 1 ; HS )) + f✓,b
+                                             n
+                                                   (hn1:i 1 ; HS )              Dvariables = {S1 , ..., Sz }, where z is the number of variable
+                       i                         i
+                                                                (3)             subsets, and each variable subset Si contains N variables with
+                                                                                different missing variables combinations. It should be noted
+where, f✓,s
+          n
+               and f✓,b
+                    n
+                          are the unconstrained functions to ob-                that the selection of variable subset should be consistent with
+             i          i
+tain scale and bias. The log determinant can be calculated as                   that of inference phase. We sample a batch of variable subsets
+         @f n                   P                                               Si , and when adapting to different subsets, we update the pa-
+log det @h✓n (hn ; HS ) =                    n        S
+                                   i f✓,si (h1:i 1 ; H ).                       rameters ✓ of flows f✓ to ✓i0 : ✓i0 = ✓ ↵r✓ LSi (f✓ ) where ↵ is
+
+
+
+                                                                         2066
+                                       Proceedings of the Thirty-Third International Joint Conference on Artificial Intelligence (IJCAI-24)
+
+
+
+              Backbone                             MTGNN                                      ASTGCN                                      T-GCN
+                    Setting             Partial            Reconstruct              Partial           Reconstruct               Partial         Reconstruct
+          VSF Method                       N/A             TRF(Ours)                   N/A             TRF(Ours)                  N/A             TRF(Ours)
+                    Metric         MAE         RMSE      MAE         RMSE       MAE       RMSE      MAE        RMSE        MAE       RMSE      MAE     RMSE
+                        0.05       5.209       10.33     3.843       7.837     5.807      11.26     5.185      10.13      9.154       15.89    8.546   14.52
+          METR-LA
+
+
+
+
+                        0.15       4.597       9.391     3.739       7.672     5.593      10.66     5.135      9.858      8.885       15.16    8.343   14.21
+                        0.25       4.441       9.077     3.685       7.567     5.276      10.24     5.101      9.752      8.531       14.56    8.092   13.90
+                        0.05       5.495       7.526     3.997       5.927     6.257      8.412     4.382      6.254      9.319       12.50    5.533   7.750
+           SOLAR
+
+
+
+
+                        0.15       4.286       6.146     3.703       5.718     5.786      8.058     4.279      6.223      8.909       12.25    5.487   7.967
+                        0.25       3.825       5.650     3.540       5.480     5.374      7.692     4.205      6.168      8.386       11.70    5.460   8.038
+                        0.05       22.21       43.17     11.58       28.05     23.04      43.39     18.84      39.03      47.69       74.80    38.30   59.55
+          TRAFFIC
+
+
+
+
+                        0.15       18.60       38.12     11.57       27.98     22.43      43.09     18.90      39.22      45.53       70.95    38.43   59.86
+                        0.25       16.05       34.69     11.52       27.93     21.73      42.54     18.86      39.24      42.92       66.40    38.39   59.86
+                        0.05       4.220       6.832     3.596       6.344     3.712      6.248     3.477      5.903      6.825       11.28    6.298   9.977
+          ECG5000
+
+
+
+
+                        0.15       4.082       6.592     3.546       6.147     3.604      6.053     3.476      5.675      6.704       10.68    6.218   9.962
+                        0.25       3.819       6.327     3.457       6.039     3.565      5.966     3.473      5.921      6.555       9.892    6.148   9.770
+
+        Table 1: Variable Subset Time-series Forecasting performance of backbones and TRF (Ours) under Partial and Reconstruct setting.
+
+
+the learning rate of the inner loop optimization, and LSi (f✓ )                               (3) MTGNN [Wu et al., 2020] utilizes a graph learning to
+is the loss following equation 4. To train the model parame-                                  describe uni-directed relations among variables.
+ters, we optimize the performance of the adapted generation                                      To evaluate the average performance of our method, we
+model f✓i0 via diverse tasks sampled from Dvariables . We for-                                randomly set the number of available variables |S| for 100
+mulate the meta-objective as:                                                                 times, in order to indicate various missing percentages,. Dur-
+                    X                               X
+min                            LSi (f✓i0 ) =                    LSi (f✓ ↵r✓ LSi (f✓ ) )       ing training, all the time series backbone models were trained
+    ✓
+        Si ⇠Dvariables                         Si ⇠Dvariables                                 with all variables available in lookback windows and horizon
+                                                                                   (5)        windows. During inference (testing), we created three set-
+ We target to update the model parameters in such a man-                                      tings: 1) Partial: partial variables were observed and avail-
+ner that optimal performance can be achieved via minimum                                      able. We set missing variables to 0. This setting aims to
+gradient steps on a new task. So we employ the stochas-                                       show missing variables will lower time series forcasting per-
+tic gradient descent (SGD) and update the parameters ✓ by                                     formance. 2) Reconstruct: Not just partial observed variables
+computing the gradient of LSi (f✓i0 ), which can be written as:                               were available, but also the other missing variables were re-
+                P                                                                             constructed by our method in both in lookback and horizon
+✓     ✓     r✓ Si ⇠Dvariables LSi (f✓i0 ), where is the meta
+learning rate of the outer loop optimization. The training pro-                               windows; in other words, our reconstruction method plays a
+cess of the Meta-flows is shown in Algorithm 1.                                               role. This setting aims to show reconstruction can advance
+                                                                                              forecasting. By default, we adopted the Reconstruct setting
+5       Experimental Results                                                                  during inference (testing), unless specified otherwise. 3) Or-
+                                                                                              acle: All variables were observed and there are no miss-
+5.1       Experimental Setup                                                                  ing variables. Yet, we evaluate the forecasting performance
+Dataset. We conducted our experiments on four real world                                      only on the partially available variable subset (S) in Setting
+datasets: (1) METR-LA [Li et al., 2017] includes statistics                                   2). This setting aims show effective reconstruction of miss-
+on traffic speed gathered from 207 loop detectors on county                                   ing variables can approach the performances of all variables
+highways during Mar 1st 2012 and Jun 30th 2012 in Los An-                                     available. The lengths of horizon windows and lookback win-
+geles. (2) SOLAR contains the solar power output of the 137                                   dows were set to 12.
+plants in Alabama in 2007. (3) TRAFFIC describes road oc-
+cupancy rates collected by 862 sensors in the San Francisco                                   Evaluation Metrics. Since the Oracle setting use data
+Bay area from 2015 to 2016. (4) ECG5000 contains 140 elec-                                    with fully observed and available variables, the perfor-
+trocardiograms (ECG) with a length of 5000 each.                                              mance of the Oracle setting can be seen as the upper
+                                                                                              bound of forecasting. Thereafter, we measure the per-
+Multivariate Time Series Forecasting Model Backbone                                           formance difference between Reconstruct and the Oracle
+Setting. After missing variable reconstruction, we em-                                        settings with respect to MAE and RMSE, which is for-
+ployed the widely-used models as backbones for our down-                                                              E reconstruct E oracle
+stream multivariate time series forecasting task: (1) T-GCN                                   mulated as MAE = M AE E oracle M AE ⇥ 100%, and
+                                                                                                                                        M AE
+[Zhao et al., 2019]: utilizes graph convolutional network and                                              reconstruct
+                                                                                                         ERM             oracle
+                                                                                                                        ERM
+                                                                                                RMSE =
+                                                                                                              SE            SE
+                                                                                                                                ⇥100%, where, EM   reconstruct
+gated recurrent unit to model spatial-temporal correlation. (2)                                                   oracle
+                                                                                                                ERM   SE
+                                                                                                                                                     AE
+ASTGCN [Guo et al., 2019] exploits spatial and temporal                                       and ERM
+                                                                                                    reconstruct
+                                                                                                        SE      represent  the  average  MAE    and RMSE    of
+attentions to model correlations among dynamic time series.                                   the Reconstruct setting, and EM  oracle
+                                                                                                                                 AE   and E oracle
+                                                                                                                                           RM SE   are the av-
+
+
+
+                                                                                       2067
+                               Proceedings of the Thirty-Third International Joint Conference on Artificial Intelligence (IJCAI-24)
+
+
+
+      Backbone                         MTGNN                                         ASTGCN                                             T-GCN
+            Setting      Reconstruct           Reconstruct             Reconstruct             Reconstruct             Reconstruct              Reconstruct
+  VSF Method               FDW                 TRF(Ours)                   FDW                  TRF(Ours)                  FDW                  TRF(Ours)
+            Metric      MAE      RMSE         MAE        RMSE         MAE        RMSE         MAE        RMSE         MAE          RMSE         MAE       RMSE
+
+                0.05   9.16%    7.16%      8.67%       6.82%        2.17%       3.06%       1.96%       2.72%       7.02%        5.8%        6.65%       5.31%
+  METR-LA
+
+
+
+
+                0.15   6.49%    4.68%      6.08%       4.42%        1.89%       2.72%       1.65%       2.48%       5.03%       5.43%        4.74%       5.10%
+                0.25   4.97%    3.45%      4.62%       3.29%        1.53%       2.34%       1.38%       2.11%       3.83%       4.50%        3.59%       4.22%
+                0.05   39.1%    31.9%      36.9%       30.1%        11.5%       10.4%       10.8%       9.78%       9.43%       7.45%        7.95%       6.23%
+  SOLAR
+
+
+
+
+                0.15   28.7%    24.4%      26.2%       22.9%        7.95%       7.29%       7.48%       6.87%       7.08%       4.62%        6.32%       4.19%
+                0.25   22.8%    19.8%      20.7%       17.2%        6.15%       5.68%       5.79%       5.24%       5.70%       3.49%        5.41%       3.28%
+                0.05   2.83%    4.52%      2.67%       4.27%        0.23%       0.49%       0.21%       0.46%       0.65%       0.42%        0.61%       0.38%
+  TRAFFIC
+
+
+
+
+                0.15   1.98%    2.79%      1.86%       2.59%        0.19%       0.45%       0.17%       0.41%       0.68%       0.42%        0.65%       0.39%
+                0.25   1.76%    2.00%      1.61%       1.86%        0.16%       0.41%       0.15%       0.38%       0.64%       0.38%        0.63%       0.36%
+                0.05   5.24%    6.29%      4.84%       5.92%        0.28%       1.06%       0.26%       0.99%       1.79%       2.79%        1.70%       2.62%
+  ECG5000
+
+
+
+
+                0.15   2.16%    3.14%      2.04%       2.98%        0.26%       1.03%       0.23%       0.94%       2.31%       3.11%        2.18%       2.91%
+                0.25   1.17%    2.40%      1.07%       2.27%        0.23%       0.98%       0.21%       0.93%       1.66%       1.98%        1.54%       1.85%
+
+Table 2: Performance comparisons with the state-of-the-art method in variable subset time-series forecasting under the Reconstruct setting
+(all of the metrics are measured by MAE and RMSE ).
+
+
+erage MAE and RMSE of the oracle setting.                                               Methods      METR-LA          SOLAR           TRAFFIC       ECG5000
+                                                                                          TRF        6.08 / 4.42     26.2 / 22.9      1.86 / 2.59   2.04 / 2.98
+5.2          Overall Performance                                                         KNNE        8.21 / 9.68     31.7 / 27.4      2.07 / 2.62   2.24 / 3.05
+                                                                                         MICE        32.3 / 22.7     34.1 / 19.1      37.3 / 25.2   41.0 / 26.8
+We evaluated the performance under the reconstruct setting                               TRMF        72.4 / 54.7     57.2 / 25.4      174 / 92.1    37.5 / 22.8
+(i.e., partial variables available with missing variable recon-                         US-GAN       23.9 / 25.2     36.0 / 24.4      20.0 / 24.1   5.32 / 8.18
+struction) with respect to different available variable subset                           SAITS       6.24 / 4.56     32.8 / 28.7      2.22 / 3.23   2.17 / 3.02
+sizes (|S|), i.e., 5%, 15%, 25% of total variables. Table 1                              CSDI        6.67 / 4.94     28.5 / 24.0      2.38 / 3.15   2.42 / 3.53
+presents a comparative analysis of three time series forecast-
+ing backbone models under the partial setting (without re-                          Table 3: Performance comparisons with Multivariate Time Series
+construction) and the reconstruct setting (with our TRF re-                         Imputation techniques on MTGNN across four datasets (measured
+construction). The results show that our TRF reconstruction                         by MAE / RMSE ).
+of missing variables advance the three backbone forecasting
+models. In the Appendix D.1, Table 5 details the results un-
+der an oracle setting. Notably, when operating under a re-                          density distribution of missing variables for recovery. This
+construct setting with a subset of variables, there is a marked                     feature is particularly significant as non-parametric methods
+decrease in the performance of the backbone models. How-                            often fail to effectively recover missing values.
+ever, the integration of our reconstruction method leads to
+significant enhancements across all backbone models. For in-
+                                                                                    5.4     Comparison with Imputation Methods
+stance, in the TRAFFIC dataset, with only 5% variables avail-                       Imputation can complete missing data as well. We compared
+able, integrating our TRF method can boost the performance                          our method with six popular imputation baseline methods,
+of MTGNN by 47.86% (i.e., improving the Mean Absolute                               i.e., CSDI [Tashiro et al., 2021], kNNE [Domeniconi and
+Error (MAE) from 22.21 to 11.58). Similarly, for the SO-                            Yan, 2004], MICE [Van Buuren and Groothuis-Oudshoorn,
+LAR dataset with 5% variables available, ASTGCN’s perfor-                           2011], TRMF [Yu et al., 2016], SAITS [Du et al., 2023] and
+mance is elevated by 29.97% (reducing the MAE from 6.257                            US-GAN [Miao et al., 2021] with respect to various forecast-
+to 4.382). These results support the effectiveness of our gen-                      ing backbone models under the reconstruct setting. Due to
+erative flow as missing variable reconstruction strategy.                           page limits, we only present the results for MTGNN while
+                                                                                    other results are detailed in the Appendix D.2. Table 3 shows
+5.3          Comparison with Variable Subset Time-Series                            that our framework can outperform all of the imputation base-
+             Forecasting under the Reconstruct Setting                              lines, except the RMSE of traffic dataset. This can be ex-
+Under the reconstruct setting (i.e., reconstruct missing vari-                      plained as imputation methods are insufficient in modeling
+ables then forecast), we compared our method with the state-                        inter-variable correlation under time series dynamics.
+of-the-art VSF model, namely the Forecast Distance Weight-
+ing (FDW) ensemble method [Chauhan et al., 2022] Table 2                            5.5     Ablation Study
+shows that our method outperform FDW, achieving an av-                              We evaluated the effectiveness of each component of our
+erage performance improvement of over 5%. One possible                              method on four datasets. We denoted TRF w/o VAML as
+explanation is that our deep generative flow learning method                        the variant of our method without Variables-Agnostic Meta
+is capable to model temporal patterns to estimate time series                       Learning. TRF w/o BZ is another variant without batch nor-
+
+
+
+                                                                             2068
+                           Proceedings of the Thirty-Third International Joint Conference on Artificial Intelligence (IJCAI-24)
+
+
+
+
+   (a) METR-LA.           (b) TRAFFIC.               (c) SOLAR.                     (a) METR-LA.               (b) TRAFFIC.       (c) SOLAR.
+
+Figure 3: Ablation study of different baselines on datasets (all per-           Figure 5: Horizon analysis of different baselines on datasets (all
+formances are measured in MAE ).                                                performances are measured in MAE ).
+
+
+
+
+      (a) MTGNN.           (b) ASTGCN.                (c) T-GCN.
+                                                                                     (a) MTGNN.                (b) ASTGCN.        (c) T-GCN.
+Figure 4: Hyperparameter analysis of the number of coupling lay-                Figure 6: Hyperparameter analysis of number of hidden layers in
+ers on METR-LA dataset, where all performances are measured in                  each MADE on METR-LA dataset, where we measure performance
+  MAE and   RMSE .                                                              in MAE and RMSE .
+
+malization. Figure 3 shows that removing different com-
+ponents reduces forecasting accuracy for diverse backbones.
+This illustrates that all components of our method works as
+one for estimating the unknown density of missing variables
+and reconstruct the missing relationship. Moreover, we ob-                           (a) MTGNN.                (b) ASTGCN.        (c) T-GCN.
+served that TRF w/o VAML generally perform better than
+TRF w/o BZ. A potential explanation is that stabilizing the                     Figure 7: Hyperparameter analysis of number of hidden layers in
+training process is more crucial for recovering missing infor-                  each MADE on SOLAR dataset (all performances are measured in
+mation compared to emphasizing generalization ability.                            MAE and   RMSE ).
+
+
+5.6    Model Analysis                                                           Analysis of the Number of Hidden Layers. Figure 6 and
+Horizon Analysis. We evaluated the influence of different                       Figure 7 show how the performance of our method changes
+horizon lengths on model performance. Figure 5 shows                            over the number of hidden layers in each MADE. We ob-
+that when dealing with a smaller horizon window, the per-                       served that the lager the number of hidden layers is, the poorer
+formance difference between the reconstruct setting and the                     the forecasting accuracy is. It is highly possible that more
+oracle setting is smaller, indicating a better forecasting ac-                  hidden layers will bring more training obstacles and more
+curacy. On the contrary, we observed that under the oracle                      complex masking transformation for the TRF so that the per-
+setting, forecasting accuracy is not influenced by the horizon                  formances of TRF are greatly hindered.
+window size. This is because, all variables are observed and
+available under the oracle setting.                                             6     Conclusion
+Analysis of the Number of Coupling Layers. We evalu-                            In this work, we reformulate the VSF problem from the
+ated the impact of the number of coupling layers. Figure 4                      perspective of density estimation. To assist the forecast-
+shows that the performance of our proposed framework ex-                        ing model in reconstructing the missing values and captur-
+hibit limited correlation with the number of coupling layers                    ing inter-dependencies among variables, we first estimate the
+under T-GCN. In contrast, the performance is sensitive to the                   unknown density of inaccessible variable subset, and then re-
+number of coupling layers under ASTGCN and MTGNN. For                           construct the missing variables by generation. Specifically,
+instance, M AE and RM SE decrease when the number of                            we propose Time-series Reconstruction Flows (TRF), a con-
+coupling layers increases, while M AE and RM SE become                          ditional flows-based generative framework consisting of con-
+larger when the number of coupling layers increases. This                       ditional autoregressive layers based on subset embedding, to
+shows there exist an optimal coupling layer number. The                         estimate the density and rebuild missing variables. To further
+potential reason for this trend is that increasing the number                   improve the generalization ability, we design the Variables-
+of coupling layers in a certain level can improve the perfor-                   Agnostic Meta Learning as the training framework such that
+mance of framework since flows without deep stack cannot                        TRF can adapt to estimate the density new variables subset
+model intricate density, but when the number of coupling lay-                   more accurately. Finally, we conduct experiments on real-
+ers gets large enough, it adds additional training challenges to                world datasets to indicate our proposed method can recover
+impede model convergence.                                                       the most of the performance of forecasting models.
+
+
+
+                                                                         2069
+                        Proceedings of the Thirty-Third International Joint Conference on Artificial Intelligence (IJCAI-24)
+
+
+
+Acknowledgments                                                              [Du Preez and Witt, 2003] Johann Du Preez and Stephen F
+                                                                                Witt. Univariate versus multivariate time series forecast-
+This research is funded by the Science and Technol-
+                                                                                ing: an application to international tourism demand. Inter-
+ogy Development Fund (FDCT), Macau SAR (file no.
+                                                                                national Journal of Forecasting, 19(3):435–451, 2003.
+0123/2023/RIA2, 001/2024/SKL), the Start-up Research
+Grant of University of Macau (File no. SRG2021-00017-                        [Fan et al., 2022] Wei Fan, Shun Zheng, Xiaohan Yi, Wei
+IOTSC), and National Science Foundation (NSF) via the                           Cao, Yanjie Fu, Jiang Bian, and Tie-Yan Liu. Depts:
+grant numbers: 2040950, 2006889, 2045567.                                       Deep expansion learning for periodic time series forecast-
+                                                                                ing. arXiv preprint arXiv:2203.07681, 2022.
+Contribution Statement                                                       [Fan et al., 2023] Wei Fan, Pengyang Wang, Dongkun
+                                                                                Wang, Dongjie Wang, Yuanchun Zhou, and Yanjie Fu.
+In this work, Xuanming Hu and Wei Fan contributed equally                       Dish-ts: a general paradigm for alleviating distribution
+by leading the project, offering theoretical support, and han-                  shift in time series forecasting. In Proceedings of the AAAI
+dling the overall model design, code implementation, exper-                     Conference on Artificial Intelligence, volume 37, pages
+imental design, and paper writing. Haifeng Chen, Pengyang                       7522–7529, 2023.
+Wang, and Yanjie Fu gave valuable feedback on the paper
+drafts. All authors reviewed and approved the manuscript.                    [Finn et al., 2017] Chelsea Finn, Pieter Abbeel, and Sergey
+                                                                                Levine. Model-agnostic meta-learning for fast adaptation
+                                                                                of deep networks. In International conference on machine
+References                                                                      learning, pages 1126–1135. PMLR, 2017.
+[Bai et al., 2018] Shaojie Bai, J Zico Kolter, and Vladlen                   [Germain et al., 2015] Mathieu Germain, Karol Gregor, Iain
+  Koltun. An empirical evaluation of generic convolutional                      Murray, and Hugo Larochelle. Made: Masked autoen-
+  and recurrent networks for sequence modeling. arXiv                           coder for distribution estimation. In International confer-
+  preprint arXiv:1803.01271, 2018.                                              ence on machine learning, pages 881–889. PMLR, 2015.
+[Bai et al., 2020] Lei Bai, Lina Yao, Can Li, Xianzhi Wang,                  [Goodfellow et al., 2014] Ian Goodfellow, Jean Pouget-
+  and Can Wang. Adaptive graph convolutional recurrent                          Abadie, Mehdi Mirza, Bing Xu, David Warde-Farley,
+  network for traffic forecasting. Advances in neural infor-                    Sherjil Ozair, Aaron Courville, and Yoshua Bengio. Gen-
+  mation processing systems, 33:17804–17815, 2020.                              erative adversarial nets. Advances in neural information
+[Bartholomew, 1971] David J Bartholomew.               Time series              processing systems, 27, 2014.
+  analysis forecasting and control., 1971.                                   [Guo et al., 2019] Shengnan Guo, Youfang Lin, Ning Feng,
+[Byrne, 2019] Ruth MJ Byrne. Counterfactuals in explain-                        Chao Song, and Huaiyu Wan. Attention based spatial-
+  able artificial intelligence (xai): Evidence from human rea-                  temporal graph convolutional networks for traffic flow
+  soning. In IJCAI, pages 6276–6282, 2019.                                      forecasting. In Proceedings of the AAAI conference on
+                                                                                artificial intelligence, volume 33, pages 922–929, 2019.
+[Chauhan et al., 2022] Jatin Chauhan, Aravindan Raghu-
+  veer, Rishi Saket, Jay Nandy, and Balaraman Ravindran.                     [Hamid and Wibowo, 2018] Nur Hamid and Wahyu Catur
+  Multi-variate time series forecasting on variable subsets.                    Wibowo. Wind speed forecasting using multivariate time-
+  In Proceedings of the 28th ACM SIGKDD Conference                              series radial basis function neural network. In 2018 Inter-
+  on Knowledge Discovery and Data Mining, pages 76–86,                          national Conference on Advanced Computer Science and
+  2022.                                                                         Information Systems (ICACSIS), pages 423–428. IEEE,
+                                                                                2018.
+[Dinh et al., 2014] Laurent Dinh, David Krueger, and
+  Yoshua Bengio. Nice: Non-linear independent compo-                         [Hamzaçebi, 2008] Coşkun Hamzaçebi. Improving artificial
+  nents estimation. arXiv preprint arXiv:1410.8516, 2014.                       neural networks’ performance in seasonal time series fore-
+                                                                                casting. Information Sciences, 178(23):4550–4559, 2008.
+[Dinh et al., 2016] Laurent Dinh, Jascha Sohl-Dickstein, and
+                                                                             [Hu et al., 2023] Xuanming Hu, Wei Fan, Kun Yi, Pengfei
+  Samy Bengio. Density estimation using real nvp. arXiv
+  preprint arXiv:1605.08803, 2016.                                              Wang, Yuanbo Xu, Yanjie Fu, and Pengyang Wang. Boost-
+                                                                                ing urban prediction via addressing spatial-temporal dis-
+[Domeniconi and Yan, 2004] Carlotta Domeniconi and Bo-                          tribution shift. In 2023 IEEE International Conference on
+  jun Yan. Nearest neighbor ensemble. In Proceedings of                         Data Mining (ICDM), pages 160–169. IEEE, 2023.
+  the 17th International Conference on Pattern Recognition,                  [Hu et al., 2024] Xuanming Hu, Wei Fan, Dongjie Wang,
+  2004. ICPR 2004., volume 1, pages 228–231. IEEE, 2004.
+                                                                                Pengyang Wang, Yong Li, and Yanjie Fu. Dual-stage
+[Du et al., 2019] Shengdong Du, Tianrui Li, Yan Yang, and                       flows-based generative modeling for traceable urban plan-
+  Shi-Jinn Horng. Deep air quality forecasting using hybrid                     ning. In Proceedings of the 2024 SIAM International Con-
+  deep learning framework. IEEE Transactions on Knowl-                          ference on Data Mining (SDM), pages 370–378. SIAM,
+  edge and Data Engineering, 33(6):2412–2424, 2019.                             2024.
+[Du et al., 2023] Wenjie Du, David Côté, and Yan Liu. Saits:               [Ioffe and Szegedy, 2015] Sergey Ioffe and Christian
+  Self-attention-based imputation for time series. Expert                       Szegedy. Batch normalization: Accelerating deep net-
+  Systems with Applications, 219:119619, 2023.                                  work training by reducing internal covariate shift. In
+
+
+
+                                                                      2070
+                         Proceedings of the Thirty-Third International Joint Conference on Artificial Intelligence (IJCAI-24)
+
+
+
+   International conference on machine learning, pages                        [Vaswani et al., 2017] Ashish Vaswani, Noam Shazeer, Niki
+   448–456. pmlr, 2015.                                                          Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez,
+[Kingma and Dhariwal, 2018] Durk P Kingma and Prafulla                           Łukasz Kaiser, and Illia Polosukhin. Attention is all you
+   Dhariwal. Glow: Generative flow with invertible 1x1 con-                      need. Advances in neural information processing systems,
+   volutions. Advances in neural information processing sys-                     30, 2017.
+   tems, 31, 2018.                                                            [Wu et al., 2020] Zonghan Wu, Shirui Pan, Guodong Long,
+[Kingma and Welling, 2013] Diederik P Kingma and Max                             Jing Jiang, Xiaojun Chang, and Chengqi Zhang. Con-
+   Welling. Auto-encoding variational bayes. arXiv preprint                      necting the dots: Multivariate time series forecasting with
+   arXiv:1312.6114, 2013.                                                        graph neural networks. In Proceedings of the 26th ACM
+                                                                                 SIGKDD international conference on knowledge discov-
+[Li et al., 2017] Yaguang Li, Rose Yu, Cyrus Shahabi, and
+                                                                                 ery & data mining, pages 753–763, 2020.
+   Yan Liu. Diffusion convolutional recurrent neural net-
+   work: Data-driven traffic forecasting. arXiv preprint                      [Yi et al., 2024a] Kun Yi, Qi Zhang, Wei Fan, Hui He, Liang
+   arXiv:1707.01926, 2017.                                                       Hu, Pengyang Wang, Ning An, Longbing Cao, and Zhen-
+                                                                                 dong Niu. Fouriergnn: Rethinking multivariate time series
+[Luo et al., 2018] Yonghong Luo, Xiangrui Cai, Ying
+                                                                                 forecasting from a pure graph perspective. Advances in
+   Zhang, Jun Xu, et al. Multivariate time series imputation                     Neural Information Processing Systems, 36, 2024.
+   with generative adversarial networks. Advances in neural
+   information processing systems, 31, 2018.                                  [Yi et al., 2024b] Kun Yi, Qi Zhang, Wei Fan, Shoujin
+[Miao et al., 2021] Xiaoye Miao, Yangyang Wu, Jun Wang,                          Wang, Pengyang Wang, Hui He, Ning An, Defu Lian,
+                                                                                 Longbing Cao, and Zhendong Niu. Frequency-domain
+   Yunjun Gao, Xudong Mao, and Jianwei Yin. Generative
+                                                                                 mlps are more effective learners in time series forecast-
+   semi-supervised learning for multivariate time series im-
+                                                                                 ing. Advances in Neural Information Processing Systems,
+   putation. In Proceedings of the AAAI conference on artifi-
+                                                                                 36, 2024.
+   cial intelligence, volume 35, pages 8983–8991, 2021.
+                                                                              [Yick et al., 2008] Jennifer Yick, Biswanath Mukherjee, and
+[Nichol and Schulman, 2018] Alex Nichol and John Schul-
+                                                                                 Dipak Ghosal. Wireless sensor network survey. Computer
+   man. Reptile: a scalable metalearning algorithm. arXiv
+                                                                                 networks, 52(12):2292–2330, 2008.
+   preprint arXiv:1803.02999, 2(3):4, 2018.
+                                                                              [Yu et al., 2016] Hsiang-Fu Yu, Nikhil Rao, and Inderjit S
+[Oreshkin et al., 2019] Boris N Oreshkin, Dmitri Carpov,
+                                                                                 Dhillon. Temporal regularized matrix factorization for
+   Nicolas Chapados, and Yoshua Bengio. N-beats: Neural
+                                                                                 high-dimensional time series prediction. Advances in neu-
+   basis expansion analysis for interpretable time series fore-
+                                                                                 ral information processing systems, 29, 2016.
+   casting. arXiv preprint arXiv:1905.10437, 2019.
+[Papamakarios et al., 2017] George Papamakarios, Theo                         [Zeng et al., 2023] Ailing Zeng, Muxi Chen, Lei Zhang, and
+   Pavlakou, and Iain Murray. Masked autoregressive flow                         Qiang Xu. Are transformers effective for time series fore-
+   for density estimation. Advances in neural information                        casting? In Proceedings of the AAAI conference on artifi-
+   processing systems, 30, 2017.                                                 cial intelligence, volume 37, pages 11121–11128, 2023.
+[Ren et al., 2022] Weijieying Ren, Pengyang Wang, Xiaolin                     [Zhao et al., 2019] Ling Zhao, Yujiao Song, Chao Zhang,
+   Li, Charles E Hughes, and Yanjie Fu. Semi-supervised                          Yu Liu, Pu Wang, Tao Lin, Min Deng, and Haifeng Li.
+   drifted stream learning with short lookback. In Proceed-                      T-gcn: A temporal graph convolutional network for traffic
+   ings of the 28th ACM SIGKDD Conference on Knowledge                           prediction. IEEE transactions on intelligent transportation
+   Discovery and Data Mining, pages 1504–1513, 2022.                             systems, 21(9):3848–3858, 2019.
+[Tang et al., 2020] Xianfeng Tang, Huaxiu Yao, Yiwei Sun,
+   Charu Aggarwal, Prasenjit Mitra, and Suhang Wang. Joint
+   modeling of local and global temporal dynamics for mul-
+   tivariate time series forecasting with missing values. In
+   Proceedings of the AAAI Conference on Artificial Intelli-
+   gence, volume 34, pages 5956–5963, 2020.
+[Tashiro et al., 2021] Yusuke Tashiro, Jiaming Song, Yang
+   Song, and Stefano Ermon. Csdi: Conditional score-
+   based diffusion models for probabilistic time series impu-
+   tation. Advances in Neural Information Processing Sys-
+   tems, 34:24804–24816, 2021.
+[Van Buuren and Groothuis-Oudshoorn, 2011] Stef Van Bu-
+   uren and Karin Groothuis-Oudshoorn. mice: Multivariate
+   imputation by chained equations in r. Journal of statistical
+   software, 45:1–67, 2011.
+[Vanschoren, 2018] Joaquin Vanschoren. Meta-learning: A
+   survey. arXiv preprint arXiv:1810.03548, 2018.
+
+
+
+                                                                       2071
+

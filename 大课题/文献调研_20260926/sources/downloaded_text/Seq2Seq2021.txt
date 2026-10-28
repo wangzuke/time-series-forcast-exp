@@ -1,0 +1,365 @@
+Proceedings of the 26th International Conference on
+Automation & Computing, University of Portsmouth,
+Portsmouth, UK, 2-4 September 2021
+
+    The Sequence-to-Sequence Architecture with An
+    Embedded Module for Long-Term Traffic Speed
+            Forecasting with Missing Data
+                                         Ge Zheng1 , Wei Koong Chai1 , Vasilis Katos1
+      1 Department of Computing and Informatics, Bournemouth University, Poole, Dorset, BH12 5BB, U.K.
+
+
+
+
+   Abstract—Traffic forecasting plays a crucial role in Intelligent        example, some variants of ARMA like Auto-Regressive Inte-
+Transportation Systems (ITSs), which is proposed to provide                grated Moving Average (ARIMA) [4] and Seasonal ARIMA
+traffic status in advance for road users to avoid traffic congestion       (SARIMA) [5] were proposed for improving the capability
+or other traffic incidents and for authorities to optimise the
+strategies of traffic management. In this paper, we develop a novel        of traffic forecasting. ARMA and its variants are statistic
+deep learning framework, based on the Sequence-to-Sequence ar-             models and usually used for time series forecasting with
+chitecture with an embedded module, for long-term traffic speed            linear relationship. However, [6] pointed that a non-linear
+forecasting with missing data and providing high forecasting               relationship exists in traffic data, and ARMA and its variants
+accuracy. The embedded module uses Graph Convolution Neural                are unable to completely analyse the non-linear relationship of
+Network for the local spatial dependency analysis by conducting
+convolutional operation on the k − hop neighbourhood matrix,               traffic data. Owning to the wide popularity of machine learning
+while utilises Transformer for the global spatial dependency               technologies, machine learning models with non-linear kernels
+analysis by implementing the attention mechanism that assigns              or activation functions have been used for analysing non-linear
+individual weights to neighbour detectors for contributing to              relationships of traffic data and achieved better performance
+the targeted detector. The sequence-to-sequence architecture is            compared to ARMA and its variants. For example, Support
+built to analyse temporal dependencies of the spatially-fused time
+series from the embedded module. To evaluate the proposed                  Vector Regression with RBF kernel (SVR) was used for traffic
+model against existing well-known ones, the real traffic speed             flow forecasting [7] while an enhanced K-Nearest Neighbor
+dataset with missing data and frequent traffic incidents is used to        (K-NN) algorithm was also used for traffic flow forecasting
+train and test the models. The experimental results indicate that          [8].
+our proposed framework achieves the most accuracy forecasting,                With the availability of new sensor technologies and ad-
+even obtaining more than 80% accuracy for forecasting two hours
+in advance.                                                                vanced big data analysis technologies, mass data with more
+   Index Terms—long-term, intelligent transportation system,               features is available for traffic forecasting. Therefore, deep
+deep learning, large-scale road networks                                   learning models that are capable of analysing big data with
+                                                                           high dimensions have been used for traffic forecasting, instead
+                       I. I NTRODUCTION                                    of machine learning models that are too shallow for dealing
+                                                                           with high dimensional data. In 2014, Huang et al. [9] designed
+
+W        ITH the sharp growth of population and vehicles, trans-
+         portation infrastructures are facing huge challenges,
+such as serious traffic congestion, increasing number of inci-
+                                                                           a deep learning model for traffic forecasting which uses a net-
+                                                                           work with Deep Belief Network (DBN) model at the bottom
+                                                                           for unsupervised pre-training and a Multi-Task Layer (MTL) at
+dents and severe delay in actual travel time. These challenges             the top for unsupervised forecasting. In the same year, Lv et al.
+bring many problems to cities like air pollution and waste of              [10] built a Stacked AutoEncoder model (SAE) to learn traffic
+energy. To overcome the challenges and resolve these prob-                 flow features and trained it in a greedy layerwise fashion.
+lems, the concept of Intelligent Transportation Systems (ITSs)             Zhang [11] developed a Convolutional Neural Network (CNN)
+[1] has been proposed. It aims to offer innovative services                for learning traffic data as images and then used a fully-
+relating to different modes of transport and traffic management            connected layer for final forecasting. The advantage of this
+based on the most advanced technologies and enable road                    model is that spatial dependencies can be extracted through
+users to be better informed and safer during travelling [2]. As            the kernels of CNN with non-linear activation functions and its
+an important element of ITSs, traffic forecasting is to forecast           kernel size decides the area coverage of the traffic data image.
+traffic status for the future based on historical traffic data and         However, these models are unable to analyse the temporal
+then provide it for road users to improve traffic efficiency.              dependencies of traffic data. Therefore, the Recurrent Neural
+   Many works in traffic forecasting have been reported in the             Network (RNN) and its variants (Long-Short Term Memory,
+literature, including studies on traffic flow, speed and travel            LSTM, and Gated Recurrent Unit, GRU) [12] , that take the
+time, since the earliest work, that used the well-known Auto-              advantage of analysing long-term dependencies, have been
+Regressive Moving Average (ARMA) model to forecast traffic                 combined with CNN for traffic forecasting. Wu et al. [13] used
+volume and occupancy, was published in late 1970s [3]. For                 a 1D CNN and two LSTMs to build a hybrid deep learning
+
+
+
+                                                                       1
+model named CLTFP while Liu et al. [14] combined CNN                from the targeted node and define the k − hop neighborhood
+with LSTM to generate a Conv-LSTM model for traffic flow            matrix as Ãk ∈ RN ×N .
+forecasting.                                                           The traffic data from the road network with N detectors
+   The aforementioned models consider road networks as              is described as xt = {x1t , x2t , . . . , xit , . . . , xtN −1 , xNt }; xt ∈
+regular grids and traffic data having regular Euclidean struc-      RN , (i = 1, 2, 3, . . . , N ), and xit denotes the traffic data
+ture. However, road networks are inherently irregular and           measured at detector i at tth time step. Typically, a time step
+traffic data should instead be treated as non-Euclidean data        can represent 5, 15, 30, 45 and 60 minutes [19]. In this paper,
+[15]. Therefore, to overcome this limitation, Graph Convo-          the dataset used for evaluating the proposed model considers
+lution Network (GCN) that can more efficiently analyse non-         5 minutes as a time step. Then X ∈ RT ×N (cf. Eq. (1)) repre-
+Euclidean structured data has been introduced into solving the      sents traffic data collected from N detectors in the network for
+traffic forecasting problem on large-scale traffic networks. It     T previous time steps. Conversely, the traffic data for the future
+                                                                                                                                     0
+conducts convolutional operations on non-Euclidean data for         is written as X 0 = {xt+1 , xt+2 , . . . , xt+T 0 } ∈ RT ×N where
+obtaining the relationships of traffic data in space domain.        T 0 is the forecasting horizon. Generally, traffic forecasting
+For example, [16] built the STGCN model consisting of two           problems can be categorized into short- (T 0 < 30 minutes)
+spatial-temporal convolutional blocks (named ST-Conv blocks)        and long-term (T 0 ≥ 30 minutes). Since we aim to solve
+and a fully-connected layer for traffic forecasting on road         the long-term traffic forecasting problem on large-scale road
+network-wide. [17] proposed the TGC-LSTM model that uses            network, this paper covers timescales T 0 = {6, 12, 18, 24}
+GCN to capture the spatial dependencies on the road network-        corresponding to {30, 60, 90, 120} minutes.
+wide and utilises LSTM to extract temporal dependencies
+while Tang [18] jointed the attention mechanism into GCN                          X = {xt−T +1 , xt−T +2 , . . . , xt−1 , xt };
+and then developed a GAGCN model to forecast traffic flow.                                                                                  (1)
+                                                                                               X ∈ RT ×N , T = 1, 2, 3, . . .
+   Based on the most recent literature, in this paper, a novel
+deep learning framework is to be developed to resolve the              Based on traffic data and the road graph described above,
+long-term traffic forecasting problem, aiming to provide more       the traffic forecasting problem for the proposed approach in
+accurate forecasting on large-scale road networks. The pro-         this paper can be formulated as Eq. (2).
+posed framework takes the advantages of Graph Convolution                                                      
+Network and Transformer on the different spatial dependency                            X̃ 0 = F X; G(V, E, Ãk )             (2)
+analysis and the Sequence-to-Sequence architecture on the
+temporal dependency analysis, which is denoted as GCNT-             where the objective is to learn the mapping function F(.) and
+Seq2Seq. The traffic forecasting problem will firstly be de-        compute the traffic data in the next T 0 time steps based on
+scribed in Section II and details of the proposed model will        the historical traffic data in T previous time steps and the
+be explained in Section III. The proposed model will be             road graph G. For fitting the training phase, both input X
+evaluated against other existing forecasting models based on        and targeted X 0 need to be formatted to X ∈ RB×T ×N and
+                                                                                 0
+real world traffic dataset in Section IV. Finally, this work will   X 0 ∈ RB×T ×N where B is the batch size.
+be concluded in Section V.
+                                                                                III. A N OVEL P ROPOSED F RAMEWORK
+                II. P ROBLEM F ORMULATION                              Fig. 1 presents the framework of the proposed deep learning
+                                                                    model, named GCNT-Seq2Seq, that is designed to comprehen-
+   The traffic forecasting problem in this paper is defined         sively analyse the spatial and temporal dependencies of traffic
+on a large-scale road network with N detectors. Therefore,          data. GCNT-Seq2Seq is developed under the sequence-to-
+the road graph used in the proposed model has N nodes               sequence architecture consisting of an encoder and a decoder
+and is represented as G = (V, E) where V is the set of              for the long-term dependency analysis. The encoder is used
+nodes with |V| = N . E is the set of edges representing             to learn the historical information and encodes it to a context
+physical connectivity between detectors. Generally, G can be        vector. The decoder is utilised to decode the context vector
+represented by A ∈ RN ×N , the N × N symmetric adjacency            to the final forecasting. The modules of the sequence-to-
+matrix, with its element Ai,j = 1 if there exists a link between    sequence architecture is built based on graph convolution
+node i and j and 0 otherwise. Considering that the future traffic   neural networks and the transformer for analysing spatial
+states of a detector are influenced by its own historical states,   dependencies from original traffic data and the road graph
+the road graph, G, is represented by Ã = (A + IN ) ∈ RN ×N         data. The following content will explain the GCNT-Seq2Seq
+where IN is the N × N identity matrix. Ã only describes the        model on the spatial dependency analysis and the temporal
+connectivity of neighbors one hop away from each node (i.e.,        dependency analysis in detail, respectively.
+1 − hop neighborhood). Due to considering that traffic speed           GCNT as the embedded module of the sequence-to-
+propagates downstream while traffic congestion propagates           sequence architecture is used to analyse the spatial dependen-
+upstream and the dataset used in this work includes traffic         cies. Fig. 2 displays the GCNT module that consists of Lg
+congestion, we introduce the notion of k − hop neighborhood         graph convolutional neural (GCN) layers and Ls transformer
+to represent the set of nodes that are reachable within k hops      layers in parallel. Considering the lg th GCN layer at the
+                                                                                       Fig. 2: The module of GCNT
+
+                                                                      Qls ;t Kls ;t |
+                                                                          √
+                                                                             dk
+                                                                                      ∈ RB×H×N ×N enabling all other detectors to have
+                                                                      individual weights for the targeted detector, spatial features
+                                                                      obtained here are considered as global spatial features.
+
+          Fig. 1: The framework of GCNT-Seq2Seq.                                         Qls ;t = Wlqs ;t S(ls −1);t |
+                                                                                           Kls ;t = Wlks ;t S(ls −1);t |
+                                                                                                                                      (4)
+tth time step as an example, the convolution operation is                                  Vls ;t = Wlvs ;t S(ls −1);t |
+conducted on the k − hop neighbourhood matrix Ãk joined to
+                          th
+the output of the (lg − 1) GCN layer for obtaining spatial                                                                               !
+features using Eq. (3). Due to Ãk describing connections
+                                                                                                              Ql ;t Kl ;t | 
+                                                                      Sls ;t = ReLU     Wlss ;t       sof tmax( s√ s )Vls ;t + bsls ;t
+of detectors in the k − hop neighbourhood, obtained spatial                                                          dk
+features from the GCN layers can be considered as local spatial
+                                                                                                                              +S(ls −1);t
+features.
+                                                                                                                                      (5)
+
+                                                                      where S(ls −1);t | ∈ RB×N is the transposition of the output
+                                                    
+       GCN lg ;t = ReLU (Wlg ;t ∗ Ãk )GCN (lg −1);t
+                                                                                          th
+                                                               (3)    of the (ls − 1) transformer layer as the input of the ls th
+                                           +GCN (lg −1);t             transformer layer. Sls is the output of the ls th transformer layer
+where GCN (lg −1);t ∈ RB×N is the output of the (lg − 1)
+                                                                th    and the input of the 1st transformer layer is xt . Wlqs ;t , Wlks ;t
+GCN layer and is treated as the input of the lg th GCN layer.         and Wlvs ;t are weight matrices of queries, keys and values,
+GCN lg ;t ∈ RB×N is the output of the lg th GCN layer and the         respectively. Wlss ;t is the weight matrix of the linear layer and
+input of the 1st GCN layer is xt ∈ RB×N . Wlg ;t ∈ RN ×N is           bsls ;t is the related bias. ReLU is an activation function.
+                                                                          Finally, the output of the last GCN layer, GCNLg ;t , and the
+the weight matrix of Ãk and ReLU is the activation function
+                                                                      output of the last transformer layer, SLs ;t , are concatenated,
+of GCN layers.
+                                                                      and then pass a linear layer to generate local-global spatial
+   Meanwhile, transformer layers analyse spatial dependencies
+                                                                      features GCN T Lgs ;t using Eq. (6). In addition, the residual
+from the other aspect by the attention mechanism to assign
+                                                                      connection network [20] is used in each GCN and transformer
+individual weights to neighbours of the targeted detector so
+                                                                      layer to ensure the stable training and also supplement the
+as to contribute to the targeted detector. Each transformer
+                                                                      important information hidden in negative values that are ne-
+layer consists of three fully-connected layers, an attention
+                                                                      glected by the ReLU activation function.
+layer and a linear layer. Considering the ls th transformer layer
+at the tth time step as an example, three fully-connected
+layers are used to generate the multi-head inputs of queries           GCN T Lgs ;t = WLgs ;t concat(GCNLg ;t , SLs ;t ) + bLgs ;t (6)
+Qls ;t ∈ RB×(H×dq )×N , keys Kls ;t ∈ RB×(H×dk )×N and
+values Vls ;t ∈ RB×(H×dv )×N by Eq. (4), in which H is the            where WLgs ;t and bLgs ;t are the weight matrix and the bias,
+number of multi-heads and dq , dk and dv are the number               respectively.
+of embedded features for Qls ;t , Kls ;t and Vls ;t , respectively.      Seq2Seq consists of LSTMs as the encoder and the decoder,
+The spatial weight matrix is generated by multiplying the             which is used to embed our GCNT module for extracting
+transposition of Kls ;t by Qls ;t and then utilised to obtain         and delivering temporal features from spatially-fused features.
+spatial features using Eq. (5). Due to the spatial weight matrix      Taking the tth time step as an example, the encoder takes
+the GCN T Lgs ;t as the input and encodes the spatially-fused
+features using Eq. (7).
+
+         ft = σg (wf · GCN T Lgs ;t + uf · ht−1 + bf )
+          it = σg (wi · GCN T Lgs ;t + ui · ht−1 + bi )
+         ot = σg (wo · GCN T Lgs ;t + uo · ht−1 + bo )
+ ct = ft ◦ ct−1 + it ◦ σc (wc · GCN T Lgs ;t + uc · ht−1 + bc )
+                           ht = ot ◦ σh × (ct )
+                                                               (7)
+where wf , wi , wo and wc are the weights of the forget gate
+ft , the input gate it , the output gate ot and the cell state
+ct respectively while bf , bi , bo and bc are the corresponding
+biases for each gate and the cell state. Furthermore, uf , ui , uo         Fig. 3: Locations of loop detectors in METR-LA
+and uc are the weights of the last hidden state ht−1 . σg denotes                                        0
+                                                                                              N X T
+a sigmoid function (= 1+e1−x ) in three gates and the operator ◦                       1      X      |xit − x̃it |
+denotes Hadamard product. σc and σh are hyperbolic tangent                  M AP E =        ·                      × 100%         (9)
+                                                                                     N × T 0 i=1 t=1      xit
+function (tanh(x)) for the cell state and the final output. ht is
+considered as the output of the encoder and carries historical                            "                  0           # 21
+                                                                                               N X T
+information. In the decoder, the output of the encoder ht is                            1      X
+                                                                              RM SE =        ·       (xi − x̃it )2               (10)
+treated as the initialised hidden state and GCN T Lgs ;t is still                     N × T 0 i=1 t=1 t
+considered as the input. The output of the decoder is the final
+forecasting.                                                         where MAE presents the average absolute difference between
+                                                                     the forecasted and real traffic speed. It is used to measure
+                      IV. E XPERIMENTS                               absolute forecasting error. MAPE is the relative difference
+A. Data Description                                                  between the forecasted and real traffic speed and is utilised
+   Dataset used for evaluating the proposed model and compar-        to measure relative forecasting error. RMSE is the standard
+ing our model against well-known existing models is collected        deviation of the residuals where residual is the difference
+from the real-world road network, named METR-LA [21].                between forecasted and real traffic speed.
+Fig. 3 displays the locations of loop detectors in METR-LA.
+It includes 207 detectors and covers 4 months of traffic speed       C. Parameter Settings
+data from 1st of March to 30th of June in 2012. A time                   To optimise the GCNT-Seq2Seq model and obtain high
+step is 5 minutes and the number of observed traffic data            forecasting accuracy, there are several hybrid-parameters that
+points is 7,094,304 (= 34272 × 207). This dataset misses             need to be tuned including historical time steps T , targeted
+some data points so that it brings more challenges. To evaluate      time steps T 0 , the number of multi-heads H, the number
+and valid the robustness of the proposed model, discontinuous        of embedded features {dq , dk , dv }, the learning rate r, batch
+missing data points are replaced by the mean of the last and         size B and the number of epochs. Based on the well-known
+next traffic data and continuous missing data points are set as      existing works, the historical time steps T , targeted time steps
+zeros to simulate traffic incidents such as traffic accidents and    T 0 , the number of multi-heads H, the number of embedded
+congestion. In addition, an undirected road graph with edge          features {dq , dk , dv }, and batch size B are set as 12, 24, 8,
+weights is used to construct the neighbourhood matrix. The           {8, 8, 8} and 32, respectively. For the learning rate setting,
+pairwise road distances between detectors are first computed         generally, a too small learning rate will make a training
+and then a thresholded Gaussian Kernel in [22] is utilised to        algorithm converge slowly while a too large learning rate will
+build the weighted matrix.                                           make the algorithm diverge. Therefore, finding an optimal
+B. Performance Metrics                                               learning rate is very important to improve the performance
+                                                                     of the algorithm. However, the experimental method to find
+  To measure the results, three types of metrics named               the best learning rate is time-consuming. In our work, the
+Mean Absolute Error (MAE), Mean Absolute Percentage Error            method named Cyclical Learning Rates (CLR) in [23] is used
+(MAPE) and Root-Mean Square Error (RMSE) in the literature           to optimise the learning rate as 1.02e−03 . In addition, stop
+[14][17] are used and computed as Eq. (8), Eq. (9) and               early strategy is used to optimise the number of epochs and
+Eq. (10).                                                            avoid the problem of over-fitting. It means the training process
+                                 N X T   0                           will be stopped when the training loss continues to decrease
+                          1      X
+                                                                     in 10 epochs while the validation loss increases. Finally, we
+             M AE =            ·       |xi − x̃it |           (8)
+                        N × T 0 i=1 t=1 t                            follow the convention and use 70% of the dataset for training,
+                                                                     10% for validation and 20% for testing.
+                              (a)                                                                  (b)
+      Fig. 4: (Color Online) Real (black color) and forecasted (other colors) traffic speed (miles/h) in a day with 288
+   (= 1days∗24hours∗60minutes
+               5minutes         ) time intervals from all models on METR-LA with a time interval = 5 minutes. The x-axis
+   represents the time and the y-axis is traffic speed (miles/hour). The forecasting horizons are 30 minutes in (a) and 120
+     minutes in (b), respectively. The red lines in (a) and (b) represent forecasted traffic speed from our GCNT-Seq2Seq
+                                TABLE I: Experimental results from all models on METR-LA
+          Model                                                       METR-LA
+          Name              MAE(T’=6/12/18/24)                   MAPE(T’=6/12/18/24)                     RMSE(T’=6/12/18/24)
+         ANN          5.0232 / 6.7519 / 8.1165 / 9.1839    13.12% / 18.20% / 21.68% / 24.42%   9.8455 / 11.8983 / 13.1064 / 13.8129
+         LSTM         5.2023 / 6.6489 / 7.6383 / 8.2251    12.74% / 16.44% / 18.68% / 21.21%   9.4332 / 11.1926 / 12.2611 / 12.8663
+         GRU          5.0715 / 6.2108 / 7.0753 / 7.7387    12.67% / 15.64% / 18.17% / 20.03%   9.1238 / 10.6058 / 11.7414 / 12.4671
+        CNN-FC        6.4447 / 8.0232 / 8.4805 / 9.4339    14.77% / 18.40% / 19.91% / 21.88%   9.7793 / 11.5983 / 12.0401 / 13.0291
+       CNN-LSTM       5.2192 / 6.4425 / 7.5352 / 8.3240    12.70% / 16.03% / 18.79% / 20.96%   9.3857 / 10.9365 / 12.1356 / 12.8291
+       TGC-LSTM       5.2822 / 6.6194 / 7.6074 / 8.2736    12.62% / 15.99% / 18.64% / 20.54%   9.5018 / 11.1085 / 12.1906 / 12.8627
+      GCNT-Seq2Seq    4.9956 / 6.1774 / 6.9358 / 7.5813   12.10% / 15.38% / 17.44% / 19.41%    9.2731 / 10.8090 / 11.6876 / 12.3108
+
+
+                                                                      colors) traffic speed data in a day from the GCNT-Seq2Seq
+                                                                      model and other six baselines. Fig. 4 (a) and (b) consider 30
+                                                                      minutes and 120 minutes as forecasting horizons, respectively.
+                                                                      Overall, GCNT-SeqSeq can efficiently forecast the trend of
+                                                                      traffic speed changes, even for longer forecasting horizons.
+                                                                      Besides, GCNT-Seq2Seq also capture the sudden changes
+                                                                      caused by mission data or traffic incidents.
+                                                                         TABLE I presents experimental results from all competition
+                                                                      models for different forecasting horizons. T 0 = {6, 12, 18, 24}
+                                                                      are responding to consider {30, 60, 90, 120} minutes as fore-
+                                                                      casting horizons. It is observed clearly that the proposed
+                                                                      model, GCNT-Seq2Seq, achieves the best performance among
+  Fig. 5: The forecasting accuracy (100%-MAPE) from all               all competition models. Its MAEs, MAPEs and RMSEs for
+                    comparison models.                                all forecasting horizons are almost the lowest. It means the
+                                                                      forecasting accuracy of GCNT-Seq2Seq is the highest, which
+                                                                      can be also observed in Fig. 5 that displays the forecasting
+D. Results and Discussion                                             accuracy (100%-MAPE) of all models. From Fig. 5, the dif-
+  To evaluate the proposed model, six baselines are used for          ferences of forecasting accuracy between GCNT-Seq2Seq and
+comparison experiments, including 1) one linear feature-based         other models become more obvious over longer forecasting
+model, ANN [24]; 2) two temporal feature-based models,                horizons. It means the superiority of our model is more
+LSTM [25] and GRU [26]; 3) one spatial feature-based model,           obvious for longer forecasting horizons. Even for 120 minutes
+CNN-FC [27]; 4) two spatial and temporal feature-based                as forecasting horizon, the forecasting accuracy of GCNT-
+models, CNN-LSTM [14] and TGC-LSTM [17].                              Seq2Seq is still more than 80% and it is also the only one
+  Fig. 4 presents the real (black color) and forecasted (other        model achieving over 80% accuracy among all comparison
+models.                                                                            [6] G. P. Zhang, “Time series forecasting using a hybrid arima and neural
+   From TABLE I, the linear feature-based model, ANN, that                             network model,” Neurocomputing, vol. 50, pp. 159–175, 2003.
+                                                                                   [7] M. Lippi, M. Bertini, and P. Frasconi, “Short-term traffic flow forecast-
+relies on the linear relationship of traffic speed data in time do-                    ing: An experimental comparison of time-series analysis and supervised
+main for forecasting almost obtains the worst results excluding                        learning,” IEEE Transactions on Intelligent Transportation Systems,
+30 minutes as the forecasting horizon where the spatial feature-                       vol. 14, no. 2, pp. 871–882, 2013.
+                                                                                   [8] F. G. Habtemichael and M. Cetin, “Short-term traffic flow rate forecast-
+based model, CNN-FC, is the worst one. The probable reason                             ing based on identifying similar traffic patterns,” Transp. Res. Part C
+is that linear relationships for longer forecasting horizons                           Emerg. Technol., vol. 66, pp. 61–78, 2016.
+are not obvious while the spatial dependencies among road                          [9] W. Huang, G. Song, and et.al., “Deep architecture for traffic flow predic-
+                                                                                       tion: deep belief networks with multitask learning,” IEEE Transactions
+network become more important. Therefore, CNN-FC model                                 on Intelligent Transportation Systems, vol. 15, no. 5, pp. 2191–2201,
+that mainly focuses on spatial feature extraction by the convo-                        2014.
+lution kernels performs better than ANN for longer forecasting                    [10] Y. Lv, Y. Duan, and et.al., “Traffic flow prediction with big data: a deep
+                                                                                       learning approach,” IEEE Transactions on Intelligent Transportation
+horizons. Between two temporal feature-based models, LSTM                              Systems, vol. 16, no. 2, pp. 865–873, 2014.
+and GRU, GRU always outperforms LSTM for all different                            [11] W. Zhang, Y. Yu, and et.al., “Short-term traffic flow prediction based
+forecasting horizons. This conclusion was confirmed in [12]                            on spatio-temporal analysis and cnn deep learning,” Transportmetrica A:
+                                                                                       Transport Science, vol. 15, no. 2, pp. 1688–1711, 2019.
+by numerous experiments. Both CNN-LSTM and TGC-LSTM                               [12] J. Chung, C. Gulcehre, K. Cho, and Y. Bengio, “Empirical evaluation
+achieve similar results, because they are able to analyse both                         of gated recurrent neural networks on sequence modeling,” in NIPS
+spatial and temporal features for final forecasting.                                   Workshop on Deep Learning, 2014.
+                                                                                  [13] Y. Wu and H. Tan, “Short-term traffic flow forecasting with spatial-
+                            V. C ONCLUSION                                             temporal correlation in a hybrid deep learning framework,” arXiv
+                                                                                       preprint arXiv:1612.01022, 2016.
+   In this paper, the problem of forecasting long-term traffic on                 [14] Y. Liu, H. Zheng, and et.al., “Short-term traffic flow prediction
+large-scale road network is addressed and a novel deep learn-                          with conv-lstm,” in IEEE 9th International Conference on Wireless
+                                                                                       Communications and Signal Processing (WCSP), 2017, pp. 1–6.
+ing framework, named GCNT-Seq2Seq, is developed based                             [15] E. Ahmed, A. Saint, A. E. R. Shabayek, and et.al., “A survey on deep
+on the most advanced technologies. The proposed framework                              learning advances on different 3d data representations,” arXiv preprint
+takes the advantages of Graph Convolution Network (GCN)                                arXiv:1808.01462, 2018.
+                                                                                  [16] B. Yu, H. Yin, and Z. Zhu, “Spatio-temporal graph convolutional net-
+and Transformer on the different spatial dependency analysis                           works: a deep learning framework for traffic forecasting,” in Proceedings
+and the advantage of the Sequence-to-Sequence (Seq2Seq)                                of the 27th International Joint Conference on Artificial Intelligence,
+architecture on the temporal dependency analysis. GCN is used                          2018, pp. 3634–3640.
+                                                                                  [17] Z. Cui, K. Henrickson, and et.al., “Traffic graph convolutional re-
+to extract the local spatial features by operating convolution                         current neural network: A deep learning framework for network-
+on the k − hop neighbourhood matrix and Transformer is                                 scale traffic learning and forecasting,” IEEE Transactions on Intelligent
+utilised to capture the global spatial features by assigning                           Transportation Systems, 2019.
+                                                                                  [18] C. Tang, J. Sun, Y. Sun, and et.al., “A general traffic flow prediction
+individual weights to neighbours of the targeted detector so                           approach based on spatial-temporal graph attention,” IEEE Access,
+as to contribute to the targeted detector. The concatenation                           vol. 8, pp. 153 731–153 741, 2020.
+of local and global spatial features is embedded into the                         [19] P. J. Bickel, C. Chen, J. Kwon, and et.al., “Measuring traffic,” Statistical
+                                                                                       Science, pp. 581–597, 2007.
+Seq2Seq architecture for temporal feature extraction and final                    [20] K. He, X. Zhang, S. Ren, and et.al., “Deep residual learning for image
+forecasting. The proposed framework is compared to the                                 recognition,” in Proceedings of the IEEE conference on computer vision
+existing well-known models using the real world dataset with                           and pattern recognition, 2016, pp. 770–778.
+                                                                                  [21] Y. Li, R. Yu, C. Shahabi, and Y. Liu, “Diffusion convolutional recur-
+missing data and frequent traffic incidents. Among all the                             rent neural network: Data-driven traffic forecasting,” in International
+models being compared, our proposed model shows the best                               Conference on Learning Representations, 2018.
+performance and can even achieve more than 80% accuracy                           [22] D. I. Shuman, S. K. Narang, P. Frossard, and et.al., “The emerging field
+                                                                                       of signal processing on graphs: Extending high-dimensional data anal-
+for forecasting two hours traffic status in advance.                                   ysis to networks and other irregular domains,” IEEE signal processing
+                                                                                       magazine, vol. 30, no. 3, pp. 83–98, 2013.
+                              R EFERENCES                                         [23] L. N. Smith, “Cyclical learning rates for training neural networks,” in
+ [1] L. Figueiredo, I. Jesus, and et.al., “Towards the development of intelli-         IEEE Winter Conference on Applications of Computer Vision (WACV),
+     gent transportation systems,” in IEEE Intelligent Transportation Systems.         2017, pp. 464–472.
+     Proceedings (Cat. No. 01TH8585), 2001, pp. 1206–1211.                        [24] A. Csikós, Z. J. Viharos, K. B. Kis, and et.al., “Traffic speed predic-
+ [2] Y. Lin, P. Wang, and M. Ma, “Intelligent transportation system (its): Con-        tion method for urban networks—an ann approach,” in International
+     cept, challenge and opportunity,” in IEEE 3rd international conference            Conference on Models and Technologies for Intelligent Transportation
+     on big data security on cloud (bigdatasecurity), ieee international               Systems (MT-ITS). IEEE, 2015, pp. 102–108.
+     conference on high performance and smart computing (hpsc), and ieee          [25] D. Kang, Y. Lv, and Y.-y. Chen, “Short-term traffic flow prediction with
+     international conference on intelligent data and security (ids), 2017, pp.        lstm recurrent neural network,” in IEEE 20th International Conference
+     167–172.                                                                          on Intelligent Transportation Systems (ITSC), 2017, pp. 1–6.
+ [3] M. S. Ahmed and A. R. Cook, Analysis of freeway traffic time-series          [26] R. Fu, Z. Zhang, and L. Li, “Using lstm and gru neural network
+     data by using Box-Jenkins techniques. Transportation Research Board,              methods for traffic flow prediction,” in IEEE 31st Youth Academic
+     1979, no. 722.                                                                    Annual Conference of Chinese Association of Automation (YAC), 2016,
+ [4] S. Ho and M. Xie, “The use of arima models for reliability forecasting            pp. 324–328.
+     and analysis,” Computers & industrial engineering, vol. 35, no. 1-2, pp.     [27] X. Ma, Z. Dai, Z. He, and et.al., “Learning traffic as images: a
+     213–216, 1998.                                                                    deep convolutional neural network for large-scale transportation network
+ [5] B. M. Williams, P. K. Durvasula, and D. E. Brown, “Urban freeway                  speed prediction,” Sensors, vol. 17, no. 4, p. 818, 2017.
+     traffic flow prediction: application of seasonal autoregressive integrated
+     moving average and exponential smoothing models,” Transportation
+     Research Record, vol. 1644, no. 1, pp. 132–141, 1998.
+

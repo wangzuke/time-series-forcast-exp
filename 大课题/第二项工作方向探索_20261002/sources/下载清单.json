@@ -1,0 +1,69 @@
+[
+  {
+    "name": "StableMiss",
+    "url": "https://www.ijcai.org/proceedings/2023/0525.pdf",
+    "date": "2026-10-02",
+    "status": "downloaded and pdftotext converted",
+    "pdf": "sources/StableMiss.pdf",
+    "text": "sources/StableMiss.txt",
+    "bytes": 324471,
+    "sha256": "9dc22c0d70f2810d4360e791ca42ee4a21b1d5ce1296b208a7bc2783b3e8602b"
+  },
+  {
+    "name": "INTER",
+    "url": "https://www.ijcai.org/proceedings/2025/0734.pdf",
+    "date": "2026-10-02",
+    "status": "downloaded and pdftotext converted",
+    "pdf": "sources/INTER.pdf",
+    "text": "sources/INTER.txt",
+    "bytes": 584903,
+    "sha256": "b781d752deb2a05382b9d5c6d20dbc07b3c311a8b84d561e65c6dced0b751234"
+  },
+  {
+    "name": "APN",
+    "url": "https://arxiv.org/pdf/2505.11250",
+    "date": "2026-10-02",
+    "status": "downloaded and pdftotext converted",
+    "pdf": "sources/APN.pdf",
+    "text": "sources/APN.txt",
+    "bytes": 1960880,
+    "sha256": "d8c3cac92eacaef2fcfb626011e63ea61c56952ffcebe127098be3bcfc7545a8"
+  },
+  {
+    "name": "TimeCHEAT",
+    "url": "https://arxiv.org/pdf/2412.12886",
+    "date": "2026-10-02",
+    "status": "downloaded and pdftotext converted",
+    "pdf": "sources/TimeCHEAT.pdf",
+    "text": "sources/TimeCHEAT.txt",
+    "bytes": 1389430,
+    "sha256": "4f497ab1eddb2358af1b19048aa73d6bd238a8efc6b88ffa3c24dea03f77906b"
+  },
+  {
+    "name": "KRNO",
+    "url": "https://raw.githubusercontent.com/mlresearch/v267/main/assets/dama25a/dama25a.pdf",
+    "date": "2026-10-02",
+    "status": "downloaded and pdftotext converted",
+    "pdf": "sources/KRNO.pdf",
+    "text": "sources/KRNO.txt",
+    "bytes": 9409145,
+    "sha256": "8668c21a2a69d1d471ccb215830647d07fba0aaf46c42cc2bb858c17dc061442"
+  },
+  {
+    "name": "UnderCali",
+    "url": "https://arxiv.org/pdf/2605.28603",
+    "date": "2026-10-02",
+    "status": "downloaded and pdftotext converted",
+    "pdf": "sources/UnderCali.pdf",
+    "text": "sources/UnderCali.txt",
+    "bytes": 982829,
+    "sha256": "9e744b57a71550c74bf10114ff13ca186ba9d56946b0d4257368b97da2244539"
+  },
+  {
+    "name": "ConformalIncomplete",
+    "url": "https://openreview.net/pdf?id=KMBU4wx79B",
+    "alternative_url": "https://openreview.net/attachment?id=KMBU4wx79B&name=pdf",
+    "date": "2026-10-02",
+    "status": "HTTP failure/browser verification; no local fulltext retained"
+  }
+]

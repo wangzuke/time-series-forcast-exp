@@ -1,0 +1,897 @@
+                                                  Multi-Variate Time Series Forecasting on Variable Subsets
+                                                          Jatin Chauhan                                     Aravindan Raghuveer                                    Rishi Saket
+                                                        Google Research                                          Google Research                                 Google Research
+                                                    chauhanjatin@google.com                                  araghuveer@google.com                           rishisaket@google.com
+
+                                                                                            Jay Nandy                              Balaraman Ravindran
+                                                                                      Google Research                           Indian Institute of Technology,
+                                                                                    jnandy@google.com                                       Madras
+                                                                                                                                     ravi@cse.iitm.ac.in
+                                         ABSTRACT
+arXiv:2206.12626v1 [cs.LG] 25 Jun 2022
+
+
+
+
+                                         We formulate a new inference task in the domain of multivari-
+                                         ate time series forecasting (MTSF), called Variable Subset Forecast
+                                         (VSF), where only a small subset of the variables is available during
+                                         inference. Variables are absent during inference because of long-
+                                         term data loss (eg. sensor failures) or high→low-resource domain
+                                         shift between train / test. To the best of our knowledge, robustness
+                                         of MTSF models in presence of such failures, has not been studied
+                                         in the literature. Through extensive evaluation, we first show that
+                                         the performance of state of the art methods degrade significantly in
+                                         the VSF setting. We propose a non-parametric, wrapper technique
+                                         that can be applied on top any existing forecast models. Through
+                                         systematic experiments across 4 datasets and 5 forecast models,                      Figure 1: Variable Subset Forecast Problem: The two sub-
+                                         we show that our technique is able to recover close to 95% perfor-                   figures show a (i) training and (ii) test instance, respectively.
+                                         mance of the models even when only 15% of the original variables                     The light gray part on top of each sub-figure represents the
+                                         are present.                                                                         input timesteps. The dark shaded part is the forecast. During
+                                                                                                                              training, Variables V1 through V7 are present while during
+                                         CCS CONCEPTS                                                                         Testing, only V1, V2, V4, V7 are present.
+                                         • Computing methodologies → Machine learning.
+
+                                         KEYWORDS                                                                             present MTSF scenarios where at the time of inference the model
+                                         Multivariate time series forecasting; Variable Subsets; Partial Infer-               does not have access to all the variables used in training.
+                                         ence; Retrieval Model                                                                1. Long Term Variable Data Unavailability: In a majority of
+                                                                                                                              Multi-Variate Time Series applications, the most common source
+                                         ACM Reference Format:                                                                of time series data is via sensors. Each variable in the Multi-Variate
+                                         Jatin Chauhan, Aravindan Raghuveer, Rishi Saket, Jay Nandy, and Balara-
+                                                                                                                              Time Series is the output of a sensor. Sensor failures due to reasons
+                                         man Ravindran. 2022. Multi-Variate Time Series Forecasting on Variable
+                                                                                                                              like component malfunction, battery outages are common in real-
+                                         Subsets . In Proceedings of the 28th ACM SIGKDD Conference on Knowl-
+                                         edge Discovery and Data Mining (KDD ’22), August 14–18, 2022, Washington,            world deployments where they are exposed to adverse weather
+                                         DC, USA. ACM, New York, NY, USA, 11 pages. https://doi.org/10.1145/                  conditions, dust and so on. As explained in[30] sensor failures can
+                                         XXXXXXX.XXXXXXX                                                                      extend for a very long period of time (multiple months in many
+                                                                                                                              cases) before the sensor gets replaced. This causes long-term data
+                                         1    INTRODUCTION                                                                    unavailability for variables that were originally produced by the
+                                                                                                                              then-failed sensors.
+                                         Multi-Variate Time Series Forecasting (MTSF) continues to receive
+                                                                                                                              2. High→Low Resource Domain Shift: Time Series models are
+                                         significant attention from the research community owing to its
+                                                                                                                              often used in domains that have a wide variability in resource avail-
+                                         applicability in many real-world scenarios[10] such as traffic fore-
+                                                                                                                              ability. For instance, consider inventory prediction of products. This
+                                         casting, air quality forecasting, power load forecasting and medical
+                                                                                                                              has been posed as a MTSF problem since there exists correlation in
+                                         monitoring. We draw attention to two practical scenarios wherein
+                                                                                                                              market demand across different products (for instance, phones and
+                                         MTSF models require robustness to data scarcity. Specifically, we
+                                                                                                                              their cases [14]). A model trained on a dataset from large retailer
+                                                                                                                              will have a wide variety of products (variables). When applying the
+                                                                 This work is licensed under a Creative Commons Attribution
+                                                                 International 4.0 License.                                   same model to a small and medium business(SMB) retailer, the num-
+                                                                                                                              ber of products stocked will be significantly limited and may also
+                                         KDD ’22, August 14–18, 2022, Washington, DC, USA                                     vary over time. So it is not possible to train a model on a fixed subset
+                                         © 2022 Copyright held by the owner/author(s).
+                                         ACM ISBN 978-1-4503-9385-0/22/08.                                                    of products as the stocked items will vary across SMBs. Another
+                                         https://doi.org/10.1145/XXXXXXX.XXXXXXX                                              example is a MTSF model to forecast physiological indicators like
+KDD ’22, August 14–18, 2022, Washington, DC, USA                                                                                          Jatin Chauhan et al.
+
+
+blood glucose, insulin, creatinine, etc[4]. A model trained with data     we address. We propose a novel ensemble weighting method to
+collected at a large hospital would have access to all the variables      score candidates from the biased retrieval. Our method is simple to
+during training. When the same model is applied (at inference) in a       implement and more importantly the underlying forecast models
+rural hospital without access to many of the diagnostic instruments       do not need re-training. We make the following contributions in
+a large chunk of variables will be missing. In this case, though it is    this paper:
+possible to know the subset of variables apriori, it is not scalable to      (1) We formulate a new inference task called Variable Subset
+create and maintain one model per known subset. Furthermore, the                 Forecast in MTSF motivated by failure situations that arise
+algorithm proposed in our work (section 5) is able to outperform                 in real-world settings. To the best of our knowledge we are
+or match a model that is trained on only a subset of the variables               the first to propose this problem formulation. (Section 3)
+known apriori. Similar situations also occur in other domains such           (2) We propose a novel wrapper solution to improve the perfor-
+as battery usage prediction between top-end (high resource) and                  mance of various models under this setup. The algorithm
+low-spec smartphones; and wind speed forecasting between coastal                 is very simple to code1 and is agnostic to the choice of the
+(high resource) and deep-sea (low resource) naval stations[9].                   forecast model. (Section 5)
+    Multi-Variate Time Series Imputation techniques[18, 24] are a            (3) We conduct extensive experiments to understand why cur-
+relevant area of active research. Imputation methods use global                  rent forecast models significantly underperform in the VSF
+inter-variable patterns and local variable information (average, re-             setting (Section 4). Then we quantitatively and qualitatively
+cent values) to generate plausible missing values. Imputation tech-              study our proposed solution with thorough ablations.
+niques significantly rely on temporal locality therefore are not
+very effective when the data is missing for a long time duration.         2    RELATED WORK
+In the High→Low Resource Domain Shift scenario, variables are
+                                                                          MTSF has a rich history with a diverse category of forecast methods
+missing entirely. In this case, imputation methods are even less
+                                                                          proposed over decades. Some of the earliest models were based on
+effective. To the best of our knowledge, robustness of MTSF models
+                                                                          Statistical Modelling, which include: Vector Auto Regressive (VAR),
+in presence of such failures, that cause a subset of variables to be
+                                                                          Vector Auto Regressive Moving Average model (VARMA) [19] as
+completely absent during inference, has not been studied in the lit-
+                                                                          well as Gaussian Process (GP) based methods [7]. Another body
+erature. Although for completeness, we also provide a comparison
+                                                                          of literature, although not extensive, is based on leveraging the
+to Imputation methods in section 9.
+                                                                          Matrix Factorization (MF) techniques, which is detailed well in [31].
+    Conventionally, the MTSF problem aims to simultaneously pre-
+                                                                          With the surge of Deep Neural models, there has been a series of
+dict the future values of N variables given their past time series
+                                                                          architectural advances in this domain, which segregates the models
+values by accurately modeling inter and intra variable dependencies.
+                                                                          into two typical components: (i) first one learns the underlying
+In this paper, the training setup is unchanged from the standard
+                                                                          associations amongst the variables (referred as spatial module)
+setting wherein we assume that the training algorithm has access
+                                                                          (ii) the second one learns the temporal patterns for the variables’
+to all variables (denoted by N ). But during inference, the past data
+                                                                          historical data (referred as temporal module).
+is only provided for an arbitrary small subset of variables (denoted
+                                                                              The popular works of [16, 21] provided some of the first LSTM
+by S) and we aim to predict future values of variables in S. We call
+                                                                          based multivariate forecasting models, followed by more sophis-
+this the Variable Subset Forecast (VSF in short) problem in MTSF.
+                                                                          ticated models such as DeepState [20] and subsequently Trans-
+Figure 1 summarizes the problem with a simple example.
+                                                                          formers [32]. A huge bottleneck of these works is that interaction
+    The VSF problem poses 2 key challenges. First, since a substantial
+                                                                          amongst the variables is encapsulated in a global hidden vector
+portion of the data (N − S variables) is absent during inference, it
+                                                                          which fails to explicitly model the pairwise dependencies and in-
+is challenging to recover the loss incurred compared to the setting
+                                                                          teractions. To tackle this, GNN-based models have become the
+where all N are present. Second, with only a small S presented
+                                                                          SOTA in recent years. Here, the temporal dependencies are usually
+randomly during inference, it is not feasible to take advantage of
+                                                                          modelled by RNN whereas a GNN is applied on the spatial axis.
+the rich inter-variable associations in N . Prior works [2, 8, 16, 25]
+                                                                          This general framework was initially proposed in traffic prediction
+have shown significant performance gains by exploiting such inter-
+                                                                          models such as DCRNN [17] as well as for skeleton-based action
+variable dependencies. Also, retraining the model for every subset
+                                                                          recognition [29] but was later adopted for multivariate time series
+S is not practically feasible since S is not known during training.
+                                                                          forecasting as well [8].
+    In this paper, we also propose a novel solution to improve the
+                                                                              For our experiments, we select the following 5 widely used
+performance of the forecasts models and show that it can even
+                                                                          forecast models as a representation of the wide variety of recent
+recover close to 95% of the best-case performance even with only
+                                                                          techniques in literature - (i) MTGNN [25]: This method extracts
+15% of the variables available. The proposed algorithm is a wrapper
+                                                                          uni-directed relations among the time series variables via a graph
+method in that it can be implemented over any existing forecast
+                                                                          learning module and then performs spatio-temporal modelling,
+model. We take a non-parametric approach to addressing the prob-
+                                                                          where the temporal module is a temporal convolution network. (ii)
+lem by retrieving nearest neighbors using only the S variables and
+                                                                          ASTGCN [8]: This method utilizes a spatial-temporal attention
+using these neighbors to fill missing values. However, this retrieval
+                                                                          mechanism to learn the dynamic spatial and temporal correlations
+is inherently biased because neighbors are retrieved using a dis-
+                                                                          of the data and then leverages a standard spatio-temporal modelling
+tance measure in partial dimensions and is therefore different from
+                                                                          mechanism for forecasting. (iii) MSTGCN [8]: This method utilizes
+the traditional k-NN setting. Achieving near-optimal performance
+with a biased retrieval mechanism is another technical challenge          1 Code available at https://github.com/google/vsf-time-series
+Multi-Variate Time Series Forecasting on Variable Subsets                                                 KDD ’22, August 14–18, 2022, Washington, DC, USA
+
+
+graph convolutional networks for capturing the spatial features                 4.2    Baseline Variants
+and convolutions in the temporal dimension for describing depen-                For each of the 5 forecast methods, we implement two baselines
+dencies from nearby time slices, to learn to forecast. (iv) LSTNet              as described below. Both baselines are trained on the full training
+[16]: This model uses convolutions on the spatial axis to discover              data but differ in terms of the inference procedure.
+the associations amongst the variables while a recurrent network                   Partial: In this setting, we completely remove the data for the
+is applied on the temporal axis. (v) TCN [2]: This is a completely              remaining N \ S variables during test time forward pass. This rep-
+convolutional neural network based model that combines various                  resents the performance of the forecast model on the VSF problem
+practices such as residual connections and dilations with causal                in the form it was originally proposed.
+convolutions and perform predictions autoregressively.                             Oracle: Although infeasible in practice, this setting provides an
+                                                                                upper bound to the results we seek to obtain and is solely for the
+3     PROBLEM FORMULATION                                                       purpose of comparison. During inference, we assume access to the
+Consider 𝑁 distinct variables, each of which represents values                  data for all N variables, which allows the spatial module to make
+for some event that evolves temporally. In the general setting, we              completely informed forward pass. However the error metrics are
+have a 𝑃 timestep input as 𝑋 = {𝒁 𝒕1 , 𝒁 𝒕2 ...𝒁 𝒕 𝑷 }, where each of the       computed only for the variables in S, as desired for comparison.
+𝒁 𝒕 𝒊 is a matrix in R𝑁 ×𝐷 , 𝐷 being the feature dimension of all the
+variables at each time step. The first column of 𝒁 𝒕 𝒊 contains the             4.3    Metrics:
+primary value for the variables and the remaining 𝐷 − 1 columns                 Representing the model forecast and the ground truth at time step
+represent some auxiliary information [25]. Given a sequence of                  𝑗 with 𝑌ˆ:,𝑗 and 𝑌:,𝑗 respectively, the error metrics can be defined as
+historical 𝑃 timesteps, we are required to predict the future values            follows:
+𝑌 = {𝒛 𝒕 𝑷 +1 , 𝒛 𝒕 𝑷 +2 ...𝒛 𝒕 𝑷 +𝑸 }, where each 𝒛 𝒕𝒋 is a vector in R𝑁 . 𝑄
+denotes the forecast horizon, the number of time steps into the                                                                 |S |
+                                                                                                                           1 ∑︁ ˆ
+future that we want to predict. Our aim is to learn a mapping                           Mean Absolute Error (MAE) =               |𝑌𝑛,𝑗 − 𝑌𝑛,𝑗 |       (1)
+                                                                                                                          |S| 𝑛=1
+𝑓 : 𝑋 → 𝑌 , also referred to as forecast model. During the inference
+phase, we have a much smaller subset S of N , i.e., |S| ≪ |N |,                                                           v
+                                                                                                                          u
+                                                                                                                          t        |S |
+where N is the set of first 𝑁 integers, [[1...𝑁 ]]. Therefore, each 𝒁 𝒕 𝒊                                                      1 ∑︁ ˆ
+                                                                                 Root Mean Squared Error (RMSE) =                     (𝑌𝑛,𝑗 − 𝑌𝑛,𝑗 ) 2 (2)
+in the input is now a matrix in R | S |×𝐷 during inference. Another                                                           |S| 𝑛=1
+important aspect of the problem is that S is chosen completely at
+                                                                                  Oracle Gap (Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙 ) We evaluate our proposed methodology
+random which makes this setup extremely challenging.
+                                                                                by quantifying the performance relative to the Oracle as follows:
+4     PERFORMANCE GAP ANALYSIS                                                                           𝐸       − 𝐸𝑂𝑟𝑎𝑐𝑙𝑒
+                                                                                              Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙 = 𝑃𝑎𝑟𝑡𝑖𝑎𝑙             × 100             (3)
+                                                                                                              𝐸𝑂𝑟𝑎𝑐𝑙𝑒
+In this section, we study the performance of an array of recent and
+popular MTSF methods (MTGNN [25], ASTGCN [8], MSTGCN [8]                        Here E is the placeholder for the error metrics MAE and RMSE. For
+LSTNet [16], TCN [2]) on the variable subset forecast problem. Then             each technique Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙 represents the headroom that we aim to
+we further investigate the gaps that exist in current techniques that           recover using the algorithms we propose in this paper.
+motivates our solution in Section 5.                                               For the error metrics, lower values are better. Also, note that in
+                                                                                Equations 1 and 2 the error is computed only over the variables
+4.1      Datasets                                                               that are present in S and not over all the variables N .
+We consider 4 widely used datasets in the literature, described as              4.4    Experiment Setup
+follows - (i) METR-LA [11]: This dataset contains average traffic
+speed measured by 207 loop detectors on the highways of Los                     During inference (ie testing), we consider |S| to be some percent
+Angeles ranging from Mar 2012 to Jun 2012. (ii) 2 SOLAR: This                   𝑘 of |N |. We set 𝑘 = 15% for all experiments unless stated other-
+dataset contains the solar power output that was collected from                 wise (variation of 𝑘 is studied in section 4.5.1). For each trained
+137 plants in Alabama State in 2007. (iii) 3 TRAFFIC: This dataset              model, we randomly sample the subset S 100 times to perform the
+contains road occupancy rates that were measured by 862 sensors                 inference. This helps ensure a good coverage of subsets of N . To
+in San Francisco Bay area during 2015 and 2016 . Since the default              better estimate the uncertainty due to random initialization, we
+scale of a substantial fraction of values is of the order of 1𝑒 −3 , we         train 10 models from scratch and report the mean and variance of
+upscale (multiply the variable values) by 1𝑒 3 . (iv) 4 ECG5000: This           the results . Therefore all the error metrics reported in our exper-
+dataset from the UCR time-series Classification Archive consists of             iments involve 100 × 10 = 1000 runs over the test set. The error
+140 electrocardiograms (ECG) with a length of 5000 each (we use it              metrics are computed for forecast horizon length 𝑄 at 12, unless
+for the purpose of forecasting, as done by [5]). Similar to TRAFFIC,            specified otherwise. We use 70% of the samples for training, 10%
+we upscale all variables by a factor of 10.                                     for validation and 20% for testing. Other hyperparameter details
+   Table 12 contains the important statistics for the datasets.                 are provided in section A.3.
+
+2 https://www.nrel.gov/grid/solar-power-data.html
+                                                                                4.5    Performance of Current Forecast Models
+3 https://pems.dot.ca.gov/                                                      The results are provided in table 1. Note the substantial increment
+4 http://www.timeseriesclassification.com/description.php?Dataset=ECG5000       in the Gap Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙 w.r.t Oracle, sometimes even higher than 45%.
+KDD ’22, August 14–18, 2022, Washington, DC, USA                                                                                                           Jatin Chauhan et al.
+
+
+Table 1: Values of the error metrics for Partial and Oracle cases. The numbers represent average over the 1000 selections of
+S (the numbers in parenthesis are corresponding standard deviations). Value represents the actual errors followed by corre-
+sponding Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙 w.r.t Oracle.
+
+        Forecast Model Variant                        METR-LA                    SOLAR                               Traffic                        ECG5000
+                                                 MAE        RMSE          MAE        RMSE                      MAE         RMSE                 MAE        RMSE
+                                     Value     4.54(0.37) 8.90(0.68)    4.26(0.53) 6.04(0.81)               18.57(2.31) 38.46(3.94)           3.88(0.61) 6.54(1.10)
+                          Partial
+           MTGNN                    Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙    30.08 %    23.43 %       44.89 %    29.61 %                  62.18 %      39.95 %              13.11 %    10.10 %
+                          Oracle               3.49(0.25) 7.21(0.50)    2.94(0.27) 4.66(0.57)               11.45(0.57) 27.48(2.14)           3.43(0.54) 5.94(1.08)
+                                     Value     5.57(0.72) 10.61(1.36)   6.14(1.29) 8.95(2.35)               22.44(1.58) 43.07(2.46)           3.60(0.60) 6.05(1.13)
+                          Partial
+           ASTGCN                   Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙    10.51 %    10.63 %       35.24 %    38.11 %                  17.05 %       7.11 %               3.74 %     3.77 %
+                          Oracle               5.04(0.39) 9.59(0.62)    4.54(0.47) 6.48(0.85)               19.17(0.91) 40.21(2.02)           3.47(0.50) 5.83(0.99)
+                                     Value     4.78(0.43) 9.35(0.75)    4.75(0.73) 7.02(1.42)               18.96(1.21) 40.13(2.67)           4.34(0.87) 7.61(1.86)
+                          Partial
+           MSTGCN                   Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙     6.45 %     4.70 %       30.49 %    25.35 %                   8.90 %      6.05 %               28.02 %    30.75 %
+                          Oracle               4.49(0.31) 8.93(0.50)    3.64(0.41) 5.60(0.82)               17.41(0.74) 37.84(1.88)           3.39(0.52) 5.82(1.06)
+                                     Value     6.88(0.59) 11.68(0.93)   7.17(0.91) 10.22(1.49)              21.47(2.23) 42.62(3.32)           4.97(0.72) 8.27(1.43)
+                          Partial
+            LSTNet                  Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙    19.65 %    18.94 %       32.04 %    41.16 %                  13.71 %      15.12 %              28.09 %    27.03 %
+                          Oracle               5.75(0.28) 9.82(0.53)    5.43(0.48) 7.24(0.64)               18.88(0.76) 37.02(2.47)           3.88(0.49) 6.51(0.98)
+                                     Value     6.41(0.61) 11.34(0.86)   6.82(0.62) 9.91(1.25)               23.31(1.57) 46.49(2.29)           4.94(0.65) 7.93(1.51)
+                          Partial
+             TCN                    Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙    16.33 %    16.18 %       45.10 %    44.88 %                  13.43 %      10.19 %              33.15 %    30.21 %
+                          Oracle               5.51(0.38) 9.76(0.60)    4.70(0.29) 6.84(0.79)               20.55(0.70) 42.19(1.98)           3.71(0.56) 6.09(1.13)
+
+
+Following the time series literature [5, 25, 26], we note that this
+relative gap is large enough for this problem setup to be considered                               24
+challenging and leaves room for large improvement over the Partial
+case. The high standard deviation in results is attributed to the vari-                            22
+
+ability in selecting S. Similar to results reported in recent literature,                          20
+                                                                                       MAE Value
+
+we see Graph based methods perform better than the Deep Learning
+                                                                                                   18
+based methods in the Oracle case. In the Oracle setting, MTGNN has
+significantly better performance across all datasets except ECG5000                                16
+                                                                                                            Model
+where its performance is comparable to other techniques. Also, MT-                                          MTGNN
+                                                                                                   14       ASTGCN
+GNN sees the the largest drop in performance in the Partial setting                                         MSTGCN
+                                                                                                            Variant
+as seen by the relatively large values of Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙 . We hypothesize                                12       Partial
+                                                                                                            Oracle
+that MTGNN is able to model inter-variable relationships better                                         5      10     15      20   25    30      35   40     45
+that lead to it outperforming other techniques in the Oracle and the                                                       ( | | / | | ) X 100
+same reason causes its performance to degrade significantly when
+such information is not available in the Partial setting. For instance          Figure 2: Variation of Error metrics with relative size of S
+in the Traffic dataset, MTGNN oracle is almost 50% better than                  for the Traffic dataset. The Gap closes with increasing size
+other methods while its Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙 is the highest across all dataset,             of S. Solid lineplot is the Partial setting, whereas the dashed
+model combinations. We also observe that there is no one single                 correspond to Oracle (nearly constant), for a given model.
+model that has the lowest Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙 across all datasets. This shows
+absence of data affects different models in complex ways. Hence
+a wrapper approach, like the one proposed in this paper (section                models on this data as well as further infer on the same. 50 models
+5), can abstract the complexity of the VSF problem to re-use SOTA               with random selections of S are trained and the reported results are
+MTSF algorithms in the VSF setting.                                             averaged. The remaining hyperparameters are kept same. Note that
+                                                                                this setting is infeasible in practice and is solely for the purpose of
+4.5.1 On the Size of S. In figure 2 we show the MAE on TRAFFIC                  analysis as we don’t assume anything about S in this work. The
+dataset for Partial and oracle settings for various sizes of S. We see          results shown in table 2 demonstrate that apriori knowledge of
+that the error decreases as the size of S increases since: (i) more             S does not necessarily help recover oracle performance. In the
+data is available, (ii) with more variables in the input, the likelihood        oracle case, the spatial module (which learns the inter-variable
+of co-occurence of two variables in S that have very high associ-               associations) has more information and can model the dynamics
+ation also increases, thus allowing the spatial module to exploit               better during the forward pass, compared to this apriori setting. We
+the inter-dependencies in the input better and improve the overall              also see that the S apriori performance is better than the Partial
+forecast.                                                                       setting in Table1 as the model parameters are trained to adjust to
+                                                                                the given data.
+
+4.5.2 On the apriori knowledge of S . We conduct another oracle                 4.5.3 On the importance of inter-variable associations. Since S is
+experiment where we assume apriori knowledge of S and train the                 selected at random, a natural question to ask is - "what if we remove
+Multi-Variate Time Series Forecasting on Variable Subsets                                             KDD ’22, August 14–18, 2022, Washington, DC, USA
+
+
+Table 2: Results for S apriori experiments (on ECG5000).                Table 3: Results on MTGNN model for Section 4.5.3 (Identity
+Note: this is also an oracle setup and infeasible in practice,          Matrix Case). Δ𝐼𝑑𝑒𝑛𝑡𝑖𝑡 𝑦 represents the results for Identity Ma-
+since we don’t assume any knowledge about the subset S in               trix setting and is computed in a similar manner as eq 3.
+this work. Δ S apriori represents the results for S apriori set-
+ting and is computed in a similar manner as eq 3.                                     Dataset Setting               MAE        RMSE
+                                                                                             Δ𝐼𝑑𝑒𝑛𝑡𝑖𝑡 𝑦           47.27 %     35.92 %
+                  Model Setting   MAE       RMSE                                     METR-LA Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙             30.08 %     23.43 %
+                       ΔS apriori 5.38 %    4.89 %                                            Oracle             3.49(0.25) 7.21(0.50)
+                MSTGCN
+                        Oracle 3.39(0.52) 5.82(1.06)                                         Δ𝐼𝑑𝑒𝑛𝑡𝑖𝑡 𝑦           104.76 %    64.59 %
+                       ΔS apriori 4.30 %    5.27 %                                    SOLAR  Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙             44.89 %     29.61 %
+                MTGNN                                                                         Oracle             2.94(0.27) 4.66(0.57)
+                        Oracle 3.43(0.54) 5.94(1.08)
+                                                                                             Δ𝐼𝑑𝑒𝑛𝑡𝑖𝑡 𝑦           155.54 %    83.87 %
+                                                                                     TRAFFIC Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙             62.18 %     39.95 %
+                                                                                              Oracle             11.45(0.57) 27.48(2.14)
+
+
+the spatial module and let the models learn solely based on temporal
+patterns?". We design an experimental setting for the graph based          The distance between two time series instances 𝑋 ′ and 𝑋 ′′ can
+forecast models (shown to be superior in performance), where the        be computed as:
+adjacency matrix during training as well as inference is replaced
+with an Identity matrix 𝐼 N×N . The results shown in table 3 verify                                               |S | ∑︁
+                                                                                                               𝑃 ∑︁     𝐷
+                                                                                                       1      ∑︁
+the importance of the associations, either learnt or predefined, and           𝐷 (𝑋 ′, 𝑋 ′′ ) =                             ′
+                                                                                                                          |𝑋𝑝,𝑠,𝑑    ′′
+                                                                                                                                  − 𝑋𝑝,𝑠,𝑑 |𝑏     (4)
+consequently the flow of information via message passing.                                         𝑃 ∗ |S| ∗ 𝐷 𝑝=1 𝑠=1
+                                                                                                                       𝑑=1
+
+                                                                        where 𝑏 is the exponent factor. We also observed in our ablation
+5     PROPOSED SOLUTION                                                 experiments that 𝑏 = 0.5 works best. Denoting the actual training
+In the previous section, we showed that current MTSF algorithms         set as T , the nearest neighbor to 𝑋 𝑡𝑒𝑠𝑡 is computed as:
+underperform in the VSF formulation primarily because of absence
+                                                                                                                         ′
+of data of other N − S variables and the complex relationships                             𝑋 𝑁 𝑁 = arg min 𝐷 (𝑋 𝑡𝑒𝑠𝑡 , 𝑋 [:,S,:] )                (5)
+of variables in S to the ones in N − S. In this section, we build                                       𝑋 ′ ∈T
+on these observations to propose a simple, yet effective, wrapper       where [:, S, :] is standard data indexing from tensors. Lastly, we
+technique to address the Variable Subset Forecast problem.              construct a new instance 𝑋 𝑛𝑒𝑤 , such that 𝑋 𝑛𝑒𝑤       = 𝑋 𝑡𝑒𝑠𝑡 and
+                                                                                                                       [:,S,:]
+                                                                        𝑋 𝑛𝑒𝑤
+                                                                          [:,N\S,:]
+                                                                                        𝑁𝑁
+                                                                                    = 𝑋 [:,N\S,:] . The output obtained from the forecast
+5.1     kNN Retrieval over Variable Subset S                            model 𝑓 over 𝑋 𝑛𝑒𝑤   in the dimensions corresponding to S is subse-
+The extensive evaluations in the previous section have showed that      quently used to compute the error metrics.
+the remaining variables play an important role in the process. We
+thus resort to a retrieval based mechanism to first borrow the data     5.2    Weighted Ensembling
+for the remaining N − S variables for the given test instance and
+                                                                        We further explore the usage of an ensemble over multiple neigh-
+further perform the forward pass through 𝑓 . The underlying idea
+                                                                        bors to improve performance. The method to retrieve neighbors
+is that - with the original test instance data of S and the borrowed
+                                                                        remains same as in equation 5, with the only difference that top-𝑚
+data for N − S, the spatial module and thereby the entire forecast
+                                                                        neighbors with least distance are selected. Correspondingly, 𝑋 𝑛𝑒𝑤𝑖 ,
+model 𝑓 can make much more informed decision. Recently, similar
+                                                                        𝑖 ∈ {1, 2, ...𝑚}, are created where in each of these, the data for the
+non parametric k-NN based retrieval techniques have also been
+                                                                        S variables is same as given test instance 𝑋 𝑡𝑒𝑠𝑡 and the data for
+used to significantly improve Neural Machine Translation, Question
+                                                                        remaining variables is replaced with the 𝑖 𝑡ℎ neighbor 𝑋 𝑁 𝑁𝑖 , one
+Answering and Language Modeling[1, 3, 15, 27] in NLP.
+                                                                        by one.
+    Formally defining, given a test instance 𝑋 𝑡𝑒𝑠𝑡 which can be rep-
+resented as a 3𝐷 tensor of shape 𝑃 × |S| × 𝐷 (𝑃 being time steps,       5.2.1 Uniform Weighting (UW):. The most standard way of assign-
+|S| being size of selected subset and 𝐷 being the dimension of each     ing weights to the 𝑚 forecasts is by averaging.
+node), we compute its distance to the instances in entire training         However, out of these 𝑚 forecasts obtained using data of 𝑚
+data, to obtain the neighbors. The choice of this distance is user-     neighbors, it is evident that some outputs will be closer to the actual
+dependent and there are many different options available in the         forecast for 𝑋 𝑡𝑒𝑠𝑡 , call it 𝑌 𝑡𝑒𝑠𝑡 , compared to others, indicating a
+literature such as multivariate dynamic time warping [13], global       weighted average of forecasts would work better. One can utilize
+alignment kernel [6] etc., however a simple euclidean distance [13]     simple mathematical functions to complex neural networks in order
+type function has been shown to work well and has an added              to predict these scalar weights.
+benefit of being substantially faster than others. Simply and more
+intuitively, we can understand it as operating over the distance of     5.2.2 Direct Distance Weighting (DDW):. A very standard way
+the flattened 3𝐷 tensor into a vector of length 𝑃 ∗ |S| ∗ 𝐷 (where ∗    to assign the weights to these neighbors is by simply computing
+is the multiplication over reals).                                      softmax of the negative of the distance computed in equation 4, as
+KDD ’22, August 14–18, 2022, Washington, DC, USA                                                                                            Jatin Chauhan et al.
+
+
+follows:                                                                               Algorithm 1 Proposed Forecast Distance Weighting (FDW)
+                                                   𝑁𝑁
+                                   −𝐷 (𝑋 𝑡𝑒𝑠𝑡 ,𝑋 [:,S,:]𝑖 )/𝜏
+                               𝑒                                                       Require: Forecast model 𝑓 , Training set T , Test Instance 𝑋 𝑇 𝑒𝑠𝑡 ,
+                     𝑤𝑖 =                            𝑁 𝑁𝑗
+                                                                                 (6)       Forecast Distance function 𝐷 𝐹 , # Neighbors 𝑚, exponent 𝑏,
+                            Í𝑚         −𝐷 (𝑋 𝑡𝑒𝑠𝑡 ,𝑋 [:,S,:] )/𝜏
+                               𝑗=1 𝑒                                                       temperature 𝜏
+where 𝜏 is the temperature parameter and 𝑤𝑖 is the weight given to                     Ensure: Ensembled Forecast 𝑌ˆ 𝑛𝑒𝑤 for test instance 𝑋 𝑇 𝑒𝑠𝑡
+                                                                                        1: # Obtain Set of Nearest Neighbors using Eq 4 and 5
+the forecast of the 𝑖 𝑡ℎ neighbor. However, this has multiple caveats.
+Firstly, this scheme does not take into account the spatial module                      2: K 𝑁 𝑁 = {𝑋 𝑁 𝑁𝑖 |𝑖 ∈ [[1...𝑚]], 𝑋 𝑇 𝑒𝑠𝑡 , T , 𝑏}
+
+that governs the interactions amongst the variables. Secondly, it                       3:
+
+also noteworthy that if two instances are close based on the distance                   4: D = [] # List of Forecast Distances Eq 7
+
+of few variables does not necessarily mean the instances will be                        5: Y = [] # List of Forecasts using 𝑚 neighbors
+
+close when all N variables are considered, because of the bias in                       6:
+
+retrieval.                                                                              7: for 𝑋 𝑁 𝑁𝑖 ∈ K 𝑁 𝑁 do
+                                                                                        8:   𝑋 𝑛𝑒𝑤𝑖 = 𝑋 𝑡𝑒𝑠𝑡 ||𝑋 𝑁 𝑁𝑖 # Create new instance, section 5.1
+5.2.3 Forecast Distance Weighting (FDW) (Algorithm 1): We re-                           9:   𝑌 𝑛𝑒𝑤𝑖 , 𝑌 𝑁 𝑁𝑖 = 𝑓 (𝑋 𝑛𝑒𝑤𝑖 ), 𝑓 (𝑋 𝑁 𝑁𝑖 )
+trieve the top-𝑚 neighbors using equations 4 and 5. However, to                        10:   Y.𝑎𝑝𝑝𝑒𝑛𝑑 (𝑌 𝑛𝑒𝑤𝑖 )
+compute better weights, we propose to use a parametric and com-                        11:   D.𝑎𝑝𝑝𝑒𝑛𝑑 (𝐷 𝐹 (𝑌 𝑛𝑒𝑤𝑖 , 𝑌 𝑁 𝑁𝑖 )) # Forecast Distance (Eq 7)
+plex neural network, for which 𝑓 seems to be a reasonable choice.                      12: end for
+Instead of computing the vicinity of training instances to 𝑋 𝑡𝑒𝑠𝑡 (in                  13:
+some other space), we measure the discrepancy of the forecast out-                     14: W = {𝑤𝑖 |𝑖 ∈ [[1...𝑚]], D, 𝜏 } # FDW (Eq 8)
+puts between 𝑋 𝑛𝑒𝑤𝑖 and the corresponding 𝑋 𝑁 𝑁𝑖 , ∀𝑖 ∈ {1, 2...𝑚}.                    15:
+Note that 𝑋 𝑛𝑒𝑤𝑖 is a combination of data from 𝑋 𝑡𝑒𝑠𝑡 and 𝑋 𝑁 𝑁𝑖 .                     16: 𝑌ˆ 𝑛𝑒𝑤 = 0
+Making a forward pass through 𝑓 for both of these inputs will pro-                     17: for 𝑖 ∈ [[1...𝑚]] do
+vide a forecasts that can be represented as matrices of shape |N | ×𝑄,                 18:   𝑌ˆ 𝑛𝑒𝑤 += W [𝑖]Y [𝑖]
+𝑄 being forecast output length. These forecasts are obtained as a                      19: end for
+result of the combination of complex operations that capture global                    20: Return 𝑌ˆ 𝑛𝑒𝑤
+                                                                                                    [:,S ]
+or pairwise interactions in conjunction with RNNs (or temporal
+CNNs). The forward passes check the compatibility of the data bor-
+rowed for the remaining N \ S variables to the original data of S                      Here, 𝐸𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 are the errors for the proposed ensemble case
+variables in 𝑋 𝑡𝑒𝑠𝑡 . If both the forecasts are close (via some function),             and 𝐸𝑂𝑟𝑎𝑐𝑙𝑒 is retrieved from Table 1. The results are provided in
+then we assume that the corresponding neighbor’s borrowed data                         Table 4. Details regarding the hyperparameters in this approach are
+is a good proxy for missing data in 𝑋 𝑡𝑒𝑠𝑡 . The entire retrieval and                  provided in section A.3. We see that across all methods and datasets,
+ensemble weighting procedure is formulated as follows.                                 the FDW ensemble substantially recovers the performance drop
+   First, lets denote the forecasts of 𝑋 𝑛𝑒𝑤𝑖 and 𝑋 𝑁 𝑁𝑖 , ie 𝑓 (𝑋 𝑛𝑒𝑤𝑖 )              we see in table 1. For a majority of the cases, we see the relative
+and 𝑓 (𝑋 𝑁 𝑁𝑖 ), as 𝑌 𝑛𝑒𝑤𝑖 and 𝑌 𝑁 𝑁𝑖 respectively. The distance func-                 gap with the oracle is less than 5%.
+tion we use is akin to the mean absolute error metric, as shown                           We also observe that the performance of all models on Solar is
+below:                                                                                 relatively poor compared to that of Traffic (and others). We analyse
+                                                𝑄 |S |
+                                           ∑︁ ∑︁ 𝑌𝑞,𝑠           𝑛𝑒𝑤𝑖      𝑁 𝑁𝑖
+                                                                       − 𝑌𝑞,𝑠          the datasets using a ranking measure called reciprocal rank to un-
+                                      1
+        𝐷 𝐹 (𝑌 𝑛𝑒𝑤𝑖 , 𝑌 𝑁 𝑁𝑖 ) =                                                 (7)   cover the reasons of this performance parity as follows. For every
+                                   𝑄 ∗ |S| 𝑞=1 𝑠=1                     𝑞
+                                                                                       validation instance, first we find the optimal (nearest) neighbor by
+                                                                                       using all N variables. We then find the rank of this optimal neigh-
+where 𝐷 𝐹 simply denotes the distance function for forecasts. Note
+                                                                                       bor in the list obtained by retrieving neighbors using the distance
+the use of S as we seek to obtain the discrepancy in the correspond-
+                                                                                       on the S variables as in Equation 4. Figure 3 shows the reciprocal of
+ing dimensions. The factor 𝑞 in denominator ensures that values
+                                                                                       rank of the optimal neighbor for the four datasets. Larger values of
+in longer horizons don’t dominate the computation and serves
+                                                                                       reciprocal rank (close to 1) is better and means the optimal neighbor
+as a normalizing factor (supporting experiments are provided in
+                                                                                       can be found relatively close to the corresponding validation in-
+appendix section A.1 ). Finally, the weights are computed as:
+                                                                                       stance. Small (close to zero) reciprocal ranks show that the optimal
+                              𝑒 −𝐷 𝐹 (𝑌
+                                           𝑛𝑒𝑤𝑖 ,𝑌 𝑁 𝑁𝑖 )/𝜏
+                                                                                       neighbor is far away from the corresponding validation instance.
+                    𝑤𝑖 = Í                                                       (8)   For SOLAR and METR-LA datasets, the one mode of the distribution
+                             𝑚 𝑒 −𝐷 𝐹 (𝑌 𝑛𝑒𝑤 𝑗 ,𝑌 𝑁 𝑁 𝑗 )/𝜏
+                             𝑗=1                                                       substantially lies close to zero. Traffic and ECG datasets, on the
+                                                                                       other hand, have a much better reciprocal rank distribution.
+6    EMPIRICAL EVALUATION
+We use Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 to quantify the performance of the proposed
+                                                                                       6.1    Retrieval and Weighting Hyperparameters
+FDW ensemble method relative to the Oracle, defined as follows:                        In this section, we perform an ablation study on two important
+                                                                                       hyperparameters (i) exponent 𝑏 used in equation 4 and temperature
+                          𝐸         − 𝐸𝑂𝑟𝑎𝑐𝑙𝑒                                          𝜏 in FDW. The experiments are performed for MSTGCN model on
+               Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 = 𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒           × 100                              (9)   ECG5000 and MTGNN model on METR-LA. The values of Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒
+                                𝐸𝑂𝑟𝑎𝑐𝑙𝑒
+Multi-Variate Time Series Forecasting on Variable Subsets                                                                                    KDD ’22, August 14–18, 2022, Washington, DC, USA
+
+
+Table 4: Relative performance, Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 , of our proposed FDW ensemble method w.r.t Oracle. We substantially improve over
+the Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙 in Table 1.
+
+                                                               Forecast           METR-LA            SOLAR              Traffic               ECG5000
+                                                               Model           MAE RMSE         MAE RMSE           MAE RMSE                 MAE RMSE
+                                                               MTGNN           7.50 % 5.46 %   30.05 % 25.45 %     1.13 % 2.01 %            2.14 % 3.11 %
+                                                               ASTGCN          1.88 % 2.79 %    4.32 % 4.21 %      0.17 % 0.42 %            0.26 % 1.03 %
+                                                               MSTGCN          0.71 % 0.56 %    9.50 % 7.65 %      0.78 % 1.01 %            1.13 % 0.59 %
+                                                               LSTNet          1.39 % 1.02 %   11.78 % 14.22 %     0.47 % 0.54 %            1.36 % 0.73 %
+                                                               TCN             1.98 % 1.53 %   19.57 % 18.12 %     0.38 % 0.21 %            1.07 % 0.31 %
+
+
+                                                                                                            6.2      Comparison to k-NN method of [22]
+         Reciprocal Rank of Optimal Neighbor
+
+
+
+
+                                               1.2
+                                                                                                            Recent work by [22] used k-NN algorithm to find nearest neighbors
+                                                                                                            for a test instance and directly use the corresponding neighbors’
+                                               1.0
+                                                                                                            forecast as the test time forecast, weighted via Rank Order Centroid.
+                                               0.8                                                          Other works such as [23] also leverage similar strategies for finan-
+                                               0.6                                                          cial time series data. We thus compare our approach to more recent
+                                               0.4                                                          [22] (henceforth referred as Baseline). Results in Table 6 clearly
+                                                                                                            demonstrates the superiority of performing forward pass through
+                                               0.2
+                                                                                                            the forecast models so that spatial modules can properly exploit
+                                               0.0
+                                                                                                            the underlying associations in order to generate informed outputs.
+                                               0.2
+                                                     METR-LA   SOLAR    TRAFFIC      ECG                    Table 6: Comparison of FDW to Baseline [22]. Each cell con-
+                                                                Dataset Name                                tains MAE / RMSE values of Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 (in %) .
+
+  Figure 3: Reciprocal Rank of Optimal Nearest Neighbor                                                      ECG5000          MTGNN           ASTGCN         MSTGCN           LSTNet           TCN
+                                                                                                             FDW             2.14 / 3.11     0.26 / 1.03     1.13 / 0.59    1.36 / 0.73    1.07 / 0.31
+                                                                                                             Baseline[22]   16.54 / 11.02   15.34 / 13.36   18.39 / 13.55    3.30 / 1.40    8.03 / 8.38
+                                                                                                             METR-LA          MTGNN           ASTGCN         MSTGCN           LSTNet           TCN
+                                                                                                             FDW             7.50 / 5.46     1.88 / 2.79     0.71 / 0.56    1.39 / 1.02    1.98 / 1.53
+Table 5: Hyperparameter Ablation Study of FDW for MST-                                                       Baseline[22]   70.23 / 59.27   18.02 / 19.61   32.70 / 28.72   3.51 / 16.99   8.02 / 17.71
+GCN on ECG5000 and MTGNN on METR-LA.
+
+                                      ECG5000        METR-LA                                                7 RETRIEVAL ABLATIONS
+                                     MAE RMSE       MAE RMSE                                                7.1 Number of neighbors
+    Main Results (𝑏 = 0.5, 𝜏 = 0.1) 1.13 % 0.59 % 7.50 % 5.46 %
+                            Hyperparameters                                                                We analyse the variation of Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 with changing number of
+    Exponent 𝑏 = 0.33               0.54 % 0.31 % 7.57 % 5.59 %                                            neighbors in figure 4a (for ASTGCN on SOLAR). Note the strictly
+    Exponent 𝑏 = 1                  1.16 % 0.97 % 10.66 % 10.24 %                                          decreasing bar sizes. This is due to the weight computation mech-
+    Exponent 𝑏 = 2                  1.27 % 1.04 % 21.65 % 18.76 %                                          anism in FDW. As we increase the number of neighbors, we also
+    Temperature 𝜏 = 0.01            1.32 % 1.26 % 6.98 % 6.32 %                                            increase the likelihood of obtaining a neighbor which has very low
+    Temperature 𝜏 = 1               2.44 % 2.43 % 7.67 % 5.75 %                                            discrepancy in the forecast w.r.t 𝑋 𝑡𝑒𝑠𝑡 (eq 7) and thus improve the
+    Temperature 𝜏 = 10              0.66 % 0.58 % 7.55 % 5.77 %                                            overall ensemble forecast result whereas a large fraction of the ob-
+                                                                                                           tained neighbors are assigned almost 0 weight (the mechanism in eq
+                                                                                                           8). Furthermore, we have diminishing reductions in Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 with
+                                                                                                           increasing number of neighbors. For our main experiments, we use
+are reported in Table 5 where Main Results denote the actual results                                       5 neighbors as it provides a reasonable runtime and performance
+borrowed from Table 4. While accounting for a specific hyperpa-                                            tradeoff.
+rameter, the rest are kept same. For example, if exponent 𝑏 is varied,
+then temperature 𝜏 is kept to it best value. The optimal hyperpa-                                           7.2      Varying size of Retrieval Set
+rameters were selected by search over the validation set reported                                           To study the effect of the size of the source set over which retrieval is
+in Appendix A.3. First we see that as we increase 𝑏 performs drops                                          performed, we perform an experiment to observe Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 for the
+rapidly. This can be explained by the construction of the distance                                          error metrics against the fraction of data used in the retrieval step.
+function in Equation 4. With large values of 𝑏 the elements in the                                          Figure 4b (MTGNN over SOLAR) shows that this follows almost
+summation that are large will contribute disproportionately and                                             an asymptotic behaviour, where the Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 improves sharply
+hence the distance would be dominated by a few dimensions where                                             in smaller fractions and then improves gradually with increasing
+the gaps are large. We however do not see a specific pattern emerge                                         size of retrieval set. At quarter size of the data, we see that the
+for the temperature 𝜏 parameter.                                                                            performance is very close to complete training set. Due to the
+KDD ’22, August 14–18, 2022, Washington, DC, USA                                                                                                                                                                                             Jatin Chauhan et al.
+
+
+                                                                                                               50                                                                 Table 8: Comparison of different Ensemble Weighing tech-
+                                                                           MAE                                                                                             MAE
+                                                                                                                                                                                  niques via corresponding Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 for each.
+    Ensemble for the Error Metrics
+
+
+
+
+                                                                                  Ensemble for the Error Metrics
+                                 5                                         RMSE                                45                                                          RMSE
+                                 4                                                                             40
+
+                                 3                                                                             35
+
+                                 2
+                                                                                                                                                                                                     MSTGCN (ECG5000)         MTGNN (METR-LA)
+                                                                                                               30
+
+                                 1                                                                             25
+                                                                                                                                                                                                      MAE     RMSE             MAE    RMSE
+                                 0                                                                             20
+                                                                                                                                                                                            UW       2.21 %   1.92 %          8.17 %  5.72 %
+                                     1        5        10        20        50                                        0.01         0.1      0.25      0.5      0.75         1.0
+                                         Number of Neighbors in Ensemble                                                    Fraction of Training Data used for Retrieval                    DDW      2.67 %   2.78 %          7.71 %  5.76 %
+    (a) Vary Number of Neighbors                                                                                   (b) Vary Retrieval Set Size                                              FDW      1.13 %   0.59 %          7.50 %  5.46 %
+
+
+Figure 4: Variation of Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 with number of neighbors
+                                                                                                                                                                                  Table 9: Comparison of our proposed technique FDW to Pop-
+(left subfigure) and size of Retrieval Set w.r.t Training Set
+                                                                                                                                                                                  ular Data Imputation Techniques - kNNE and IIM. The num-
+(right subfigure).
+                                                                                                                                                                                  bers in the table represent the values of Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 for both
+                                                                                                                                                                                  MAE/RMSE in %.
+Table 7: Comparison of different Ensemble techniques by
+stating the MRR (as defined in section 8) and Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 (put                                                                                                                                   METR-LA           SOLAR         TRAFFIC          ECG5000
+as Δ for brevity) RMSE values. The absence of MRR in UW                                                                                                                                FDW     7.50 / 5.46    30.05 / 25.45    1.13 / 2.01     2.14 / 3.11
+is because all neighbors are given equal weight, thus sorting                                                                                                                          kNNE    8.36 / 9.80    31.66 / 27.40    1.01 / 2.42     2.24 / 3.05
+the neighbor list isn’t feasible due to floating point precision                                                                                                                       IIM     9.55 / 10.85   30.04 / 24.94    3.39 / 3.83     2.68 / 3.04
+issues.
+
+                                                    MTGNN              ASTGCN                                        MSTGCN                       LSTNet              TCN
+                                                                                                                                                                                  we provide a comparison to two popular techniques that can be
+                                         MRR            -                  -                                             -                            -                 -
+ UW                                                                                                                                                                               applied in this setup without significant modifications: kNNE [28]
+                                          Δ          2.83 %             0.31 %                                        1.24 %                       0.94 %            0.82 %
+                                         MRR         0.4532             0.4358                                        0.4439                      0.4593             0.4560       and IIM [33]. The results on MTGNN model across the datasets
+ DDW
+                                          Δ          2.81 %             0.45 %                                        1.53 %                       1.12 %            0.79 %       are provided in table 9 with the number of retrieved neighbors
+                                         MRR        0.4685              0.4591                                        0.4512                      0.4729             0.4677       kept to 5 for all methods in order to provide a fair comparison.
+ FDW
+                                          Δ          2.01 %             0.42 %                                        1.01 %                      0.54 %             0.21 %       Firstly, note that FDW consistently outperforms or nearly matches
+                                                                                                                                                                                  the best case performance in any column of table 9. Furthermore,
+                                                                                                                                                                                  the imputation baselines are inconsistent in performance, for eg -
+complexity of the model, dataset combinations, we note that the                                                                                                                   IIM performs slightly better in RMSE of SOLAR, but is worse on
+fraction at which original performance is recovered can vary.                                                                                                                     METR-LA and other two datasets. Similarly, kNNE is close in per-
+                                                                                                                                                                                  formance on TRAFFIC, but is outperformed by our method FDW
+8                              WEIGHTING ABLATIONS                                                                                                                                on METR-LA nd SOLAR, which are the more difficult datasets com-
+In this section, we compare the performance of the three weighting                                                                                                                pared to ECG5000 and TRAFFIC. One of the primary reasons that
+methods : UW, DDW, FDW through both an intrinisic metric (mean                                                                                                                    FDW usually outperforms the imputation baselines is the novel
+reciprocal rank) and extrinsic metric (RMSE). From the list of 𝑚                                                                                                                  solution to the biased retrieval problem.
+retrieved neighbors, we first find the ideal neighbor as the one that
+produces the least error with respect to the ground truth. Therefore                                                                                                              10    CORRELATED FAILURES
+the ideal neighbor is model dependent. We induce rankings of                                                                                                                      In the previous sections, we assumed that variables are absent at
+DDW (using Equation 6) and FDW (using Equation 8). The results                                                                                                                    random during inference time. However, in real world settings,
+provided in Table 7, over the validation set of Traffic, demonstrate                                                                                                              multiple sensor failures are not random but often correlated. For
+that the ideal neighbor in the retrieved set of size 𝑚 is ranked higher                                                                                                           instance, sensor values could be correlated and failures also cor-
+for the proposed eq 8. Correspondingly we see that the Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒                                                                                                                  related if they are spatially close. In this experiment, we simulate
+for RMSE values of FDW is much better compared to DDW and                                                                                                                         this condition by by first constructing 𝐶 disjoint clusters of N .
+that compared to UW. This shows using the 𝑓 to compute the                                                                                                                        To generate these clusters, we apply DBSCAN algorithm over the
+weights of the ensemble helps combine predictions more effectively.                                                                                                               pairwise distance matrix, D, where D𝑖 𝑗 = 1 − |𝜌𝑖 𝑗 |, 𝜌𝑖 𝑗 being the
+Table 8 reports the MAE and RMSE values for the three weighing                                                                                                                    Spearman Rank correlation between the time series of variables 𝑖
+schemes aross 2 more combinations of dataset, models. The trend                                                                                                                   and 𝑗. Following the previous setting, we perform 1000 runs over
+is consistent that FDW is able to significantly outperform the other                                                                                                              the test set, where in each run, we first randomly pick 𝑐 clusters
+methods.                                                                                                                                                                          and then choose |S| points from their union. Note that this method
+                                                                                                                                                                                  of selection of S is the converse of correlated failures. We chose
+9                            COMPARISON TO DATA IMPUTATION                                                                                                                        this method since its more direct and is a reasonable proxy for
+                             TECHNIQUES                                                                                                                                           what we want to study. We observe in Table 10, Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 values
+As argued previously in section 1, a large literature of data im-                                                                                                                 are higher for lower cluster count (converse for MRR) as the re-
+putation baselines is not applicable because of the heavy reliance                                                                                                                trieved neighbors are close w.r.t to the S variables, which belong
+on the temporal locality of the time series of each variable, which                                                                                                               to few clusters. This retrieval generates a higher margin of error
+is absent altogether in our problem statement. For completeness,                                                                                                                  in the remaining N − S variables and serves as a comparatively
+Multi-Variate Time Series Forecasting on Variable Subsets                                                                KDD ’22, August 14–18, 2022, Washington, DC, USA
+
+
+worse and biased proxy. In summary, we can conclude that if more                          [7] Roger Frigola. 2015. Bayesian Time Series Learning with Gaussian Processes
+uncorrelated variables fail, the error in prediction increases.                               (Doctoral thesis). University of Cambridge. https://www.repository.cam.ac.uk/
+                                                                                              handle/1810/299413
+                                                                                          [8] Shengnan Guo, Youfang Lin, Ning Feng, Chao Song, and Huaiyu Wan. 2019.
+Table 10: Variation of Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 under Correlated Failures                                    Attention Based Spatial-Temporal Graph Convolutional Networks for Traffic
+setting (on SOLAR). Last row shows the MRR values w.r.t op-                                   Flow Forecasting. Proceedings of the AAAI Conference on Artificial Intelligence
+                                                                                              (2019).
+timal nearest neighbor (similar to section 6) when S is sam-                              [9] Nur Hamid and Wahyu Catur Wibowo. 2018. Wind Speed Forecasting Using Mul-
+pled from union of given number of clusters.                                                  tivariate Time-Series Radial Basis Function Neural Network. In 2018 International
+                                                                                              Conference on Advanced Computer Science and Information Systems (ICACSIS).
+                                                                                              IEEE, 423–428.
+            Forecast       Error               # Clusters                                [10] Liangzhe Han, Bowen Du, Leilei Sun, Yanjie Fu, Yisheng Lv, and Hui Xiong. 2021.
+            Model          1                     4      7           11                        Dynamic and Multi-faceted Spatio-temporal Deep Learning for Traffic Speed
+                                                                                              Forecasting. In Proceedings of the 27th ACM SIGKDD Conference on Knowledge
+                   MAE  9.42 %                5.30 % 3.23 %       4.32 %
+            ASTGCN                                                                            Discovery & Data Mining. 547–555.
+                   RMSE 7.82 %                5.45 % 3.21 %       4.21 %                 [11] H. V. Jagadish, Johannes Gehrke, Alexandros Labrinidis, Yannis Papakonstanti-
+                   MAE 13.55 %                9.96 % 8.81 %       9.50 %                      nou, Jignesh M. Patel, Raghu Ramakrishnan, and Cyrus Shahabi. 2014. Big Data
+            MSTGCN                                                                            and Its Technical Challenges. Commun. ACM (2014).
+                   RMSE 13.70 %               8.46 % 7.02 %       7.65 %
+                                                                                         [12] Jeff Johnson, Matthijs Douze, and Hervé Jégou. 2019. Billion-scale similarity
+                   MRR  0.5005                0.5706 0.5886       0.6276                      search with gpus. IEEE Transactions on Big Data (2019).
+                                                                                         [13] David C. Kale, Dian Gong, Zhengping Che, Yan Liu, Gerard Medioni, Randall
+                                                                                              Wetzel, and Patrick Ross. 2014. An Examination of Multivariate Time Series
+   We also analyse the results for the variation of the error met-                            Hashing with Applications to Health Care. In 2014 IEEE International Conference
+rics over the Partial baseline variant, ie variables in S, in table 11.                       on Data Mining. 260–269. https://doi.org/10.1109/ICDM.2014.153
+Contrary to the trend in table 10, we instead observe increasing                         [14] Tristan Karb, Niklas Kühl, Robin Hirt, and Varvara Glivici-Cotruta. 2020. A
+                                                                                              network-based transfer learning approach to improve sales forecasting of new
+MAE and RMSE values since the selection of S from union of lesser                             products. arXiv preprint arXiv:2005.06978 (2020).
+number of clusters imply that the spatial module can model the                           [15] Urvashi Khandelwal, Angela Fan, Dan Jurafsky, Luke Zettlemoyer, and Mike
+associations comparatively better.                                                            Lewis. 2021. Nearest Neighbor Machine Translation. In International Conference
+                                                                                              on Learning Representations. https://openreview.net/forum?id=7wCBOfJ8hJM
+                                                                                         [16] Guokun Lai, Wei-Cheng Chang, Yiming Yang, and Hanxiao Liu. 2018. Modeling
+Table 11: Results for Partial baseline variant under Corre-                                   Long- and Short-Term Temporal Patterns with Deep Neural Networks.
+lated Failures on SOLAR.                                                                 [17] Yaguang Li, Rose Yu, Cyrus Shahabi, and Yan Liu. 2018. Diffusion Convolutional
+                                                                                              Recurrent Neural Network: Data-Driven Traffic Forecasting. In International
+                                                                                              Conference on Learning Representations.
+     Forecast      Error                       # Clusters                                [18] Yonghong Luo, Xiangrui Cai, Ying Zhang, Jun Xu, et al. 2018. Multivariate time
+                     1                        4          7              11                    series imputation with generative adversarial networks. Advances in neural
+     Model
+                                                                                              information processing systems 31 (2018).
+            MAE 5.91(2.23)                5.94(1.66) 6.04(1.51)     6.14(1.37)           [19] Helmut Lütkepohl. 2005. Vector Autoregressive Moving Average Processes. Springer
+     ASTGCN
+            RMSE 8.07(3.32)               8.52(2.76) 8.75(2.64)     8.97(2.51)                Berlin Heidelberg, Berlin, Heidelberg, 419–446.
+            MAE 4.27(1.59)                4.39(0.94) 4.53(0.76)     4.74(0.73)           [20] Syama Sundar Rangapuram, Matthias W Seeger, Jan Gasthaus, Lorenzo Stella,
+     MSTGCN                                                                                   Yuyang Wang, and Tim Januschowski. 2018. Deep State Space Models for Time
+            RMSE 6.14(2.35)               6.24(1.54) 6.67(1.33)     7.02(1.44)                Series Forecasting. In Advances in Neural Information Processing Systems.
+                                                                                         [21] Shun-Yao Shih, Fan-Keng Sun, and Hung-Yi Lee. 2018. Temporal Pattern Atten-
+                                                                                              tion for Multivariate Time Series Forecasting. (2018).
+                                                                                         [22] Samya Tajmouati, Bouazza El Wahbi, Adel Bedoui, Abdallah Abarda, and Mo-
+11     CONCLUSION                                                                             hamed Dakkoun. 2021. Applying k-nearest neighbors to time series forecasting :
+In this work, we introduce a new inference task called Variable                               two new approaches. arXiv:2103.14200 [stat.ME]
+                                                                                         [23] Li Tang, Heping Pan, and Yiyong Yao. 2018. K-Nearest Neighbor Regression with
+Subset Forecast in the MTSF setting. We motivate this setting with                            Principal Component Analysis for Financial Time Series Prediction.
+practical use cases and show that challenging part of the problem is                     [24] Xianfeng Tang, Huaxiu Yao, Yiwei Sun, Charu Aggarwal, Prasenjit Mitra, and
+                                                                                              Suhang Wang. 2020. Joint modeling of local and global temporal dynamics for
+the significantly small sized randomly selected subset at test time.                          multivariate time series forecasting with missing values.
+We propose a simple yet effective and easy to implement solution                         [25] Zonghan Wu, Shirui Pan, Guodong Long, Jing Jiang, Xiaojun Chang, and Chengqi
+followed by thorough ablation studies as well as quantitative and                             Zhang. 2020. Connecting the Dots: Multivariate Time Series Forecasting with
+                                                                                              Graph Neural Networks. arXiv:2005.11650 [cs.LG]
+qualitative analysis including a comparison against data imputation                      [26] Zonghan Wu, Shirui Pan, Guodong Long, Jing Jiang, and Chengqi Zhang. 2019.
+methods for completeness.                                                                     Graph WaveNet for Deep Spatial-Temporal Graph Modeling. International Joint
+                                                                                              Conferences on Artificial Intelligence Organization.
+                                                                                         [27] Jitao Xu, Josep Crego, and Jean Senellart. 2020. Boosting Neural Machine Trans-
+REFERENCES                                                                                    lation with Similar Translations. Association for Computational Linguistics.
+ [1] Akari Asai, Jungo Kasai, Jonathan H. Clark, Kenton Lee, Eunsol Choi, and Han-       [28] B. Yan and C. Domeniconi. 2004. Nearest Neighbor Ensemble. In In 17th Interna-
+     naneh Hajishirzi. 2020. XOR QA: Cross-lingual Open-Retrieval Question An-                tional Conference on Pattern Recognition.
+     swering. CoRR abs/2010.11856 (2020).                                                [29] Sijie Yan, Yuanjun Xiong, and Dahua Lin. 2018. Spatial Temporal Graph Convo-
+ [2] Shaojie Bai, J. Zico Kolter, and Vladlen Koltun. 2018. An Empirical Evaluation of        lutional Networks for Skeleton-Based Action Recognition. (2018).
+     Generic Convolutional and Recurrent Networks for Sequence Modeling. (2018).         [30] Jennifer Yick, Biswanath Mukherjee, and Dipak Ghosal. 2008. Wireless sensor
+ [3] Ankur Bapna and Orhan Firat. 2019. Non-Parametric Adaptation for Neural                  network survey. Computer networks 52, 12 (2008), 2292–2330.
+     Machine Translation. In In Proc. of NAACL 2019.                                     [31] Hsiang-Fu Yu, Nikhil Rao, and Inderjit S Dhillon. 2016. Temporal Regularized
+ [4] Ruichu Cai, Jiawei Chen, Zijian Li, Wei Chen, Keli Zhang, Junjian Ye, Zhuozhang          Matrix Factorization for High-dimensional Time Series Prediction. In Advances
+     Li, Xiaoyan Yang, and Zhenjie Zhang. 2020. Time series domain adaptation via             in Neural Information Processing Systems.
+     sparse associative structure alignment. arXiv preprint arXiv:2012.11797 (2020).     [32] George Zerveas, Srideepika Jayaraman, Dhaval Patel, Anuradha Bhamidipaty,
+ [5] Defu Cao, Yujing Wang, Juanyong Duan, Ce Zhang, Xia Zhu, Congrui Huang,                  and Carsten Eickhoff. 2021. A Transformer-Based Framework for Multivariate
+     Yunhai Tong, Bixiong Xu, Jing Bai, Jie Tong, and Qi Zhang. 2020. Spectral                Time Series Representation Learning.
+     Temporal Graph Neural Network for Multivariate Time-series Forecasting. In          [33] Aoqian Zhang, Shaoxu Song, Yu Sun, and Jianmin Wang. 2019. Learning individ-
+     Advances in Neural Information Processing Systems.                                       ual models for imputation. In 2019 IEEE 35th International Conference on Data
+ [6] Marco Cuturi. 2011. Fast Global Alignment Kernels. In Proceedings of the 28th In-        Engineering (ICDE). IEEE, 160–171.
+     ternational Conference on International Conference on Machine Learning (Bellevue,
+     Washington, USA) (ICML’11). Omnipress, Madison, WI, USA, 929–936.
+KDD ’22, August 14–18, 2022, Washington, DC, USA                                                                                                                                                                                                        Jatin Chauhan et al.
+
+
+A ADDITIONAL EXPERIMENTS                                                                                                                           4.0       = 0.8543                                                                      = 0.592
+A.1 Variation of gap between Oracle and                                                                                                            3.5                                                                         0.20
+
+
+
+
+                                                                                                                         Gap: Partial and Oracle
+
+
+
+
+                                                                                                                                                                                                     Gap: Partial and Oracle
+                                                                                                                                                   3.0
+    Partial across horizon length                                                                                                                  2.5
+                                                                                                                                                                                                                               0.15
+
+                                                                                                                                                   2.0                                                                         0.10
+In this section, we study the variation in the difference between
+                                                                                                                                                   1.5
+the error metrics for Partial and Oracle settings across the horizon                                                                               1.0                                                                         0.05
+length. Figure 5 shows the experiments performed over MSTGCN                                                                                       0.5
+                                                                                                                                                                                                                               0.00
+model. For METR-LA and SOLAR datasets, this variation is mono-                                                                                     0.0
+                                                                                                                                                         0.20 0.25 0.30 0.35 0.40 0.45 0.50 0.55                                        0.25     0.30    0.35     0.40   0.45
+tonically increasing, but an interesting upward going zig-zag trend                                                                                            Sum of Pagerank Values                                                          Sum of Pagerank Values
+surfaces for ECG5000 dataset. We hypothesize that this trend is                                                                                          (a) MTGNN on TRAFFIC                                                         (b) MSTGCN on METR-LA
+related to the nature of the temporal patterns.
+   From the previous works [5, 25], we note that the errors (MAE,                                                        Figure 6: Correlation of Variable Importance (measured
+RMSE) increase monotonically (w.r.t ground truth) with horizon                                                           with sum of Pagerank values) to Gap between Partial and
+length under the standard full variable setting, as it becomes in-                                                       Oracle (section A.2).
+creasingly difficult for the model to accurately forecast values far
+in future. Following similar reasoning, the Partial setting adds an-
+other layer of difficulty for the forecast model, thus causing similar                                                    A.3                              Hyperparameters
+deviations from the Oracle setting. This also motivates the use of                                                       We provide the details of the important hyperparameters used in the
+the factor 𝑞 in the denominator of equation 7, as we are computing                                                       experiments in this section. To train the forecast models, we use the
+the forecast differences from a given neighbor 𝑋 𝑁 𝑁𝑖 against the                                                        optimal values of learning rate, optimizer, batch size, dropout, num-
+corresponding instance with borrowed data 𝑋 𝑛𝑒𝑤𝑖 for all horizons.                                                       ber of layers etc from the corresponding github implementations. In
+The discrepancy in the forecasts amplifies over longer horizons.                                                         cases where we do not find the appropriate values, we follow [5] and
+                                                                                                                         set: learning rate to 1𝑒 −3 , dropout to 0.3, optimizer to Adam, batch
+                                                                                                                         size to 64, epochs to 100, weight decay to 1𝑒 −4 , gradient clipping to
+                                                                                                                         5. We also found curriculum learning proposed in [25] to work well
+                                                                          2.00
+                1.0                                                                                                      while training the models in Multi-Step manner [25]. All the models
+                                                                          1.75
+                                                         Difference in RMSE
+Difference in MAE
+
+
+
+
+                                                                          1.50
+                                                                                                                         are trained on normalized input, 𝑋 𝑖𝑛𝑝𝑢𝑡 = (𝑋 𝑖𝑛𝑝𝑢𝑡 − 𝜇)/𝜎, where
+                0.8
+                                               METR-LA                               METR-LA                             𝜇 and 𝜎 are scalar mean and standard deviation of the time series
+                                               SOLAR                      1.25       SOLAR
+                0.6                            ECG5000                    1.00
+                                                                                     ECG5000                             in the training data respectively. The input and output time series
+                0.4                                                       0.75                                           sequence length is fixed to 12, in order to ensure consistency. Fur-
+                                                                          0.50                                           thermore, as ASTGCN and MSTGCN require a pre-defined graph
+                0.2
+                      2   4        6     8     10   12                           2        4        6     8     10   12   structure, we use the adjacency matrix learnt by MTGNN model as
+                              Horizon Length                                                  Horizon Length
+                                                                                                                         the input graph on some datasets where default adjacency is not
+                      (a) MAE Difference                                         (b) RMSE Difference                     available, for both the models. It is evident from the results in Table
+                                                                                                                         1, that both ASTGCN and MSTGCN perform reasonably well.
+Figure 5: Variation of gap (difference) between Oracle and                                                               The hyperparameters used in our proposed method (section 5) are
+Partial across horizon length for the error metrics.                                                                     searched from the sets as follows: exponent 𝑏 from {0.33, 0.5, 1, 2},
+                                                                                                                         temperature 𝜏 from {0.01, 0.1, 1, 10}, number of neighbors from {1,
+                                                                                                                         5, 10, 20, 50}. Ablation studies have been done in the main paper.
+                                                                                                                         The default values are: 0.5 for exponent 𝑏, 0.1 for temperature 𝜏
+A.2                   Variable Importance vs Δ𝑝𝑎𝑟𝑡𝑖𝑎𝑙                                                                    and 5 retrieved neighbors.
+It is intuitive that for a given model, dataset pair, all variables are
+not equally important for minimizing the overall MAE wrt ground
+truth. In this section, we study the effect of variable importance                                                                                                         Table 12: Dataset Statistics.
+on performance drop of the forecast model. We use pagerank to
+compute variable importance and hence we study only graph based                                                                          Dataset                # Timesteps     # Variables        Sample Rate                            Input Length          Output Length
+                                                                                                                                         METR-LA                   34,272          207              5 minutes                                  12                    12
+forecast models in this section. For a given random selection of S,                                                                      TRAFFIC                   17,544          862                1 hour                                   12                    12
+                                                                                                                                         SOLAR
+we compute the sum of page rank values of variables in N − S and                                                                         ECG5000
+                                                                                                                                                                   52,560
+                                                                                                                                                                   5,000
+                                                                                                                                                                                   137
+                                                                                                                                                                                   140
+                                                                                                                                                                                                    10 minutes
+                                                                                                                                                                                                         -
+                                                                                                                                                                                                                                               12
+                                                                                                                                                                                                                                               12
+                                                                                                                                                                                                                                                                     12
+                                                                                                                                                                                                                                                                     12
+observe the gap between MAE of partial and oracle in S. Figure 6
+shows relationship between these two variables where each point
+represents one random sampling of S. We see that there is a very
+strong correlation (0.85 and 0.59 for the two dataset-model pairs                                                         B                              SCALABLE K-NN HEURISTICS FOR VSF
+considered) between the two variables. This indicates that removal                                                        Fast Nearest Neighbor Search that scales to billions of datapoints is
+of important variables (or nodes in graph) has a significant effect                                                       a topic of active research[12]. For the techniques proposed in this
+on information propagation for the spatial module due to which                                                            paper, a variation of k-NN retrieval is needed where the similar-
+the forecasts are not well informed and therefore comparatively                                                           ity needs to be computed on a subset of dimensions. An optimal
+worse.                                                                                                                    solution to this problem is an open research problem by itself and
+Multi-Variate Time Series Forecasting on Variable Subsets                                                                   KDD ’22, August 14–18, 2022, Washington, DC, USA
+
+
+is hence out of scope for this paper. In this section, we present a         of S. As we can see for most of the neighborhood settings exper-
+practical implementation that scales and performs well.                     imented in section 7.1, we are able retrieve neighbors in at most
+                                                                            3 rounds, with a diminishing increase. The total time incurred is
+B.1       Pre-Processing                                                    the sum of database search and a linear search over the training
+Let 𝑃 be the forecast time steps that we assume is known during the         instances corresponding to indices in I (which is a small set), both
+database construction time and |T | be the total number of training         of which are very fast operations.
+records (or instances), where each record is a tensor of shape 𝑃 ×|N |.
+For ease of notation, we consider 𝐷 = 1, however the methodolgy
+follows for any 𝐷 > 1 as well. We construct a new table, henceforth
+called the Query Table in which each row contains an instance of                                    3.0
+T , flattened into a vector of shape 𝑃 ∗ |N |. Therefore, the Query                                 2.9
+
+
+
+
+                                                                             Average Number of Rounds
+Table will have |T | rows and 𝑃 ∗ |N | columns. Since all the columns
+                                                                                                    2.8
+are continuous real valued numbers, we create indexes that are
+efficient for range queries.                                                                        2.7
+                                                                                                    2.6
+B.2       Methodology
+                                                                                                    2.5
+Our task remains the same as defined in section 5.1: to retrieve 𝑚
+neighbors for the test instance 𝑋 𝑡𝑒𝑠𝑡 . We do this by performing                                   2.4
+query on the Query Table that has 𝐹 = 𝑃 ∗ |S| sub-queries. Each                                     2.3
+sub-query is a range query on a Query Table column. For each sub-
+                                                                                                    2.2
+query 𝑋 𝑡𝑒𝑠𝑡   of the tensor 𝑋 𝑡𝑒𝑠𝑡 , we find the instance 𝑋 𝑝𝑟𝑖𝑚𝑒 in the                                     1         5            10          20          50
+        [𝑝,𝑠 ]
+Query Table satisfying the following:
+                                                                                                                   Number of Neighbors in Ensemble
+                                   𝑝𝑟𝑖𝑚𝑒
+                     |𝑋 𝑡𝑒𝑠𝑡
+                        [𝑝,𝑠 ] − 𝑋 [𝑝∗ | N |+𝜎 (𝑠) ] | ≤ 𝑏 𝜎 (𝑠)    (10)    Figure 7: Variation of the average number of rounds taken
+                                                                            against the desired number of neighbors to fetch. Experi-
+where 𝜎 (𝑠) is the projection of 𝑠 to its actual variable in S, 𝑏𝜎 (𝑠) is   mented for MTGNN on ECG5000.
+a hyperparameter for the corresponding variable. 𝑋 𝑝𝑟𝑖𝑚𝑒 is used
+as a vector in above equation (note the shape of 𝑋 𝑝𝑟𝑖𝑚𝑒 is 𝑃 ∗ |N |)
+                                                                               Performance Comparison to Direct Neighbor Retrieval (Sec-
+with the corresponding element vector indexed by [𝑝 ∗ |N | + 𝜎 (𝑠)].
+                                                                            tion 6): We provide a comparison for the values of Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 in
+The set of indices in the table for all such 𝑋 𝑝𝑟𝑖𝑚𝑒 is denoted by
+                                                                            the two settings where we retrieve the desired 𝑚 neighbors via: (i)
+I (𝑝, 𝑠).
+                                                                            Direct Retrieval (from table 4) to the neighbors obtained using the
+   Lastly, we obtain the set of desired neighbors by performing
+                                                                            approach in this section referred as Scalable Retrieval. From the
+intersection of the sets for all elements of 𝑋 𝑡𝑒𝑠𝑡 , given by I =
+ 𝑃 |ÑS|                                                                     results provided in table 13, its evident that the proposed scalable
+                                                                            search approach retrieves reasonably good neighbors and can re-
+ Ñ
+        I (𝑝, 𝑠).
+𝑝=1 𝑠=1                                                                     cover performance very close to the Direct retrieval. We explicitly
+   This operation is repeated until we obtain the desired number            call out that the hyperparameters: 𝑏𝜎 (𝑠) , size of I and the constant
+of 𝑚 neighbors, thus incurring ≥ 1 rounds with expansion of I in            multiplication factor 𝑢 , directly governs the results and thus require
+each round. In each subsequent round, we multiply some of the               careful tuning to provide the desired level of runtime-performance
+𝑏𝜎 (𝑠) (out of the total |S|) for which the L.H.S of equation 10 is         tradeoff.
+tighest w.r.t to 𝑏𝜎 (𝑠) by a constant factor 𝑢 > 1, which implies
+loosening the constraints to obtain a larger set. Since, |I| ≥ 𝑚, we        Table 13: Comparison of Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 for neighbor retrieval us-
+also perform a linear search over the retrieved neighbors, indexed          ing: (i) Direct (from table 4) vs (ii) Scalable (proposed in this
+via I, and retrieve the top-𝑚.                                              section) for MTGNN model
+   Selection of Primary Values of 𝑏𝜎 (𝑠) : We treat 𝑏𝜎 (𝑠) as hy-
+perparameter for this experiment. Since searching for the value                                                                  SOLAR         ECG5000
+of 𝑏𝜎 (𝑠) over the real line is difficult, we utilize the training and                                    Retrieval            MAE RMSE MAE RMSE
+validation set as follows: (i) for each instance in the validation set,                                   Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 Direct   30.05 % 25.45 % 2.14 % 3.11 %
+obtain its 𝑘ˆ𝑡ℎ neighbor (𝑘ˆ is a hyperparameter) by using all N                                          Δ𝐸𝑛𝑠𝑒𝑚𝑏𝑙𝑒 Scalable 31.28 % 26.83 % 2.51 % 3.29 %
+variables, (ii) compute the average distance, w.r.t to the variable
+dimension, over the 𝑘ˆ𝑡ℎ neighbors for all the val set instances. This
+provides a reasonable proxy to issue a query and perform the search
+in equation 10 for the corresponding 𝑏𝜎 (𝑠) .
+
+B.3       Experimental Results
+Query-Time: Figure 7 shows the number of rounds required to
+fetch desired number of neighbors, averaged over 100 selections
+
