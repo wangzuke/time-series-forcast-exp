@@ -134,11 +134,11 @@ INPUT /home/wangzk/.TinyTeX/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 INPUT /home/wangzk/.TinyTeX/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 INPUT /home/wangzk/.TinyTeX/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 INPUT /home/wangzk/.TinyTeX/texmf-dist/fonts/tfm/adobe/times/ptmr8c.tfm
-INPUT ./figures/mr_msgf_overview_observation_supported.png
-INPUT ./figures/mr_msgf_overview_observation_supported.png
-INPUT ./figures/mr_msgf_overview_observation_supported.png
-INPUT ./figures/mr_msgf_overview_observation_supported.png
-INPUT ./figures/mr_msgf_overview_observation_supported.png
+INPUT ./figures/drr_msgf_overview_dual_relation.png
+INPUT ./figures/drr_msgf_overview_dual_relation.png
+INPUT ./figures/drr_msgf_overview_dual_relation.png
+INPUT ./figures/drr_msgf_overview_dual_relation.png
+INPUT ./figures/drr_msgf_overview_dual_relation.png
 INPUT /home/wangzk/.TinyTeX/texmf-dist/fonts/vf/adobe/times/ptmr8c.vf
 INPUT /home/wangzk/.TinyTeX/texmf-dist/fonts/tfm/public/cm/cmbx10.tfm
 INPUT /home/wangzk/.TinyTeX/texmf-dist/fonts/tfm/public/cm/cmbx7.tfm

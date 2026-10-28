@@ -11,11 +11,11 @@
 \newcommand{\reg}{\mathrm{reg}}
 \newcommand{\norm}{\operatorname{RowNorm}}
 \newcommand{\sigmoid}{\operatorname{sigmoid}}
-\newcommand{\ours}{\textbf{MR-MSGF}}
+\newcommand{\ours}{\textbf{DRR-MSGF}}
 \newcommand{\best}[1]{\ensuremath{\boldsymbol{#1}}}
 
-\title{Spatial Time Series Forecasting with Missing Data through\\
-Co-Observation-Guided Regional Graph Modeling}
+\title{Dual-Relation Regional Multi-Scale Graph Forecasting\\
+for Spatial Time Series with Missing Data}
 
 \name{Zuke Wang, Wenming Yang\sthanks{Corresponding author.}}
 \address{Shenzhen International Graduate School, Tsinghua University\\
@@ -26,7 +26,7 @@ Co-Observation-Guided Regional Graph Modeling}
 \raggedbottom
 
 \begin{abstract}
-Spatial monitoring streams rely on node histories and inter-sensor relations. Asynchronous missing observations across sensors create two coupled challenges: they shorten the available history at individual nodes and reduce the pairwise co-observations used to infer relations for graph message passing. Existing missing-data forecasting methods primarily handle incomplete histories through imputation or node-wise masks, without explicitly assessing whether learned relations are supported by sufficient pairwise evidence. We propose MR-MSGF, a graph forecasting framework that directly predicts future values from incomplete spatiotemporal histories. Before sparse selection, MR-MSGF regularizes window-specific learned relation scores with pairwise co-observation, fuses the resulting graph with physical topology, and aggregates regional context within physically connected regions. Missingness and regional features then gate regional-message injection and bias the multi-scale readout. Compared with the graph-based baseline HD-TTS-AMP, MR-MSGF lowers MAE in all five missingness settings on METR-LA traffic-speed data and also when a high-rate Point mask is additionally applied to AQI36 air-quality data.
+Spatial monitoring streams rely on node histories and inter-sensor relations. Asynchronous missing observations across sensors create two coupled challenges: they shorten the available history at individual nodes and reduce the pairwise co-observations used to infer relations for graph message passing. Existing missing-data forecasting methods primarily handle incomplete histories through imputation or node-wise masks, without explicitly assessing whether learned relations are supported by sufficient pairwise evidence. We propose Dual-Relation Regional Multi-Scale Graph Forecasting (DRR-MSGF), a graph forecasting framework that directly predicts future values from incomplete spatiotemporal histories. Before sparse selection, DRR-MSGF regularizes window-specific learned relation scores with pairwise co-observation, fuses the resulting graph with physical topology, and aggregates regional context within physically connected regions. Missingness and regional features then gate regional-message injection and bias the multi-scale readout. Compared with the graph-based baseline HD-TTS-AMP, DRR-MSGF lowers MAE in all five missingness settings on METR-LA traffic-speed data and also when a high-rate Point mask is additionally applied to AQI36 air-quality data.
 \end{abstract}
 
 \begin{keywords}
@@ -35,41 +35,41 @@ Multivariate time series forecasting, missing observations, spatiotemporal graph
 
 \section{Introduction}
 
-Traffic, environmental, and industrial forecasting systems depend on temporal context and inter-sensor relations. Spatiotemporal graph models represent these relations with physical topology or learned adjacency \cite{dcrnn,mtgnn}, while hybrid designs combine physical and data-driven dependencies \cite{stfgnn}. Both relation types are used to propagate information across sensors. Under non-synchronous outages, two equally similar node representations can rest on very different amounts of joint observation. Missingness therefore affects not only node histories, but also whether an inferred edge has sufficient evidence for message passing.
+Traffic, environmental, and industrial forecasting systems depend on temporal context and inter-sensor relations. Spatiotemporal graph models represent these relations with physical topology or learned adjacency \cite{dcrnn,mtgnn}, while hybrid designs combine physical and data-driven dependencies \cite{stfgnn}. Both relation types are used to propagate information across sensors. Under asynchronous outages, similar node representations may be supported by markedly different amounts of joint observation. Missingness therefore affects not only node histories, but also whether an inferred edge has sufficient evidence for message passing.
 
 Missing-data research primarily addresses the node-history problem. Imputation reconstructs values through bidirectional recurrent models \cite{brits}, temporal attention for irregular samples \cite{mtan}, or graph propagation \cite{grin,spin}; direct forecasting instead encodes values and masks jointly \cite{crib,coifnet}. These routes make incomplete histories usable for prediction. Once their features enter graph learning, however, node availability alone does not state how much jointly observed history supports a candidate node pair.
 
-Pairwise evidence is distinct from a node-wise missingness indicator. A large adaptive similarity can be estimated from only a few coincident observations, or from a long jointly observed history; its numerical strength is the same type of quantity, but its support is not. The distinction matters before top-$k$ selection commits candidate relations to subsequent graph propagation.
+Pairwise evidence cannot be recovered from a node-wise missingness indicator. Comparable adaptive similarity scores may be estimated from only a few coincident observations or from a long jointly observed history; the score reflects numerical affinity, but not the amount of evidence supporting that affinity. The distinction matters before top-$k$ selection commits candidate relations to subsequent graph propagation.
 
-Relation modeling under irregular observation has also been studied beyond forecasting. RAINDROP learns sample-specific sensor graphs from irregular observations for classification \cite{raindrop}, while TGNN4I handles partial node observations and irregular times through continuous-time graph states \cite{tgnn4i}. For missing-data forecasting, BiTGraph injects missing-pattern biases into temporal and graph propagation \cite{bitgraph}; GinAR combines predefined and adaptive graphs under variable missingness \cite{ginar}; and GCN-M studies graph learning with incomplete traffic observations \cite{gcnm}. To our knowledge, these methods model missingness together with node representations or graph construction, but do not explicitly separate a learned relation's strength from the amount of pairwise evidence supporting it.
+Relation modeling under irregular observation has also been studied beyond forecasting. RAINDROP learns sample-specific sensor graphs from irregular observations for classification \cite{raindrop}, while TGNN4I handles partial node observations and irregular times through continuous-time graph states \cite{tgnn4i}. For missing-data forecasting, BiTGraph injects missing-pattern biases into temporal and graph propagation \cite{bitgraph}; GinAR combines predefined and adaptive graphs under variable missingness \cite{ginar}; and GCN-M studies graph learning with incomplete traffic observations \cite{gcnm}. To our knowledge, these methods jointly model missingness with node representations or graph construction, but do not use pairwise co-observation as explicit support for learned relations before sparse selection.
 
-Multi-scale models further aggregate context across time and space \cite{hdtts,pguts,higp}. A physical topology supplies a stable locality prior that does not depend on the current missing window, whereas a learned graph can capture window-specific functional dependence. They are complementary, but neither source alone determines whether a coarse regional message is useful for a particular node. A connected region can still have sparse coverage, long outages, or a node representation far from its regional center. Fusing relations before physically connected regionalization retains both forms of evidence; conditioning the resulting regional context on such node, edge, and regional cues avoids treating coarse aggregation as universally beneficial.
+Multi-scale models further aggregate context across time and space \cite{hdtts,pguts,higp}. A physical topology supplies a stable locality prior that does not depend on the current missing window, whereas a learned graph can capture window-specific functional dependence. They are complementary, but neither source alone determines whether a coarse regional message is useful for a particular node. A connected region can still have sparse coverage, long outages, or a node representation far from its regional center. Aggregating the fused graph within physically connected regions defined by the physical topology preserves both sources of relational evidence in the regional context; conditioning that context on node, observation, and regional cues avoids treating coarse aggregation as universally beneficial.
 
-This leaves a specific question: given incomplete history, how should a model condition learned-edge propagation and induced regional messages on available observation support? The goal is not to recover a ground-truth graph or calibrated uncertainty, but to condition forecasting messages on available evidence. MR-MSGF regularizes learned relations with co-observation, fuses them with physical topology before connected regionalization, and gates regional context with observation and regional features. Our contributions are:
+This raises a specific question: given an incomplete history window, how should a model condition learned-edge propagation and induced regional messages on available observation support? The goal is not to recover a ground-truth graph or calibrated uncertainty, but to condition forecasting messages on available evidence. DRR-MSGF regularizes learned relations with co-observation, fuses them with physical topology, aggregates the fused graph within physically connected regions, and uses observation and regional features to gate regional-message injection and bias multi-scale readout. Our contributions are:
 \begin{itemize}
-    \item We use pairwise co-observation as observation support to regularize learned edges before sparse selection.
-    \item We fuse observation-supported and physical graphs, regionalize the fusion, and use observation and regional features to condition regional messages and multi-scale readout.
-    \item METR-LA results are consistent with this bias; AQI36 and extreme outages delimit its scope.
+    \item We develop observation--physical relation fusion for incomplete histories. A window-specific observation graph is constructed from mask-aware representations, with pairwise co-observation conditioning candidate edges before sparse selection, and fused edge-wise with physical topology.
+    \item We introduce fusion-before-regionalization, aggregating the fused graph within fixed physically connected regions to construct regional context that retains both relation sources.
+    \item We develop observation- and region-conditioned control of regional context, modulating regional-message injection and biasing multi-scale readout.
 \end{itemize}
 
 \section{Method}
 
 \subsection{Problem Setup and Backbone}
 
-Let $X\in\mathbb{R}^{T\times N\times C}$ be a history window, $M\in\{0,1\}^{T\times N\times C}$ its observation mask, and $A^{\phy}\in\mathbb{R}^{N\times N}$ the physical adjacency. The model predicts $Y\in\mathbb{R}^{H\times N\times C_y}$ from $X^{\obs}=M\odot X$, $M$, and $A^{\phy}$. Graphs and observation features are computed per window; we omit the batch index. All datasets considered here have one target channel per node ($C=C_y=1$), so $\bar M_{t,i}=M_{t,i,1}$ and
+Let $X\in\mathbb{R}^{T\times N\times C}$ be a history window, $M\in\{0,1\}^{T\times N\times C}$ its observation mask, and $A^{\phy}\in\mathbb{R}^{N\times N}$ the physical adjacency. The model maps $X^{\obs}=M\odot X$, $M$, and $A^{\phy}$ to $\hat Y\in\mathbb{R}^{H\times N\times C_y}$ for future target $Y$ of the same shape. Graphs and observation features are computed per window; we omit the batch index. All datasets have one target channel per node ($C=C_y=1$), so $\bar M_{t,i}=M_{t,i,1}$ and
 \begin{equation}
 r_i=\frac{1}{T}\sum_t\bar M_{t,i},\qquad
 q_{ij}=\frac{1}{T}\sum_t\bar M_{t,i}\bar M_{t,j}.
 \end{equation}
-Here, $r_i$ denotes availability and $q_{ij}$ denotes pairwise co-observation support; all adjacency matrices used for message propagation are row-normalized. We retain the mask-aware encoder, dilated temporal hierarchy, fixed physical spatial hierarchy, and readout of HD-TTS-AMP \cite{hdtts}. This backbone maps incomplete history to level-wise node states $H_{\ell}\in\mathbb{R}^{N\times d}$ and multi-resolution spatial states $B_{s,\ell}$. Here $\ell$ indexes temporal levels, $s=0$ denotes the finest spatial level, and $s>0$ denotes coarser spatial levels. MR-MSGF replaces only $B_{0,\ell}$ by $\widetilde B_{0,\ell}$ through relation fusion and regional propagation; the coarser states remain unchanged and provide complementary context to the multi-scale readout. All $W_q,W_k,W_f,W_s,W_c,W_r,W_p\in\mathbb{R}^{d\times d}$, while $w_{s,\ell}\in\mathbb{R}^{4}$.
+Here, $r_i$ is availability, $q_{ij}$ is pairwise co-observation support, and $\epsilon>0$ avoids division by zero and $\log 0$; propagation adjacencies are row-normalized. We retain the mask-aware encoder, dilated temporal hierarchy, fixed physical spatial hierarchy, and readout of HD-TTS-AMP \cite{hdtts}. It maps incomplete history to level-wise node states $H_{\ell}\in\mathbb{R}^{N\times d}$ and multi-resolution spatial states $B_{s,\ell}$, where $\ell$ indexes temporal levels and $s=0$ the finest spatial level. DRR-MSGF replaces only $B_{0,\ell}$ by $\widetilde B_{0,\ell}$; $B_{s,\ell}$ for $s>0$ remains complementary readout context. All $W_q,W_k,W_f,W_s,W_c,W_r,W_p\in\mathbb{R}^{d\times d}$ and $w_{s,\ell}\in\mathbb{R}^{4}$.
 
-Fig.~\ref{fig:mrmsgf-overview} outlines MR-MSGF: co-observation guides fine relations, whose regional context is controlled by missingness-conditioned features for prediction.
+Fig.~\ref{fig:drrmsgf-overview} outlines DRR-MSGF: co-observation guides fine relations, which are aggregated over physical regions and controlled by missingness-conditioned features.
 
 \begin{figure*}[t]
   \centering
-  \includegraphics[width=0.98\textwidth]{figures/mr_msgf_overview_observation_supported.png}
-  \caption{Overview of MR-MSGF. A mask-aware encoder forms temporal states from incomplete history. A co-observation-supported graph is fused with the physical graph before physically connected regional coarsening. Observation and regional features regulate regional residual injection and multi-scale readout.}
-  \label{fig:mrmsgf-overview}
+  \includegraphics[width=0.98\textwidth]{figures/drr_msgf_overview_dual_relation.png}
+  \caption{Overview of DRR-MSGF. A mask-aware encoder forms temporal states from incomplete history. The fused graph is aggregated over connected regions defined solely by the physical graph. Observation and regional features regulate regional injection and multi-scale readout.}
+  \label{fig:drrmsgf-overview}
 \end{figure*}
 
 \subsection{Observation-Supported Relation Fusion}
@@ -83,18 +83,19 @@ The observation-supported score combines learned similarity and co-observation:
 s_{ij}&=\frac{(W_qu_i)^\top(W_ku_j)}{\sqrt d},\\
 \tilde{s}_{ij}&=s_{ij}+\operatorname{softplus}(\beta)\log(q_{ij}+\epsilon).
 \end{align}
-Here $\beta$ is learnable. We retain the top-$k$ entries over the full directed score row ($k=8$), apply row softmax, add one explicit identity contribution, and row-normalize to obtain directed sparse $A^{\obs}$. Thus, a selected diagonal score is a learned candidate contribution, whereas the added identity is the only fixed self-loop contribution. If $r_i=0$, we set $A^{\obs}_{i,:}=0$ and replace its fine-graph row with the physical-graph row; this prevents arbitrary top-$k$ ties from creating learned edges for a fully unobserved source. The logarithmic term softly discourages edges with little joint observation before sparsification.
+Here $\beta$ is learnable. We retain the top-$k$ entries of each directed score row ($k=8$), apply row softmax, add an identity contribution, and row-normalize to obtain sparse $A^{\obs}$. A selected diagonal score is learned, whereas the added identity is the only fixed self-loop. If $r_i=0$, we set $A^{\obs}_{i,:}=0$ to prevent arbitrary top-$k$ ties. The logarithmic term softly discourages little-supported edges before sparsification.
 
 Let $\bar A^{\phy}$ denote the physical graph after adding self-loops and applying row normalization. A learned edge gate then forms the fine relation:
 \begin{align}
 g_{ij}&=\sigmoid\!\left(\psi_g([r_i,r_j,q_{ij},\bar A^{\phy}_{ij},A^{\obs}_{ij}])\right),\\
 A^{\fine}&=\norm\!\left(g\odot\bar A^{\phy}+(1-g)\odot A^{\obs}\right).
 \end{align}
+After Eq.~(6), we overwrite $A^{\fine}_{i,:}$ with $\bar A^{\phy}_{i,:}$ whenever $r_i=0$.
 Thus, both physical structure and observation-supported relations participate in end-to-end learned relation fusion. The gate is intentionally edge-specific rather than a global mixing coefficient, allowing physical and observation-supported evidence to receive different weights for different edges. In implementation, $\psi_g$ is a two-layer $5\!\rightarrow\!16\!\rightarrow\!1$ MLP with GELU activation.
 
 \subsection{Missingness-Conditioned Regional Context}
 
-We construct a fixed hard assignment $S\in\{0,1\}^{N\times K}$ from the physical graph, with each node assigned to exactly one region. In METR-LA, $A^{\phy}$ is the standard distance connectivity thresholded at $0.1$; its directed, row-normalized form is used for propagation. Only for region construction, we symmetrize this adjacency and remove self-loops. We then seed by remaining physical degree and greedily add the unassigned node with the largest positive affinity to a region member until no such node remains or size $m=8$ is reached. Thus regions are physically connected and do not absorb zero-affinity nodes. With $n_k=\sum_iS_{ik}$,
+We construct a fixed hard assignment $S\in\{0,1\}^{N\times K}$ from the physical graph, assigning each node to one region. METR-LA uses distance connectivity thresholded at $0.1$; AQI36 uses Haversine Gaussian weights $\exp[-(d_{ij}/\sigma)^2]\geq0.1$, where $\sigma$ is the standard deviation of nonzero distances. Both are directed and row-normalized for propagation. Only for region construction, we symmetrize the graph and remove self-loops. We seed by remaining physical degree, then greedily add the unassigned node with largest positive affinity until none remains or size $m=8$ is reached. Thus regions are connected and exclude zero-affinity nodes. With $n_k=\sum_iS_{ik}$,
 \begin{align}
 Z^{\fine}_{\ell}&=\operatorname{ELU}(A^{\fine}H_{\ell}W_f+H_{\ell}W_s),\\
 H^{\reg}_{\ell,k}&=\frac{1}{n_k}\sum_iS_{ik}Z^{\fine}_{\ell,i},\\
@@ -105,7 +106,7 @@ Regional propagation and lifting are
 Z^{\reg}_{\ell}&=\operatorname{ELU}(A^{\coarse}H^{\reg}_{\ell}W_c+H^{\reg}_{\ell}W_r),\\
 Z^{\coarse}_{\ell}&=SZ^{\reg}_{\ell}.
 \end{align}
-Coarsening after fine-scale fusion lets regional aggregation operate on a graph containing both physical structure and observation-supported relations; coarsening only the physical or observation graph cannot retain both sources of evidence. $S^\top A^{\fine}S$ sums fine-edge weights between regions, so $A^{\coarse}$ represents total inter-region edge mass rather than average pairwise affinity; the final row normalization converts these totals into outgoing regional propagation weights.
+Coarsening follows fusion, so regional aggregation retains both physical and observation-supported relations. $S^\top A^{\fine}S$ sums fine-edge weights: $A^{\coarse}$ is total inter-region edge mass rather than average affinity, and row normalization yields outgoing propagation weights.
 
 For node $i$, let $\bar q_i=\sum_j\bar A^{\phy}_{ij}q_{ij}$ be physical-neighbor-weighted co-observation, $\rho_i=\sum_kS_{ik}n_k^{-1}\sum_jS_{jk}r_j$ be regional coverage, and $b_i$ be the longest missing block in the current history window divided by $T$. Let $k(i)$ denote the region of node $i$, $c_{i,\ell}=H^{\reg}_{\ell,k(i)}$, and
 \begin{align}
@@ -117,7 +118,7 @@ Here $\delta_{i,\ell}$ is normalized representation dispersion from the regional
 \alpha_{i,\ell}=\sigmoid\big(&\psi_\alpha([r_i,\bar q_i,\rho_i,b_i,\delta_{i,\ell}])\\
 &+\gamma^\top[1-r_i,1-\bar q_i,\rho_i-1,b_i,-\delta_{i,\ell}]\big).
 \end{align}
-Here $\psi_\alpha$ uses the same two-layer MLP structure as the edge gate, and $\gamma$ is a learnable scaling vector. The second term is a residual feature vector containing signed complementary observation and regional-consistency cues; since $\gamma$ is not sign-constrained, we do not interpret it as a monotonic prior. Let $\boldsymbol{\alpha}_{\ell}=[\alpha_{1,\ell},\ldots,\alpha_{N,\ell}]^\top\in\mathbb{R}^N$, broadcast along the feature dimension. The finest representation becomes
+Here $\psi_\alpha$ is the same two-layer MLP as the edge gate and $\gamma$ is learnable. Its signed linear residual is not interpreted as a monotonic prior. Let $\boldsymbol{\alpha}_{\ell}=[\alpha_{1,\ell},\ldots,\alpha_{N,\ell}]^\top\in\mathbb{R}^N$, broadcast along features. The finest representation becomes
 \begin{equation}
 \widetilde B_{0,\ell}=Z^{\fine}_{\ell}+\boldsymbol{\alpha}_{\ell}\odot\big(Z^{\coarse}_{\ell}W_p\big),
 \end{equation}
@@ -125,13 +126,12 @@ while $\widetilde B_{s,\ell}=B_{s,\ell}$ for $s>0$. We further bias multi-scale 
 \begin{equation}
 e_{h,s,\ell,i}=e^{\mathrm{repr}}_{h,s,\ell,i}+w_{s,\ell}^\top R_i.
 \end{equation}
-The parameters $w_{s,\ell}$ are shared across prediction steps; horizon dependence enters through $e^{\mathrm{repr}}_{h,s,\ell,i}$. For each node and prediction step, a softmax over $(s,\ell)$ yields $\pi_{h,s,\ell,i}$, and $F_{h,i}=\sum_{s,\ell}\pi_{h,s,\ell,i}\widetilde B_{s,\ell,i}$ is mapped to $\hat Y_{h,i}$ by the prediction head. Thus, these features bias scale selection rather than replacing representation content. Training minimizes masked forecasting MAE,
+$w_{s,\ell}$ is shared across prediction steps; horizon dependence enters through $e^{\mathrm{repr}}_{h,s,\ell,i}$. A softmax over $(s,\ell)$ yields $\pi_{h,s,\ell,i}$ and $F_{h,i}=\sum_{s,\ell}\pi_{h,s,\ell,i}\widetilde B_{s,\ell,i}$, which the prediction head maps to $\hat Y_{h,i}$. Thus, these features bias scale selection rather than replace representations. Training minimizes masked forecasting MAE,
 \begin{equation}
 \mathcal{L}_{\mathrm{pred}}=\frac{\sum M^Y\odot|\hat Y-Y|}{\sum M^Y},
 \label{eq:pred-loss}
 \end{equation}
-where $M^Y$ excludes unavailable future targets. We do not use reconstruction, graph, or clustering auxiliary losses.
-The gate is not interpreted as calibrated uncertainty. It is a forecasting-oriented control variable that decides whether regional context should be added for a node at a temporal level. This design keeps the added branch lightweight while making regional messages conditional on missingness evidence rather than unconditional smoothing.
+where $M^Y$ excludes unavailable targets; no reconstruction, graph, or clustering auxiliary losses are used. The gate is not calibrated uncertainty: it modulates regional-context injection strength rather than enforcing unconditional smoothing.
 
 \section{Experiments}
 
@@ -141,7 +141,7 @@ We evaluate METR-LA traffic speeds and AQI36 air quality, forecasting 12 steps f
 
 \subsection{Main Results}
 
-Table~\ref{tab:metr-main} reports METR-LA results. MR-MSGF lowers MAE over HD-TTS-AMP in all tested Block-T and Point settings. It also improves RMSE under Block-T 30\%/50\% and Point 30\%/50\%. At Block-T 70\%, MR-MSGF still improves MAE but has slightly worse RMSE, indicating that the benefit is not cross-metric consistent under extreme missingness. Across all five conditions, MR-MSGF wins all five paired MAE runs and two-sided paired $t$-tests give $p\leq0.0379$; we make no analogous across-condition significance claim for RMSE.
+Table~\ref{tab:metr-main} reports METR-LA results. DRR-MSGF lowers MAE over HD-TTS-AMP in all tested Block-T and Point settings. It also improves RMSE under Block-T 30\%/50\% and Point 30\%/50\%. At Block-T 70\%, DRR-MSGF still improves MAE but has slightly worse RMSE, indicating that the benefit is not cross-metric consistent under extreme missingness. Across all five conditions, DRR-MSGF wins all five paired MAE runs and two-sided paired $t$-tests give $p\leq0.0379$; we make no analogous across-condition significance claim for RMSE.
 
 \begin{table}[!t]
 \centering
@@ -178,7 +178,7 @@ Point & 30\% & HD-TTS-AMP & $3.105\pm.007$ & $6.359\pm.015$ \\
 
 \subsection{Cross-Domain Analysis}
 
-AQI36 provides a cross-domain stress test with native missingness. Table~\ref{tab:aqi} shows that MR-MSGF is worse than HD-TTS-AMP under native missingness, improves both metrics with an additional 25\% Point mask, and lowers MAE but raises RMSE with an additional 50\% Point mask. The heterogeneous native missingness need not make the current observation features align with transferable relations; this is a hypothesis suggested by the result, not a causal explanation. We therefore treat AQI36 as a boundary condition rather than claiming dataset-independent gains.
+AQI36 provides a cross-domain stress test with native missingness. Table~\ref{tab:aqi} shows that DRR-MSGF is worse than HD-TTS-AMP under native missingness, improves both metrics with an additional 25\% Point mask, and lowers MAE but raises RMSE with an additional 50\% Point mask. The heterogeneous native missingness need not make the current observation features align with transferable relations; this is a hypothesis suggested by the result, not a causal explanation. We therefore treat AQI36 as a boundary condition rather than claiming dataset-independent gains.
 
 \begin{table}[t]
 \centering
@@ -230,7 +230,7 @@ No readout bias & $3.330 \pm 0.025$ & $6.851 \pm 0.038$ \\
 
 \section{Conclusion}
 
-MR-MSGF forecasts incomplete spatial histories by regularizing learned graph propagation with pairwise co-observation, fusing it with physical structure, and conditioning regional context on missingness and regional features. Paired METR-LA results are consistent with this observation-aware inductive bias, while Block-T 70\% and AQI36 delimit its cross-metric and cross-domain scope.
+DRR-MSGF fuses physical and observation relations and conditions regional messages on missingness. METR-LA results are consistent with this bias; Block-T 70\% and AQI36 delimit its scope.
 
 \bibliographystyle{../template/IEEEbib}
 \bibliography{references}
