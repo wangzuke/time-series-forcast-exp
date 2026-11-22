@@ -35,3 +35,13 @@ report/
 # Local assistant config with tokens
 .claude/settings.json
 .claude/skills/settings.local.json
+
+# Local data, papers and generated artifacts stay outside Git history
+*.pdf
+*.zip
+*.log
+*.fdb_latexmk
+*.fls
+*.bak
+/tmp/
+**/r0905_blockt/masks/
