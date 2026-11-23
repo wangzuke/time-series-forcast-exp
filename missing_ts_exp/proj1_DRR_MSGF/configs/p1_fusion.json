@@ -1,0 +1,32 @@
+{
+  "protocol_id": "p1_metrla_blockt50_fusion",
+  "dataset": "METR-LA",
+  "missing_type": "block_t",
+  "missing_rate": 0.5,
+  "seq_len": 24,
+  "pred_len": 12,
+  "mask_seed": 2024,
+  "train_seed": 2024,
+  "mask_path": "missing_ts_exp/proj1_DRR_MSGF/resources/r0905_blockt/masks/METR-LA/block_t_r50_seed2024_observed.npy",
+  "region_assignment_path": "missing_ts_exp/proj1_DRR_MSGF/resources/r0905_blockt/regions/METR-LA/physical_connected_max8_assignment.npy",
+  "fusion_modes": ["physical", "observation", "fixed_half", "global_scalar", "edgewise"],
+  "mr_variant": "fine",
+  "graph_topk": 8,
+  "reliability_beta": 1.0,
+  "optimizer": "AdamW",
+  "learning_rate": 0.001,
+  "weight_decay": 0.01,
+  "pilot": {
+    "epochs": 100,
+    "train_batches": 300,
+    "batch_size": 32,
+    "patience": 20
+  },
+  "smoke": {
+    "epochs": 1,
+    "train_batches": 2,
+    "eval_batches": 1,
+    "batch_size": 8,
+    "patience": 2
+  }
+}

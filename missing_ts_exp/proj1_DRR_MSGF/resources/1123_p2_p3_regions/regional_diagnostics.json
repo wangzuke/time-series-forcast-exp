@@ -1,0 +1,182 @@
+{
+  "result_json": "/media/data1/wangzk/time-series-forcast-exp/missing_ts_exp/proj1_DRR_MSGF/results/1123_p2_p3_regions/p2/pilot/fuse_then_coarsen_seed2024.json",
+  "checkpoint": "/media/data1/wangzk/time-series-forcast-exp/missing_ts_exp/proj1_DRR_MSGF/results/1123_p2_p3_regions/p2/pilot/fuse_then_coarsen_seed2024/epoch=39-step=12000.ckpt",
+  "selection_split": "validation",
+  "validation_windows": 2048,
+  "fixed_soft_from_training_windows": 2048,
+  "finite": true,
+  "row_stochastic": true,
+  "minimum_region_mass_fraction": 0.8409848766050476,
+  "per_region_mean_mass": [
+    6.8944878578186035,
+    6.890597820281982,
+    6.89152717590332,
+    6.903957843780518,
+    6.892276763916016,
+    6.890465259552002,
+    6.956213474273682,
+    6.9358978271484375,
+    6.9159417152404785,
+    6.897459983825684,
+    6.891672134399414,
+    6.891443252563477,
+    6.938892841339111,
+    6.8868513107299805,
+    6.892529010772705,
+    6.894021987915039,
+    6.881834506988525,
+    6.9000959396362305,
+    6.897317886352539,
+    6.923477649688721,
+    6.891885757446289,
+    6.893325328826904,
+    6.901841640472412,
+    6.891637325286865,
+    6.042759895324707,
+    6.21075963973999,
+    6.2735066413879395,
+    5.709342002868652,
+    5.710758686065674,
+    5.7020158767700195,
+    5.705209732055664
+  ],
+  "effective_regions_per_node": 24.648453352238857,
+  "thresholds": {
+    "protocol_id": "drr_msgf_p2_p3_v1",
+    "dataset": "METR-LA",
+    "mask_template": "resources/r0905_blockt/masks/METR-LA/block_t_r50_seed{seed}_observed.npy",
+    "physical_assignment": "resources/r0905_blockt/regions/METR-LA/physical_connected_max8_assignment.npy",
+    "development_seed": 2024,
+    "confirmation_seeds": [
+      2025,
+      2026,
+      2027
+    ],
+    "fusion_mode": "edgewise",
+    "graph_topk": 8,
+    "reliability_beta": 1.0,
+    "max_region_size": 8,
+    "physical_anchor_lambda": 2.0,
+    "dynamic_region_temperature": 1.0,
+    "smoke": {
+      "epochs": 1,
+      "train_batches": 2,
+      "eval_batches": 2,
+      "batch_size": 32,
+      "patience": 20
+    },
+    "formal": {
+      "epochs": 100,
+      "train_batches": 300,
+      "batch_size": 32,
+      "patience": 20
+    },
+    "planning_mib_per_job": 4800,
+    "minimum_free_mib": 5000,
+    "validation_diagnostic_batches": 64,
+    "static_soft_training_batches": 64,
+    "min_region_mass_fraction": 0.01,
+    "max_adjacent_total_variation_p95": 0.3,
+    "min_dynamic_departure_from_static_soft": 1e-05,
+    "p2_orders": [
+      "fuse_then_coarsen",
+      "coarsen_then_fuse"
+    ],
+    "p3_reference_order": "fuse_then_coarsen",
+    "regional_order": "fuse_then_coarsen"
+  },
+  "stats": {
+    "graph_difference": {
+      "mean": 0.18996383761988292,
+      "p50": 0.19981082528829575,
+      "p95": 0.21987275704741477,
+      "minimum": 1.293449116701595e-07,
+      "maximum": 0.2361268252134323
+    },
+    "ftr_density": {
+      "mean": 0.44987421756377444,
+      "p50": 0.4640999138355255,
+      "p95": 0.5202913880348206,
+      "minimum": 0.17898023128509521,
+      "maximum": 0.5712799429893494
+    },
+    "ctf_density": {
+      "mean": 0.44987421756377444,
+      "p50": 0.4640999138355255,
+      "p95": 0.5202913880348206,
+      "minimum": 0.17898023128509521,
+      "maximum": 0.5712799429893494
+    },
+    "entropy": {
+      "mean": 3.2047141541891104,
+      "p50": 3.2063140869140625,
+      "p95": 3.226125717163086,
+      "minimum": 2.71094012260437,
+      "maximum": 3.226125717163086
+    },
+    "drift": {
+      "mean": 0.00035584791539074157,
+      "p50": 5.3073279559612274e-05,
+      "p95": 0.0005181813612580296,
+      "minimum": 0.0,
+      "maximum": 0.2033044695854187
+    },
+    "frobenius_drift": {
+      "mean": 0.02679778332020141,
+      "p50": 0.02227132022380829,
+      "p95": 0.09389974698424339,
+      "minimum": 0.0,
+      "maximum": 0.26701056957244873
+    },
+    "low_observation_drift": {
+      "mean": 0.0006657784696887857,
+      "p50": 1.9480939954519272e-05,
+      "p95": 0.0014191208872943912,
+      "minimum": 0.0,
+      "maximum": 0.2033044695854187
+    },
+    "hard_departure": {
+      "mean": 0.792038811824019,
+      "p50": 0.7926297187805176,
+      "p95": 0.8023737668991089,
+      "minimum": 0.599069356918335,
+      "maximum": 0.8023737668991089
+    },
+    "fixed_soft_departure": {
+      "mean": 0.004158667942915314,
+      "p50": 0.0024896757677197456,
+      "p95": 0.00949047040194273,
+      "minimum": 0.0005537029355764389,
+      "maximum": 0.12669657170772552
+    },
+    "low_obs_entropy": {
+      "mean": 3.2104889887310533,
+      "p50": 3.206434488296509,
+      "p95": 3.226125717163086,
+      "minimum": 2.71094012260437,
+      "maximum": 3.226125717163086
+    },
+    "high_obs_entropy": {
+      "mean": 3.2002745366567846,
+      "p50": 3.206310510635376,
+      "p95": 3.2066309452056885,
+      "minimum": 2.9334211349487305,
+      "maximum": 3.2085957527160645
+    },
+    "short_gap_entropy": {
+      "mean": 3.2002772765720504,
+      "p50": 3.206310510635376,
+      "p95": 3.2066292762756348,
+      "minimum": 2.9334211349487305,
+      "maximum": 3.2085957527160645
+    },
+    "long_gap_entropy": {
+      "mean": 3.2088508370485096,
+      "p50": 3.206374168395996,
+      "p95": 3.226125717163086,
+      "minimum": 2.71094012260437,
+      "maximum": 3.226125717163086
+    }
+  },
+  "passed": true
+}

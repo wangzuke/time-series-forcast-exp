@@ -1,0 +1,18 @@
+{
+  "protocol": "joint_regions_v1",
+  "parent_result": "results/p1_fusion_pilot_rerun/edgewise_METR-LA_block_t_r50_seed2024.json",
+  "caps": [8, 16, 32],
+  "seed": 2024,
+  "batch_size": 32,
+  "smoke_epochs": 1,
+  "smoke_batches": 2,
+  "epochs": 100,
+  "train_batches": 300,
+  "patience": 20,
+  "threshold_quantile": 0.25,
+  "partition_workers": 6,
+  "gpu_slots": 2,
+  "minimum_free_mib": 5000,
+  "planning_mib_per_job": 4800,
+  "max_utilization_to_add_job": 78
+}
