@@ -1,0 +1,133 @@
+{
+  "date": "2026-11-19",
+  "method": "literature-review CitationVerifier.verify_doi via DOI handle API and Crossref",
+  "results": [
+    {
+      "id": "R01",
+      "doi": "10.24963/ijcai.2023/525",
+      "doi_resolved": true,
+      "metadata": {
+        "title": "Prediction with Incomplete Data under Agnostic Mask Distribution Shift",
+        "authors": "Zhu, Y., Yuan, J., Jiang, B., et al.",
+        "year": "2023",
+        "journal": "Proceedings of the Thirty-Second International Joint Conference on Artificial Intelligence",
+        "volume": "",
+        "pages": "4720-4728",
+        "doi": "10.24963/ijcai.2023/525"
+      },
+      "expected_title": "Prediction with Incomplete Data under Agnostic Mask Distribution Shift"
+    },
+    {
+      "id": "R02",
+      "doi": "10.1109/ICASSP48485.2024.10446980",
+      "doi_resolved": true,
+      "metadata": {
+        "title": "StableMiss+: Prediction with Incomplete Data Under Agnostic Mask Distribution Shift",
+        "authors": "Zhu, Y., Jiang, B.",
+        "year": "2024",
+        "journal": "ICASSP 2024 - 2024 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)",
+        "volume": "",
+        "pages": "7190-7194",
+        "doi": "10.1109/ICASSP48485.2024.10446980"
+      },
+      "expected_title": "StableMiss+: Prediction with Incomplete Data Under Agnostic Mask Distribution Shift"
+    },
+    {
+      "id": "R06",
+      "doi": "10.1007/978-3-030-01252-6_6",
+      "doi_resolved": true,
+      "metadata": {
+        "title": "Image Inpainting for Irregular Holes Using Partial Convolutions",
+        "authors": "Liu, G., Reda, F., Shih, K., et al.",
+        "year": "2018",
+        "journal": "Lecture Notes in Computer Science",
+        "volume": "",
+        "pages": "89-105",
+        "doi": "10.1007/978-3-030-01252-6_6"
+      },
+      "expected_title": "Image Inpainting for Irregular Holes Using Partial Convolutions"
+    },
+    {
+      "id": "R12",
+      "doi": "10.1016/j.media.2022.102479",
+      "doi_resolved": true,
+      "metadata": {},
+      "expected_title": "Score-based diffusion models for accelerated MRI",
+      "manual_metadata_source": "https://pubmed.ncbi.nlm.nih.gov/35696876/",
+      "manual_metadata_checked": {
+        "title": "Score-based diffusion models for accelerated MRI",
+        "authors": [
+          "Hyungjin Chung",
+          "Jong Chul Ye"
+        ],
+        "year": 2022
+      }
+    },
+    {
+      "id": "R13",
+      "doi": "10.1016/j.patcog.2025.111772",
+      "doi_resolved": true,
+      "metadata": {
+        "title": "Encoding sampling pattern for robust and generalized MRI reconstruction",
+        "authors": "Sun, L., Wang, H., Xie, Q., et al.",
+        "year": "2025",
+        "journal": "Pattern Recognition",
+        "volume": "168",
+        "pages": "111772",
+        "doi": "10.1016/j.patcog.2025.111772"
+      },
+      "expected_title": "Encoding sampling pattern for robust and generalized MRI reconstruction"
+    },
+    {
+      "id": "R15",
+      "doi": "10.1007/978-3-319-46723-8_54",
+      "doi_resolved": true,
+      "metadata": {
+        "title": "HeMIS: Hetero-Modal Image Segmentation",
+        "authors": "Havaei, M., Guizard, N., Chapados, N., et al.",
+        "year": "2016",
+        "journal": "Lecture Notes in Computer Science",
+        "volume": "",
+        "pages": "469-477",
+        "doi": "10.1007/978-3-319-46723-8_54"
+      },
+      "expected_title": "HeMIS: Hetero-Modal Image Segmentation"
+    },
+    {
+      "id": "R18",
+      "doi": "10.21437/Interspeech.2022-10829",
+      "doi_resolved": true,
+      "metadata": {
+        "title": "INTERSPEECH 2022 Audio Deep Packet Loss Concealment Challenge",
+        "authors": "Diener, L., Sootla, S., Branets, S., et al.",
+        "year": "2022",
+        "journal": "Interspeech 2022",
+        "volume": "",
+        "pages": "580-584",
+        "doi": "10.21437/Interspeech.2022-10829"
+      },
+      "expected_title": "INTERSPEECH 2022 Audio Deep Packet Loss Concealment Challenge"
+    },
+    {
+      "id": "R19",
+      "doi": "10.1109/OJSP.2025.3526552",
+      "doi_resolved": true,
+      "metadata": {
+        "title": "The ICASSP 2024 Audio Deep Packet Loss Concealment Grand Challenge",
+        "authors": "Diener, L., Branets, S., Saabas, A., et al.",
+        "year": "2025",
+        "journal": "IEEE Open Journal of Signal Processing",
+        "volume": "6",
+        "pages": "231-237",
+        "doi": "10.1109/OJSP.2025.3526552"
+      },
+      "expected_title": "The ICASSP 2024 Audio Deep Packet Loss Concealment Grand Challenge"
+    }
+  ],
+  "non_doi_records": "Checked using author arXiv/official proceedings pages; see references.json read_depth. No claim of independent peer review for preprints.",
+  "summary": {
+    "publisher_dois": 8,
+    "resolved": 8,
+    "crossref_titles_returned": 7
+  }
+}

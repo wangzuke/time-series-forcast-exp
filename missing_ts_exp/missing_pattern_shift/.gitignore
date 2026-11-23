@@ -1,0 +1,13 @@
+# Regenerable experiment artefacts and local copies of upstream repositories.
+exp/baselines/
+exp/data/
+exp/results/
+exp/checkpoints/
+exp/logs/
+exp/figures/
+exp/summary/
+
+# Python/runtime by-products.
+__pycache__/
+*.py[cod]
+*.so

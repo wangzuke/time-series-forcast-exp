@@ -1,0 +1,1306 @@
+{
+  "electricity_ablations": [
+    "no_mask_stream",
+    "no_prototype_retrieval"
+  ],
+  "electricity_reference": "S4M strict-mask rerun, four checkpoints",
+  "jobs": [
+    {
+      "ablation": "none",
+      "baseline": "S4M",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_S4M_P_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "none",
+      "baseline": "S4M",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_S4M_P_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2025
+    },
+    {
+      "ablation": "none",
+      "baseline": "S4M",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_S4M_B_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "none",
+      "baseline": "S4M",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_S4M_B_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "ablation": "none",
+      "baseline": "ChannelTokenFormer",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_ChannelTokenFormer_P_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "none",
+      "baseline": "ChannelTokenFormer",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_ChannelTokenFormer_P_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2025
+    },
+    {
+      "ablation": "none",
+      "baseline": "ChannelTokenFormer",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_ChannelTokenFormer_B_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "none",
+      "baseline": "ChannelTokenFormer",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_ChannelTokenFormer_B_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "ablation": "none",
+      "baseline": "PatchTST",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_PatchTST_P_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "none",
+      "baseline": "PatchTST",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_PatchTST_P_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2025
+    },
+    {
+      "ablation": "none",
+      "baseline": "PatchTST",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_PatchTST_B_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "none",
+      "baseline": "PatchTST",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_PatchTST_B_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "ablation": "none",
+      "baseline": "DLinear",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_DLinear_P_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "none",
+      "baseline": "DLinear",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_DLinear_P_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2025
+    },
+    {
+      "ablation": "none",
+      "baseline": "DLinear",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_DLinear_B_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "none",
+      "baseline": "DLinear",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_DLinear_B_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "ablation": "none",
+      "baseline": "iTransformer",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_iTransformer_P_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "none",
+      "baseline": "iTransformer",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_iTransformer_P_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2025
+    },
+    {
+      "ablation": "none",
+      "baseline": "iTransformer",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_iTransformer_B_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "none",
+      "baseline": "iTransformer",
+      "dataset": "Traffic",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Traffic_iTransformer_B_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "traffic",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "ablation": "none",
+      "baseline": "S4M",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Electricity_S4M_P_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "electricity_reference",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "no_mask_stream",
+      "baseline": "S4M",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Electricity_S4M_no_mask_stream_P_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "electricity_ablation",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "no_prototype_retrieval",
+      "baseline": "S4M",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Electricity_S4M_no_prototype_retrieval_P_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "electricity_ablation",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "none",
+      "baseline": "S4M",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Electricity_S4M_P_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "electricity_reference",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2025
+    },
+    {
+      "ablation": "no_mask_stream",
+      "baseline": "S4M",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Electricity_S4M_no_mask_stream_P_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "electricity_ablation",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2025
+    },
+    {
+      "ablation": "no_prototype_retrieval",
+      "baseline": "S4M",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Electricity_S4M_no_prototype_retrieval_P_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "electricity_ablation",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2025
+    },
+    {
+      "ablation": "none",
+      "baseline": "S4M",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Electricity_S4M_B_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "electricity_reference",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "no_mask_stream",
+      "baseline": "S4M",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Electricity_S4M_no_mask_stream_B_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "electricity_ablation",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "no_prototype_retrieval",
+      "baseline": "S4M",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Electricity_S4M_no_prototype_retrieval_B_b24_s2024",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "electricity_ablation",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "ablation": "none",
+      "baseline": "S4M",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Electricity_S4M_B_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "electricity_reference",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "ablation": "no_mask_stream",
+      "baseline": "S4M",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Electricity_S4M_no_mask_stream_B_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "electricity_ablation",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "ablation": "no_prototype_retrieval",
+      "baseline": "S4M",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "Electricity_S4M_no_prototype_retrieval_B_b24_s2025",
+      "mask_balance": "per_channel",
+      "missing_rate": 0.5,
+      "phase": "electricity_ablation",
+      "pred_len": 96,
+      "seq_len": 96,
+      "test_mask_seeds": [
+        9101,
+        9102
+      ],
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2025
+    }
+  ],
+  "protocol": "r50_per_channel_L96_H96_B24_two_train_seeds_two_mask_seeds_strict_separated_blocks",
+  "suite": "s4m_traffic_electricity_stability_1115",
+  "test_mask_seeds": [
+    9101,
+    9102
+  ],
+  "traffic_models": [
+    "S4M",
+    "ChannelTokenFormer",
+    "PatchTST",
+    "DLinear",
+    "iTransformer"
+  ],
+  "train_seeds": [
+    2024,
+    2025
+  ]
+}

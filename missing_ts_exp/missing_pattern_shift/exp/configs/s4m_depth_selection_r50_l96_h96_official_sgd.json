@@ -1,0 +1,148 @@
+{
+  "jobs": [
+    {
+      "baseline": "S4M",
+      "block_len": 24,
+      "dataset": "ETTh1",
+      "e_layers": 2,
+      "id": "S4MDepth_ETTh1_L96_H96_P_r50_e2_s2024",
+      "mask_balance": "per_channel",
+      "mask_seed": 9101,
+      "missing_rate": 0.5,
+      "pred_len": 96,
+      "seq_len": 96,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "S4M",
+      "block_len": 24,
+      "dataset": "ETTh1",
+      "e_layers": 4,
+      "id": "S4MDepth_ETTh1_L96_H96_P_r50_e4_s2024",
+      "mask_balance": "per_channel",
+      "mask_seed": 9101,
+      "missing_rate": 0.5,
+      "pred_len": 96,
+      "seq_len": 96,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "S4M",
+      "block_len": 24,
+      "dataset": "ETTh1",
+      "e_layers": 8,
+      "id": "S4MDepth_ETTh1_L96_H96_P_r50_e8_s2024",
+      "mask_balance": "per_channel",
+      "mask_seed": 9101,
+      "missing_rate": 0.5,
+      "pred_len": 96,
+      "seq_len": 96,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "S4M",
+      "block_len": 24,
+      "dataset": "Weather",
+      "e_layers": 2,
+      "id": "S4MDepth_Weather_L96_H96_P_r50_e2_s2024",
+      "mask_balance": "per_channel",
+      "mask_seed": 9101,
+      "missing_rate": 0.5,
+      "pred_len": 96,
+      "seq_len": 96,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "S4M",
+      "block_len": 24,
+      "dataset": "Weather",
+      "e_layers": 4,
+      "id": "S4MDepth_Weather_L96_H96_P_r50_e4_s2024",
+      "mask_balance": "per_channel",
+      "mask_seed": 9101,
+      "missing_rate": 0.5,
+      "pred_len": 96,
+      "seq_len": 96,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "S4M",
+      "block_len": 24,
+      "dataset": "Weather",
+      "e_layers": 8,
+      "id": "S4MDepth_Weather_L96_H96_P_r50_e8_s2024",
+      "mask_balance": "per_channel",
+      "mask_seed": 9101,
+      "missing_rate": 0.5,
+      "pred_len": 96,
+      "seq_len": 96,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "S4M",
+      "block_len": 24,
+      "dataset": "Electricity",
+      "e_layers": 2,
+      "id": "S4MDepth_Electricity_L96_H96_P_r50_e2_s2024",
+      "mask_balance": "per_channel",
+      "mask_seed": 9101,
+      "missing_rate": 0.5,
+      "pred_len": 96,
+      "seq_len": 96,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "S4M",
+      "block_len": 24,
+      "dataset": "Electricity",
+      "e_layers": 4,
+      "id": "S4MDepth_Electricity_L96_H96_P_r50_e4_s2024",
+      "mask_balance": "per_channel",
+      "mask_seed": 9101,
+      "missing_rate": 0.5,
+      "pred_len": 96,
+      "seq_len": 96,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "S4M",
+      "block_len": 24,
+      "dataset": "Electricity",
+      "e_layers": 8,
+      "id": "S4MDepth_Electricity_L96_H96_P_r50_e8_s2024",
+      "mask_balance": "per_channel",
+      "mask_seed": 9101,
+      "missing_rate": 0.5,
+      "pred_len": 96,
+      "seq_len": 96,
+      "train_family": "P",
+      "train_seed": 2024
+    }
+  ],
+  "optimizer": {
+    "learning_rate_by_dataset": {
+      "ETTh1": 0.005,
+      "Electricity": 0.01,
+      "Weather": 0.001
+    },
+    "momentum": 0.9,
+    "name": "SGD",
+    "source": "released experiments/exp_pretrain1.py",
+    "weight_decay": 1e-05
+  },
+  "purpose": "Validation-only S4M depth selection with the released S4M training entrypoint's SGD; no test-set metric is used for selection.",
+  "selection_rule": {
+    "history_permutation_relative_prediction_l1_min": 0.001,
+    "p_to_b_relative_prediction_l1_min": 0.001,
+    "primary": "lowest P-family validation objective among candidates passing sensitivity screens"
+  },
+  "suite": "s4m_depth_selection_r50_l96_h96_official_sgd"
+}

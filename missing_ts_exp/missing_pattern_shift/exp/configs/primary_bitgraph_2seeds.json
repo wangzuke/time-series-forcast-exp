@@ -1,0 +1,1747 @@
+{
+  "block_lens": [
+    12,
+    24,
+    48
+  ],
+  "jobs": [
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0000_BiTGraph_ETTh1_H24_P_b24_s2024",
+      "pred_len": 24,
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0001_BiTGraph_ETTh1_H24_B_b12_s2024",
+      "pred_len": 24,
+      "train_block_len": 12,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0002_BiTGraph_ETTh1_H24_B_b24_s2024",
+      "pred_len": 24,
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0003_BiTGraph_ETTh1_H24_B_b48_s2024",
+      "pred_len": 24,
+      "train_block_len": 48,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0004_BiTGraph_ETTh1_H24_P_b24_s2025",
+      "pred_len": 24,
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0005_BiTGraph_ETTh1_H24_B_b12_s2025",
+      "pred_len": 24,
+      "train_block_len": 12,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0006_BiTGraph_ETTh1_H24_B_b24_s2025",
+      "pred_len": 24,
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0007_BiTGraph_ETTh1_H24_B_b48_s2025",
+      "pred_len": 24,
+      "train_block_len": 48,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0020_BiTGraph_ETTh1_H96_P_b24_s2024",
+      "pred_len": 96,
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0021_BiTGraph_ETTh1_H96_B_b12_s2024",
+      "pred_len": 96,
+      "train_block_len": 12,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0022_BiTGraph_ETTh1_H96_B_b24_s2024",
+      "pred_len": 96,
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0023_BiTGraph_ETTh1_H96_B_b48_s2024",
+      "pred_len": 96,
+      "train_block_len": 48,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0024_BiTGraph_ETTh1_H96_P_b24_s2025",
+      "pred_len": 96,
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0025_BiTGraph_ETTh1_H96_B_b12_s2025",
+      "pred_len": 96,
+      "train_block_len": 12,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0026_BiTGraph_ETTh1_H96_B_b24_s2025",
+      "pred_len": 96,
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "ETTh1",
+      "evaluations": [
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0027_BiTGraph_ETTh1_H96_B_b48_s2025",
+      "pred_len": 96,
+      "train_block_len": 48,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0040_BiTGraph_Weather_H24_P_b24_s2024",
+      "pred_len": 24,
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0041_BiTGraph_Weather_H24_B_b12_s2024",
+      "pred_len": 24,
+      "train_block_len": 12,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0042_BiTGraph_Weather_H24_B_b24_s2024",
+      "pred_len": 24,
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0043_BiTGraph_Weather_H24_B_b48_s2024",
+      "pred_len": 24,
+      "train_block_len": 48,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0044_BiTGraph_Weather_H24_P_b24_s2025",
+      "pred_len": 24,
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0045_BiTGraph_Weather_H24_B_b12_s2025",
+      "pred_len": 24,
+      "train_block_len": 12,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0046_BiTGraph_Weather_H24_B_b24_s2025",
+      "pred_len": 24,
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0047_BiTGraph_Weather_H24_B_b48_s2025",
+      "pred_len": 24,
+      "train_block_len": 48,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0060_BiTGraph_Weather_H96_P_b24_s2024",
+      "pred_len": 96,
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0061_BiTGraph_Weather_H96_B_b12_s2024",
+      "pred_len": 96,
+      "train_block_len": 12,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0062_BiTGraph_Weather_H96_B_b24_s2024",
+      "pred_len": 96,
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0063_BiTGraph_Weather_H96_B_b48_s2024",
+      "pred_len": 96,
+      "train_block_len": 48,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0064_BiTGraph_Weather_H96_P_b24_s2025",
+      "pred_len": 96,
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0065_BiTGraph_Weather_H96_B_b12_s2025",
+      "pred_len": 96,
+      "train_block_len": 12,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0066_BiTGraph_Weather_H96_B_b24_s2025",
+      "pred_len": 96,
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Weather",
+      "evaluations": [
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0067_BiTGraph_Weather_H96_B_b48_s2025",
+      "pred_len": 96,
+      "train_block_len": 48,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0080_BiTGraph_Electricity_H24_P_b24_s2024",
+      "pred_len": 24,
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0081_BiTGraph_Electricity_H24_B_b12_s2024",
+      "pred_len": 24,
+      "train_block_len": 12,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0082_BiTGraph_Electricity_H24_B_b24_s2024",
+      "pred_len": 24,
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0083_BiTGraph_Electricity_H24_B_b48_s2024",
+      "pred_len": 24,
+      "train_block_len": 48,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0084_BiTGraph_Electricity_H24_P_b24_s2025",
+      "pred_len": 24,
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0085_BiTGraph_Electricity_H24_B_b12_s2025",
+      "pred_len": 24,
+      "train_block_len": 12,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0086_BiTGraph_Electricity_H24_B_b24_s2025",
+      "pred_len": 24,
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0087_BiTGraph_Electricity_H24_B_b48_s2025",
+      "pred_len": 24,
+      "train_block_len": 48,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0100_BiTGraph_Electricity_H96_P_b24_s2024",
+      "pred_len": 96,
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0101_BiTGraph_Electricity_H96_B_b12_s2024",
+      "pred_len": 96,
+      "train_block_len": 12,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0102_BiTGraph_Electricity_H96_B_b24_s2024",
+      "pred_len": 96,
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0103_BiTGraph_Electricity_H96_B_b48_s2024",
+      "pred_len": 96,
+      "train_block_len": 48,
+      "train_family": "B",
+      "train_seed": 2024
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0104_BiTGraph_Electricity_H96_P_b24_s2025",
+      "pred_len": 96,
+      "train_block_len": 24,
+      "train_family": "P",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 12,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 12,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0105_BiTGraph_Electricity_H96_B_b12_s2025",
+      "pred_len": 96,
+      "train_block_len": 12,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 24,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 24,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0106_BiTGraph_Electricity_H96_B_b24_s2025",
+      "pred_len": 96,
+      "train_block_len": 24,
+      "train_family": "B",
+      "train_seed": 2025
+    },
+    {
+      "baseline": "BiTGraph",
+      "dataset": "Electricity",
+      "evaluations": [
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9101
+        },
+        {
+          "block_len": 48,
+          "test_family": "P",
+          "test_mask_seed": 9102
+        },
+        {
+          "block_len": 48,
+          "test_family": "B",
+          "test_mask_seed": 9102
+        }
+      ],
+      "id": "0107_BiTGraph_Electricity_H96_B_b48_s2025",
+      "pred_len": 96,
+      "train_block_len": 48,
+      "train_family": "B",
+      "train_seed": 2025
+    }
+  ],
+  "note": "CTF/Electricity is excluded by default until its 24GB smoke test succeeds.",
+  "protocol": "main_2x2_P_to_B_r30_L96_2trainx2test",
+  "test_mask_seeds": [
+    9101,
+    9102
+  ],
+  "train_seeds": [
+    2024,
+    2025
+  ]
+}
