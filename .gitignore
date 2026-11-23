@@ -45,3 +45,19 @@ report/
 *.bak
 /tmp/
 **/r0905_blockt/masks/
+
+# Local experiment outputs, datasets and model checkpoints
+*.npy
+*.npz
+*.pt
+*.pth
+*.ckpt
+**/events.out.tfevents.*
+/missing_ts_exp/proj1_DRR_MSGF/logs/
+/missing_ts_exp/proj1_DRR_MSGF/results/
+/missing_ts_exp/missing_pattern_shift/exp/archive/
+/missing_ts_exp/missing_pattern_shift/exp/diagnostics/
+/missing_ts_exp/missing_pattern_shift/exp/external_deps/
+/missing_ts_exp/missing_pattern_shift/exp/external_repos/
+/missing_ts_exp/missing_pattern_shift/exp/smoke/
+/missing_ts_exp/missing_pattern_shift/docs/ocpe/literature_sources/*/sources/
