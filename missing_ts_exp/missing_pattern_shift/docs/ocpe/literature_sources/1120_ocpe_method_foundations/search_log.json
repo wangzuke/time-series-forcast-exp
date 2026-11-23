@@ -1,0 +1,258 @@
+{
+  "date": "2026-11-20",
+  "review_type": "focused OCPE foundation and related-work scoping review; not exhaustive systematic review",
+  "scope_file": "scope.md",
+  "selection": "purposeful reading set of 11 papers from prior cited foundations, discussed related work and this-round additions; not a PRISMA-derived final set",
+  "channels": [
+    {
+      "source": "web.run academic discovery and primary-page reading",
+      "status": "used",
+      "raw_logs": [
+        {
+          "path": "sources/web_journal_metadata.json",
+          "args": {
+            "search_query": [
+              {
+                "q": "\"Bayesian Temporal Factorization for Multidimensional Time Series Prediction\" \"2022\" \"5413\""
+              },
+              {
+                "q": "\"Maximum likelihood estimation of factor models\" Banbura Modugno 2014"
+              }
+            ],
+            "response_length": "short"
+          },
+          "note": "Raw tool-returned text preserved; unreported total hits remain unknown."
+        },
+        {
+          "path": "sources/web_method_sections.json",
+          "args": {
+            "open": [
+              {
+                "ref_id": "https://arxiv.org/html/2610.03916v2",
+                "lineno": 90
+              },
+              {
+                "ref_id": "https://arxiv.org/html/2610.19813v1",
+                "lineno": 543
+              },
+              {
+                "ref_id": "https://arxiv.org/html/2406.16484v1",
+                "lineno": 90
+              }
+            ],
+            "response_length": "long"
+          },
+          "note": "Raw tool-returned text preserved; unreported total hits remain unknown."
+        },
+        {
+          "path": "sources/web_novelty_checks.json",
+          "args": {
+            "find": [
+              {
+                "ref_id": "https://arxiv.org/html/2610.03916v2",
+                "pattern": "Gaussian"
+              },
+              {
+                "ref_id": "https://arxiv.org/html/2406.16484v1",
+                "pattern": "NeuMISE"
+              },
+              {
+                "ref_id": "https://arxiv.org/html/2610.19813v1",
+                "pattern": "Table 12"
+              },
+              {
+                "ref_id": "https://arxiv.org/html/2610.19813v1",
+                "pattern": "C.3"
+              }
+            ],
+            "search_query": [
+              {
+                "q": "\"time series\" \"posterior\" \"mean and variance\" \"missing\" encoder"
+              },
+              {
+                "q": "\"missingness shift\" \"Gaussian\" \"latent\""
+              },
+              {
+                "q": "\"missing\" \"posterior encoding\" forecasting S4"
+              }
+            ],
+            "response_length": "long"
+          },
+          "note": "Raw tool-returned text preserved; unreported total hits remain unknown."
+        },
+        {
+          "path": "sources/web_primary_pages_01.json",
+          "args": {
+            "open": [
+              {
+                "ref_id": "https://arxiv.org/abs/2610.19813"
+              },
+              {
+                "ref_id": "https://arxiv.org/html/2610.19813"
+              },
+              {
+                "ref_id": "https://arxiv.org/abs/2609.00065"
+              },
+              {
+                "ref_id": "https://proceedings.mlr.press/v97/becker19a.html"
+              },
+              {
+                "ref_id": "https://proceedings.mlr.press/v162/schirmer22a.html"
+              },
+              {
+                "ref_id": "https://proceedings.neurips.cc/paper/2020/hash/42ae1544956fbe6e09242e6cd752444c-Abstract.html"
+              }
+            ],
+            "response_length": "long"
+          },
+          "note": "Raw tool-returned text preserved; unreported total hits remain unknown."
+        },
+        {
+          "path": "sources/web_search_01.json",
+          "args": {
+            "search_query": [
+              {
+                "q": "\"Gaussian posterior\" \"missing\" \"time series\" latent uncertainty forecasting"
+              },
+              {
+                "q": "\"missingness shifts\" NeuMISE posterior"
+              },
+              {
+                "q": "\"VaryST\" \"missing\" Appendix"
+              }
+            ],
+            "open": [
+              "https://arxiv.org/html/2610.03916v2",
+              "https://arxiv.org/html/2406.16484v1"
+            ]
+          },
+          "note": "Raw tool-returned text preserved; unreported total hits remain unknown."
+        },
+        {
+          "path": "sources/web_search_02.json",
+          "args": null,
+          "note": "Raw tool-returned text preserved; unreported total hits remain unknown."
+        },
+        {
+          "path": "sources/web_versions.json",
+          "args": {
+            "open": [
+              {
+                "ref_id": "https://doi.org/10.1109/TPAMI.2021.3066551"
+              },
+              {
+                "ref_id": "https://www.ecb.europa.eu/pub/pdf/scpwps/ecbwp1189.pdf"
+              }
+            ],
+            "search_query": [
+              {
+                "q": "site.ieeexplore.ieee.org \"Bayesian Temporal Factorization\" 2022"
+              },
+              {
+                "q": "site.dblp.org \"Bayesian Temporal Factorization\""
+              }
+            ],
+            "response_length": "short"
+          },
+          "note": "Raw tool-returned text preserved; unreported total hits remain unknown."
+        }
+      ],
+      "total_hits": "not reported; no fabricated count"
+    },
+    {
+      "source": "arXiv API",
+      "query": "all:\"missingness shift\"",
+      "requested_max_results": 10,
+      "returned_entries": 6,
+      "reported_total": "6",
+      "raw_path": "sources/arxiv_search.txt",
+      "candidates": [
+        {
+          "title": "Robust prediction under missingness shifts",
+          "url": "http://arxiv.org/abs/2406.16484v1",
+          "status": "included as R08"
+        },
+        {
+          "title": "Domain Adaptation under Missingness Shift",
+          "url": "http://arxiv.org/abs/2211.02093v3",
+          "status": "candidate; not fully assessed in this focused packet"
+        },
+        {
+          "title": "Maximum Mean Discrepancy for Generalization in the Presence of Distribution and Missingness Shift",
+          "url": "http://arxiv.org/abs/2111.10344v2",
+          "status": "candidate; not fully assessed in this focused packet"
+        },
+        {
+          "title": "Domain Adaptation Under MNAR Missingness",
+          "url": "http://arxiv.org/abs/2504.00322v1",
+          "status": "candidate; not fully assessed in this focused packet"
+        },
+        {
+          "title": "Still More Shades of Null: An Evaluation Suite for Responsible Missing Value Imputation",
+          "url": "http://arxiv.org/abs/2409.07510v6",
+          "status": "candidate; not fully assessed in this focused packet"
+        },
+        {
+          "title": "MIRRAMS: Learning Robust Tabular Models under Unseen Missingness Shifts",
+          "url": "http://arxiv.org/abs/2507.08280v2",
+          "status": "candidate; not fully assessed in this focused packet"
+        }
+      ]
+    },
+    {
+      "source": "Crossref bibliographic search",
+      "query": "missingness shift prediction",
+      "requested_rows": 10,
+      "returned_items": 10,
+      "reported_total": 893009,
+      "warning": "Fuzzy broad search; total is not a relevance-screened count.",
+      "raw_path": "sources/crossref_search.json",
+      "candidate_titles": [
+        "Missingness-Aware Knowledge Distillation for Low Birthweight and Preterm Birth Prediction Under State-Specific Item Missingness in U.S. Birth Certificates",
+        "Missingness Adapted Group Informed Clustered (MAGIC)-LASSO: A novel paradigm for prediction in data with widespread non-random missingness",
+        "What the Doctor Didn’t Order: Informative Missingness as a Clinical Signal in ICU Prediction Models",
+        "PH-MissBench: Rare-Outcome Prediction Tasks with Real, Agency-Documented Missingness from U.S. Birth Records",
+        "Conformal Prediction Under Nonignorable Missingness",
+        "Multivariate air pollution prediction modeling with partial missingness",
+        "Missingness analysis syntax",
+        "Evaluating the Reliability of Cross-Building Load Forecasting Under Distribution Shift and Sensor Missingness",
+        "HARC: Missingness-Aware Multimodal Residual Correction for Longitudinal ADAS-13 Score Prediction in Alzheimer's Disease",
+        "Unmeasured but Not Unbiased: The Missingness Demographic Leakage Audit (MDLA) for Calibration-Aware Fairness Evaluation in Critical Care Mortality Prediction"
+      ]
+    },
+    {
+      "source": "DBLP API",
+      "query": "missingness shift",
+      "status": "failed: HTML bot-check page despite HTTP 200",
+      "raw_path": "sources/dblp_search.html"
+    },
+    {
+      "source": "PMLR/NeurIPS/publishers/author PDFs",
+      "status": "primary text and bibliographic verification; not counted as independent exhaustive database searches"
+    }
+  ],
+  "dependencies": {
+    "parallel_cli": "not installed; web.run fallback",
+    "ai_schematic": "OPENROUTER_API_KEY absent; deterministic vector diagram fallback"
+  },
+  "exclusions": [
+    {
+      "category": "nonacademic search hits, news, product pages",
+      "reason": "not primary research evidence"
+    },
+    {
+      "category": "other-route cross-domain attachment files",
+      "reason": "outside OCPE packet provenance; not copied"
+    },
+    {
+      "category": "additional relevant database candidates",
+      "reason": "kept as pending; not mislabeled irrelevant"
+    }
+  ],
+  "limitations": [
+    "No exhaustive search",
+    "No dual-reviewer screening",
+    "Not all official code or supplementary proofs audited",
+    "No reproduction of prior paper results"
+  ]
+}

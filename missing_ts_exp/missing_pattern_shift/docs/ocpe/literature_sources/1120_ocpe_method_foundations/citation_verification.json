@@ -1,0 +1,459 @@
+{
+  "date": "2026-11-20",
+  "method": "Skill CitationVerifier for four publisher DOIs; primary metadata/title checks and version-aware manual verification. arXiv DOIs are not asserted to be Crossref records.",
+  "summary": {
+    "research_references": 11,
+    "machine_title_matches": 11,
+    "publisher_doi_checks": 4,
+    "publisher_doi_handles_resolved": 4,
+    "local_primary_pdfs": 10
+  },
+  "results": [
+    {
+      "id": "R01",
+      "title": "Probabilistic Principal Component Analysis",
+      "doi": "10.1111/1467-9868.00196",
+      "primary_url": "https://academic.oup.com/jrsssb/article/61/3/611/7083217",
+      "title_candidates": [
+        "Probabilistic Principal Component Analysis"
+      ],
+      "title_match_machine": true,
+      "primary_citation_authors": [],
+      "crossref_authors": [
+        {
+          "given": "Michael E.",
+          "family": "Tipping",
+          "sequence": "first",
+          "affiliation": [
+            {
+              "name": "Microsoft Research , Cambridge , UK"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Christopher M.",
+          "family": "Bishop",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Microsoft Research , Cambridge , UK"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "recorded_year": 1999,
+      "version_note": "1999 期刊卷年；2002 是期刊网页上线时间，不是方法提出年份。",
+      "read_depth": "PDF 相关小节核验；非全文逐段精读",
+      "locator": "§2.1 因子分析；§3.1 式(6)；§4.1 缺失数据",
+      "method_evidence_scope": "targeted sections; not a full text/code/replication audit",
+      "doi_handle_check": {
+        "id": "R01",
+        "doi": "10.1111/1467-9868.00196",
+        "handle_resolved": true,
+        "metadata": {
+          "title": "Probabilistic Principal Component Analysis",
+          "authors": "Tipping, M., Bishop, C.",
+          "year": "1999",
+          "journal": "Journal of the Royal Statistical Society Series B: Statistical Methodology",
+          "volume": "61",
+          "pages": "611-622",
+          "doi": "10.1111/1467-9868.00196"
+        }
+      },
+      "year_check": "version-aware manual check; arXiv submission, online and issue years may differ"
+    },
+    {
+      "id": "R02",
+      "title": "A Unifying Review of Linear Gaussian Models",
+      "doi": "10.1162/089976699300016674",
+      "primary_url": "https://cs.nyu.edu/home/people/in_memoriam/roweis/papers/NC110201.pdf",
+      "title_candidates": [
+        "A Unifying Review of Linear Gaussian Models"
+      ],
+      "title_match_machine": true,
+      "primary_citation_authors": [],
+      "crossref_authors": [
+        {
+          "given": "Sam",
+          "family": "Roweis",
+          "sequence": "first",
+          "affiliation": [
+            {
+              "name": "Computation and Neural Systems, California Institute of Technology, Pasadena, CA 91125, U.S.A."
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Zoubin",
+          "family": "Ghahramani",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "Department of Computer Science, University of Toronto, Toronto, Canada"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "recorded_year": 1999,
+      "version_note": "1999 正式期刊论文。",
+      "read_depth": "作者 PDF 的模型与相关小节核验",
+      "locator": "§4 推断讨论；§5.1 静态数据模型与因子分析",
+      "method_evidence_scope": "targeted sections; not a full text/code/replication audit",
+      "doi_handle_check": {
+        "id": "R02",
+        "doi": "10.1162/089976699300016674",
+        "handle_resolved": true,
+        "metadata": {
+          "title": "A Unifying Review of Linear Gaussian Models",
+          "authors": "Roweis, S., Ghahramani, Z.",
+          "year": "1999",
+          "journal": "Neural Computation",
+          "volume": "11",
+          "pages": "305-345",
+          "doi": "10.1162/089976699300016674"
+        }
+      },
+      "year_check": "version-aware manual check; arXiv submission, online and issue years may differ"
+    },
+    {
+      "id": "R03",
+      "title": "Maximum Likelihood Estimation of Factor Models on Datasets with Arbitrary Pattern of Missing Data",
+      "doi": "10.1002/jae.2306",
+      "primary_url": "https://onlinelibrary.wiley.com/doi/10.1002/jae.2306",
+      "title_candidates": [
+        "MAXIMUM LIKELIHOOD ESTIMATION OF FACTOR MODELS ON DATASETS WITH ARBITRARY PATTERN OF MISSING DATA"
+      ],
+      "title_match_machine": true,
+      "primary_citation_authors": [],
+      "crossref_authors": [
+        {
+          "given": "Marta",
+          "family": "Bańbura",
+          "sequence": "first",
+          "affiliation": [
+            {
+              "name": "European Central Bank Frankfurt am Main  Germany"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Michele",
+          "family": "Modugno",
+          "sequence": "additional",
+          "affiliation": [
+            {
+              "name": "ECARES Université libre de Bruxelles  Belgium"
+            }
+          ],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "recorded_year": 2014,
+      "version_note": "2010 工作论文；2012 在线发表；2014 正式卷期。",
+      "read_depth": "web 工具读取工作论文相关部分；期刊全文未取得，本地 PDF 下载失败已记录",
+      "locator": "ECB WP 1189 §2 模型与估计；附录 B 推导；期刊摘要及元数据",
+      "method_evidence_scope": "targeted sections; not a full text/code/replication audit",
+      "doi_handle_check": {
+        "id": "R03",
+        "doi": "10.1002/jae.2306",
+        "handle_resolved": true,
+        "metadata": {
+          "title": "MAXIMUM LIKELIHOOD ESTIMATION OF FACTOR MODELS ON DATASETS WITH ARBITRARY PATTERN OF MISSING DATA",
+          "authors": "Bańbura, M., Modugno, M.",
+          "year": "2014",
+          "journal": "Journal of Applied Econometrics",
+          "volume": "29",
+          "pages": "133-160",
+          "doi": "10.1002/jae.2306"
+        }
+      },
+      "year_check": "version-aware manual check; arXiv submission, online and issue years may differ",
+      "fulltext_limitation": "Publisher landing returned 403; ECB PDF TLS failed. Relevant WP parts verified through web tool. Final journal full text not obtained."
+    },
+    {
+      "id": "R04",
+      "title": "Recurrent Kalman Networks: Factorized Inference in High-Dimensional Deep Feature Spaces",
+      "doi": "",
+      "primary_url": "https://proceedings.mlr.press/v97/becker19a.html",
+      "title_candidates": [
+        "Recurrent Kalman Networks: Factorized Inference in High-Dimensional Deep Feature Spaces"
+      ],
+      "title_match_machine": true,
+      "primary_citation_authors": [
+        "Philipp Becker",
+        "Harit Pandya",
+        "Gregor Gebhardt",
+        "Cheng Zhao",
+        "C. James Taylor",
+        "Gerhard Neumann"
+      ],
+      "crossref_authors": [],
+      "recorded_year": 2019,
+      "version_note": "ICML 2019。",
+      "read_depth": "PMLR 页面与方法相关 PDF 小节核验",
+      "locator": "§2；§2.3–2.6 因子化协方差、推断与网络；§3 实验概况",
+      "method_evidence_scope": "targeted sections; not a full text/code/replication audit",
+      "doi_handle_check": null,
+      "year_check": "version-aware manual check; arXiv submission, online and issue years may differ"
+    },
+    {
+      "id": "R05",
+      "title": "Modeling Irregular Time Series with Continuous Recurrent Units",
+      "doi": "",
+      "primary_url": "https://proceedings.mlr.press/v162/schirmer22a.html",
+      "title_candidates": [
+        "Modeling Irregular Time Series with Continuous Recurrent Units"
+      ],
+      "title_match_machine": true,
+      "primary_citation_authors": [
+        "Mona Schirmer",
+        "Mazin Eltayeb",
+        "Stefan Lessmann",
+        "Maja Rudolph"
+      ],
+      "crossref_authors": [],
+      "recorded_year": 2022,
+      "version_note": "ICML 2022。",
+      "read_depth": "PMLR 页面与方法相关 PDF 小节核验",
+      "locator": "§3 方法；§3.2 连续离散 Kalman filter；§3.3–3.5 参数化与训练",
+      "method_evidence_scope": "targeted sections; not a full text/code/replication audit",
+      "doi_handle_check": null,
+      "year_check": "version-aware manual check; arXiv submission, online and issue years may differ"
+    },
+    {
+      "id": "R06",
+      "title": "Bayesian Temporal Factorization for Multidimensional Time Series Prediction",
+      "doi": "10.1109/TPAMI.2021.3066551",
+      "primary_url": "https://arxiv.org/abs/1910.06366",
+      "title_candidates": [
+        "Bayesian Temporal Factorization for Multidimensional Time Series Prediction"
+      ],
+      "title_match_machine": true,
+      "primary_citation_authors": [
+        "Chen, Xinyu",
+        "Sun, Lijun"
+      ],
+      "crossref_authors": [
+        {
+          "given": "Xinyu",
+          "family": "Chen",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Lijun",
+          "family": "Sun",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "recorded_year": 2022,
+      "version_note": "2019 arXiv；2021 early access（本地作者 PDF）；2022 正式卷期。Crossref 尚返回早期页码 1--1。",
+      "read_depth": "作者提供的 early-access PDF 方法与实验设置核验；正式卷期对照作者出版列表",
+      "locator": "§4.1–4.3 BTMF；§4.2 式(14)；预测算法及§6 实验设置",
+      "method_evidence_scope": "targeted sections; not a full text/code/replication audit",
+      "doi_handle_check": {
+        "id": "R06",
+        "doi": "10.1109/TPAMI.2021.3066551",
+        "handle_resolved": true,
+        "metadata": {
+          "title": "Bayesian Temporal Factorization for Multidimensional Time Series Prediction",
+          "authors": "Chen, X., Sun, L.",
+          "year": "2021",
+          "journal": "IEEE Transactions on Pattern Analysis and Machine Intelligence",
+          "volume": "",
+          "pages": "1-1",
+          "doi": "10.1109/TPAMI.2021.3066551"
+        }
+      },
+      "year_check": "version-aware manual check; arXiv submission, online and issue years may differ",
+      "version_resolution": {
+        "crossref": "2021 early access, page 1-1",
+        "final_issue": "2022, 44(9),4659-4673",
+        "primary_author_list": "https://wangx1024.github.io/_pages/publication.html",
+        "local_pdf": "author early-access PDF; not final pagination",
+        "evidence_log": "sources/web_versions.json"
+      }
+    },
+    {
+      "id": "R07",
+      "title": "NeuMiss networks: differentiable programming for supervised learning with missing values.",
+      "doi": "",
+      "primary_url": "https://proceedings.neurips.cc/paper/2020/hash/42ae1544956fbe6e09242e6cd752444c-Abstract.html",
+      "title_candidates": [
+        "NeuMiss networks: differentiable programming for supervised learning with missing values."
+      ],
+      "title_match_machine": true,
+      "primary_citation_authors": [
+        "Le Morvan, Marine",
+        "Josse, Julie",
+        "Moreau, Thomas",
+        "Scornet, Erwan",
+        "Varoquaux, Gael"
+      ],
+      "crossref_authors": [],
+      "recorded_year": 2020,
+      "version_note": "NeurIPS 2020。",
+      "read_depth": "NeurIPS 正式页面与相关 PDF 小节核验",
+      "locator": "§2.2 最优预测器；§3.1–3.2 Neumann 近似与网络；§4 实验概况",
+      "method_evidence_scope": "targeted sections; not a full text/code/replication audit",
+      "doi_handle_check": null,
+      "year_check": "version-aware manual check; arXiv submission, online and issue years may differ"
+    },
+    {
+      "id": "R08",
+      "title": "Robust prediction under missingness shifts",
+      "doi": "10.48550/arXiv.2406.16484",
+      "primary_url": "https://arxiv.org/abs/2406.16484",
+      "title_candidates": [
+        "Robust prediction under missingness shifts"
+      ],
+      "title_match_machine": true,
+      "primary_citation_authors": [
+        "Rockenschaub, Patrick",
+        "Xian, Zhicong",
+        "Zamanian, Alireza",
+        "Piperno, Marta",
+        "Ciora, Octavia-Andreea",
+        "Pachl, Elisabeth",
+        "Ahmidi, Narges"
+      ],
+      "crossref_authors": [],
+      "recorded_year": 2024,
+      "version_note": "本资料引用 2024 arXiv v1；未确认对应正式卷期。",
+      "read_depth": "arXiv v1 HTML/PDF 的相关章节核验；未据其他匿名投稿认定正式发表",
+      "locator": "§3–4 问题与定理1；§5.1 NeuMISE；§7 与缺失场景附录",
+      "method_evidence_scope": "targeted sections; not a full text/code/replication audit",
+      "doi_handle_check": null,
+      "year_check": "version-aware manual check; arXiv submission, online and issue years may differ"
+    },
+    {
+      "id": "R09",
+      "title": "Latent-driven Imputation and Forecasting for partially observed Time Series (LIFTS)",
+      "doi": "10.48550/arXiv.2610.03916",
+      "primary_url": "https://arxiv.org/abs/2610.03916",
+      "title_candidates": [
+        "Latent-driven Imputation and Forecasting for partially observed Time Series (LIFTS)"
+      ],
+      "title_match_machine": true,
+      "primary_citation_authors": [
+        "Wu, Sanyou",
+        "Wei, Ying",
+        "Wang, Kaizheng"
+      ],
+      "crossref_authors": [],
+      "recorded_year": 2026,
+      "version_note": "2026-10-02 v1；2026-10-26 v2；本次按预印本处理。",
+      "read_depth": "arXiv v2 方法、线性特例和实现相关部分核验；未逐一审计所有证明",
+      "locator": "§2 生成模型；§3 前向/后向推断；§4 学习；§5.3 线性特例；§6.1 实现",
+      "method_evidence_scope": "targeted sections; not a full text/code/replication audit",
+      "doi_handle_check": null,
+      "year_check": "version-aware manual check; arXiv submission, online and issue years may differ"
+    },
+    {
+      "id": "R10",
+      "title": "Efficiently Modeling Long Sequences with Structured State Spaces",
+      "doi": "",
+      "primary_url": "https://arxiv.org/abs/2111.00396",
+      "title_candidates": [
+        "Efficiently Modeling Long Sequences with Structured State Spaces"
+      ],
+      "title_match_machine": true,
+      "primary_citation_authors": [
+        "Gu, Albert",
+        "Goel, Karan",
+        "Ré, Christopher"
+      ],
+      "crossref_authors": [],
+      "recorded_year": 2022,
+      "version_note": "2021 arXiv 首发；ICLR 2022；本地 PDF v3。",
+      "read_depth": "原论文方法相关部分与已使用官方实现来源核对",
+      "locator": "§2–3 SSM 与 S4 参数化；官方实现说明",
+      "method_evidence_scope": "targeted sections; not a full text/code/replication audit",
+      "doi_handle_check": null,
+      "year_check": "version-aware manual check; arXiv submission, online and issue years may differ"
+    },
+    {
+      "id": "R11",
+      "title": "VaryST: Generalizable Spatio-Temporal Forecasting Beyond the Closed-World Setting",
+      "doi": "10.48550/arXiv.2610.19813",
+      "primary_url": "https://arxiv.org/abs/2610.19813",
+      "title_candidates": [
+        "VaryST: Generalizable Spatio-Temporal Forecasting Beyond the Closed-World Setting"
+      ],
+      "title_match_machine": true,
+      "primary_citation_authors": [
+        "Guo, Shengnan",
+        "Cheng, Jinjun",
+        "Mao, Xiaowei",
+        "Zhang, Jianhao",
+        "Lv, Haochen",
+        "Jiang, Yang",
+        "Huang, YiHeng",
+        "Lin, Yan",
+        "Lin, Youfang",
+        "Wan, Huaiyu"
+      ],
+      "crossref_authors": [],
+      "recorded_year": 2026,
+      "version_note": "2026-10-14 arXiv v1；本次按预印本处理。",
+      "read_depth": "arXiv v1 方法相关小节、缺失输入协议及表12核验",
+      "locator": "§4.4 IGOP；§5.5；附录 B.4.3 与 C.3 表12",
+      "method_evidence_scope": "targeted sections; not a full text/code/replication audit",
+      "doi_handle_check": null,
+      "year_check": "version-aware manual check; arXiv submission, online and issue years may differ"
+    }
+  ],
+  "limitations": [
+    "A resolved DOI alone is not method verification.",
+    "Downloaded full text does not imply complete close reading.",
+    "No claim of independent peer review for preprints."
+  ]
+}

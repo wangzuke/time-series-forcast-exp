@@ -1,0 +1,139 @@
+{
+  "batch_size": 64,
+  "effective_batch": 64,
+  "epochs": 30,
+  "extension_of": "posterior_s4_r50_b24_l96_h96_1119",
+  "gpus": [
+    "0",
+    "5"
+  ],
+  "jobs": [
+    {
+      "dataset": "Weather",
+      "family": "P",
+      "id": "Weather_LI-S4_P_s2024",
+      "phase": "pilot",
+      "seed": 2024,
+      "variant": "LI-S4"
+    },
+    {
+      "dataset": "Weather",
+      "family": "P",
+      "id": "Weather_STAT-S4_P_s2024",
+      "phase": "pilot",
+      "seed": 2024,
+      "variant": "STAT-S4"
+    },
+    {
+      "dataset": "Weather",
+      "family": "P",
+      "id": "Weather_PU-S4_P_s2024",
+      "phase": "pilot",
+      "seed": 2024,
+      "variant": "PU-S4"
+    },
+    {
+      "dataset": "Weather",
+      "family": "B",
+      "id": "Weather_LI-S4_B_s2024",
+      "phase": "pilot",
+      "seed": 2024,
+      "variant": "LI-S4"
+    },
+    {
+      "dataset": "Weather",
+      "family": "B",
+      "id": "Weather_STAT-S4_B_s2024",
+      "phase": "pilot",
+      "seed": 2024,
+      "variant": "STAT-S4"
+    },
+    {
+      "dataset": "Weather",
+      "family": "B",
+      "id": "Weather_PU-S4_B_s2024",
+      "phase": "pilot",
+      "seed": 2024,
+      "variant": "PU-S4"
+    },
+    {
+      "dataset": "Weather",
+      "family": "P",
+      "id": "Weather_LI-S4_P_s2025",
+      "phase": "core",
+      "seed": 2025,
+      "variant": "LI-S4"
+    },
+    {
+      "dataset": "Weather",
+      "family": "P",
+      "id": "Weather_STAT-S4_P_s2025",
+      "phase": "core",
+      "seed": 2025,
+      "variant": "STAT-S4"
+    },
+    {
+      "dataset": "Weather",
+      "family": "P",
+      "id": "Weather_PU-S4_P_s2025",
+      "phase": "core",
+      "seed": 2025,
+      "variant": "PU-S4"
+    },
+    {
+      "dataset": "Weather",
+      "family": "B",
+      "id": "Weather_LI-S4_B_s2025",
+      "phase": "core",
+      "seed": 2025,
+      "variant": "LI-S4"
+    },
+    {
+      "dataset": "Weather",
+      "family": "B",
+      "id": "Weather_STAT-S4_B_s2025",
+      "phase": "core",
+      "seed": 2025,
+      "variant": "STAT-S4"
+    },
+    {
+      "dataset": "Weather",
+      "family": "B",
+      "id": "Weather_PU-S4_B_s2025",
+      "phase": "core",
+      "seed": 2025,
+      "variant": "PU-S4"
+    }
+  ],
+  "patience": 5,
+  "pilot_training_jobs": 6,
+  "require_idle_gpus": true,
+  "selection_note": "frozen configuration; no automatic test-driven changes",
+  "slots_per_gpu": 3,
+  "source": {
+    "baselines/S4M/s4m/model/S4/s4/models/s4/s4.py": "64cb677c669fb61f0ec8397a76d6736ab955dca99f7a68b196ec3173d22e18da",
+    "models/posterior_s4.py": "8a1f93ac1a08e474395b96c86876aaec89dfa55e0242b0a92529bec3487b9752",
+    "scripts/posterior_s4_common.py": "b3498bebe9ad5555c903edbcbe8999424c302a12f97710f351d35ced9c50e5d4",
+    "scripts/protocol.py": "ea06e9d673bc3c4f9245984dde07711f066f21871eca296ccd86d0de5f42ed45",
+    "scripts/run_posterior_s4.py": "fc2030761a680ca9051402c8ecad0c250c98d899114e449a7d2297601b2fdc75",
+    "scripts/run_posterior_s4_weather.py": "b794b761ccbb75b6dd98a15786fedaf3cbb65b9f715bc3dbc842034ba8e36427"
+  },
+  "suite": "posterior_s4_weather_r50_b24_l96_h96_1119",
+  "test_families": [
+    "P",
+    "B",
+    "B-uniform"
+  ],
+  "test_mask_seeds": [
+    9101,
+    9102
+  ],
+  "threads": 2,
+  "total_training_jobs": 12,
+  "trainer_adapter_changes": [
+    "dataset lookup",
+    "suite namespace",
+    "source provenance"
+  ],
+  "workers": 10
+}

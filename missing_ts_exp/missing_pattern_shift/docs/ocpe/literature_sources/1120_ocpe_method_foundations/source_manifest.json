@@ -1,0 +1,84 @@
+[
+  {
+    "id": "R01",
+    "label": "PPCA",
+    "url": "https://academic.oup.com/jrsssb/article/61/3/611/7083217",
+    "pdf_url": "https://www.cs.columbia.edu/~blei/seminar/2020-representation/readings/TippingBishop1999.pdf",
+    "doi": "10.1111/1467-9868.00196"
+  },
+  {
+    "id": "R02",
+    "label": "Linear Gaussian review",
+    "url": "https://cs.nyu.edu/home/people/in_memoriam/roweis/papers/NC110201.pdf",
+    "pdf_url": "https://cs.nyu.edu/home/people/in_memoriam/roweis/papers/NC110201.pdf",
+    "doi": "10.1162/089976699300016674"
+  },
+  {
+    "id": "R03",
+    "label": "Arbitrary missingness factor model",
+    "url": "https://onlinelibrary.wiley.com/doi/10.1002/jae.2306",
+    "pdf_url": "https://www.ecb.europa.eu/pub/pdf/scpwps/ecbwp1189.pdf",
+    "doi": "10.1002/jae.2306",
+    "version_note": "Local PDF is ECB Working Paper 1189 (2010), not the final 2014 journal version."
+  },
+  {
+    "id": "R04",
+    "label": "RKN",
+    "url": "https://proceedings.mlr.press/v97/becker19a.html",
+    "pdf_url": "https://proceedings.mlr.press/v97/becker19a/becker19a.pdf",
+    "doi": ""
+  },
+  {
+    "id": "R05",
+    "label": "CRU",
+    "url": "https://proceedings.mlr.press/v162/schirmer22a.html",
+    "pdf_url": "https://proceedings.mlr.press/v162/schirmer22a/schirmer22a.pdf",
+    "doi": ""
+  },
+  {
+    "id": "R06",
+    "label": "BTF/BTMF",
+    "url": "https://arxiv.org/abs/1910.06366",
+    "pdf_url": "https://lijunsun.github.io/files/papers/2021-TPAMI-BTMF.pdf",
+    "doi": "10.1109/TPAMI.2021.3066551"
+  },
+  {
+    "id": "R07",
+    "label": "NeuMiss",
+    "url": "https://proceedings.neurips.cc/paper/2020/hash/42ae1544956fbe6e09242e6cd752444c-Abstract.html",
+    "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2020/file/42ae1544956fbe6e09242e6cd752444c-Paper.pdf",
+    "doi": ""
+  },
+  {
+    "id": "R08",
+    "label": "NeuMISE",
+    "url": "https://arxiv.org/abs/2406.16484",
+    "html_url": "https://arxiv.org/html/2406.16484v1",
+    "pdf_url": "https://arxiv.org/pdf/2406.16484v1",
+    "doi": "10.48550/arXiv.2406.16484"
+  },
+  {
+    "id": "R09",
+    "label": "LIFTS",
+    "url": "https://arxiv.org/abs/2610.03916",
+    "html_url": "https://arxiv.org/html/2610.03916v2",
+    "pdf_url": "https://arxiv.org/pdf/2610.03916v2",
+    "doi": "10.48550/arXiv.2610.03916"
+  },
+  {
+    "id": "R10",
+    "label": "S4",
+    "url": "https://arxiv.org/abs/2111.00396",
+    "pdf_url": "https://arxiv.org/pdf/2111.00396v3",
+    "doi": "",
+    "arxiv_doi": "10.48550/arXiv.2111.00396"
+  },
+  {
+    "id": "R11",
+    "label": "VaryST",
+    "url": "https://arxiv.org/abs/2610.19813",
+    "html_url": "https://arxiv.org/html/2610.19813v1",
+    "pdf_url": "https://arxiv.org/pdf/2610.19813v1",
+    "doi": "10.48550/arXiv.2610.19813"
+  }
+]

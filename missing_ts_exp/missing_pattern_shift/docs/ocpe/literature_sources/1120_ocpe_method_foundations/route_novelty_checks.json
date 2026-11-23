@@ -1,0 +1,163 @@
+{
+  "date": "2026-11-20",
+  "purpose": "OCPE-specific component correspondence and claim boundaries; separate from observation-normalized residual correction",
+  "status": "complete novelty not established",
+  "definition": "static window latent; exact observed-prefix Gaussian mean/covariance; mean+log marginal variance features; S4; P-B source-target evaluation",
+  "components": [
+    {
+      "component": "linear Gaussian low-rank posterior",
+      "prior_refs": [
+        "R01",
+        "R02",
+        "R03",
+        "R06"
+      ],
+      "finding": "established statistical mechanism; not a new theorem"
+    },
+    {
+      "component": "probabilistic latent inference and neural time-series prediction",
+      "prior_refs": [
+        "R04",
+        "R05",
+        "R09"
+      ],
+      "finding": "established broad direction; exact architectures differ"
+    },
+    {
+      "component": "observation-set-conditioned prediction",
+      "prior_refs": [
+        "R07",
+        "R08"
+      ],
+      "finding": "established theoretical and neural modeling direction"
+    },
+    {
+      "component": "missingness shifts",
+      "prior_refs": [
+        "R08"
+      ],
+      "finding": "explicitly studied; assumptions matter"
+    },
+    {
+      "component": "point/block training-test transfer",
+      "prior_refs": [
+        "R11"
+      ],
+      "finding": "explicit experiment in Appendix C.3 Table12; protocol differs"
+    },
+    {
+      "component": "complete OCPE implementation combination",
+      "prior_refs": [
+        "R01",
+        "R02",
+        "R03",
+        "R04",
+        "R05",
+        "R06",
+        "R07",
+        "R08",
+        "R09",
+        "R10",
+        "R11"
+      ],
+      "finding": "not established as identical to a listed method; this is not proof of uniqueness"
+    }
+  ],
+  "per_paper": [
+    {
+      "id": "R01",
+      "history_role": "原实验计划附录 B 已列",
+      "locator": "§2.1 因子分析；§3.1 式(6)；§4.1 缺失数据",
+      "relation": "低秩高斯生成模型与潜变量条件分布；非全等复现",
+      "shift_evidence": "未核实 P↔B 训练测试错配",
+      "boundary": "FA 式异方差噪声区别于 PPCA 各向同性噪声。"
+    },
+    {
+      "id": "R02",
+      "history_role": "本轮补充纳入；不追溯为原计划引用",
+      "locator": "§4 推断讨论；§5.1 静态数据模型与因子分析",
+      "relation": "区分静态因子模型与动态 Kalman 模型",
+      "shift_evidence": "未核实 P↔B 训练测试错配",
+      "boundary": "当前 OCPE 没有隐状态转移，不能称为动态 Kalman 前端。"
+    },
+    {
+      "id": "R03",
+      "history_role": "此前讨论的相关依据；本轮区分文稿版本",
+      "locator": "ECB WP 1189 §2 模型与估计；附录 B 推导；期刊摘要及元数据",
+      "relation": "任意观测子集下因子模型估计的既有路线",
+      "shift_evidence": "任意缺失模式处理不等于已验证 P↔B 错配",
+      "boundary": "采用动态因子、EM/Kalman；当前 OCPE 为静态窗口前端加预测主干。"
+    },
+    {
+      "id": "R04",
+      "history_role": "此前讨论提及；非原计划直接引用",
+      "locator": "§2；§2.3–2.6 因子化协方差、推断与网络；§3 实验概况",
+      "relation": "显式状态不确定性、可微解析更新、端到端训练已有先例",
+      "shift_evidence": "已读部分未确认我们的 P↔B 错配协议",
+      "boundary": "动态状态、神经观测编码与因子化协方差；不能据此声称 OCPE 的统计更新新颖。"
+    },
+    {
+      "id": "R05",
+      "history_role": "原实验计划附录 B 已列",
+      "locator": "§3 方法；§3.2 连续离散 Kalman filter；§3.3–3.5 参数化与训练",
+      "relation": "概率状态推断与神经时序模型结合的设计先例",
+      "shift_evidence": "不规则采样实验不自动等同 P↔B 错配",
+      "boundary": "CRU 有线性 SDE、动态传播和噪声观测；OCPE 没有这一步。"
+    },
+    {
+      "id": "R06",
+      "history_role": "此前讨论提及；非原计划直接引用",
+      "locator": "§4.1–4.3 BTMF；§4.2 式(14)；预测算法及§6 实验设置",
+      "relation": "低秩因子、观测条件推断、预测与不确定性已有结合",
+      "shift_evidence": "随机/块缺失实验不能单独证明训练测试跨模式错配",
+      "boundary": "BTF 含矩阵与张量版本；BTMF 是其中矩阵版本；时间先验为 VAR，推断为 Gibbs。"
+    },
+    {
+      "id": "R07",
+      "history_role": "此前讨论提及；非原计划直接引用",
+      "locator": "§2.2 最优预测器；§3.1–3.2 Neumann 近似与网络；§4 实验概况",
+      "relation": "按观测子集改变条件预测映射与跨模式共享参数已有理论和模型",
+      "shift_evidence": "不同缺失机制下实验不自动证明我们的时序 P↔B 错配",
+      "boundary": "原始特征空间的协方差子矩阵逆近似，与 OCPE 低秩潜空间解析求解不同。"
+    },
+    {
+      "id": "R08",
+      "history_role": "此前讨论提及；本轮核验 §5.1 NeuMISE",
+      "locator": "§3–4 问题与定理1；§5.1 NeuMISE；§7 与缺失场景附录",
+      "relation": "可忽略缺失变化下条件预测的理论边界及 NeuMISE 模型创新",
+      "shift_evidence": "明确研究 source/target 缺失机制变化；当前已核验实验是一般表格/合成设置，非我们的时序块协议",
+      "boundary": "缺失率、机制及结果依赖性有专门讨论；理论依赖数据生成与可忽略性等条件，不能直接搬成 OCPE 定理。"
+    },
+    {
+      "id": "R09",
+      "history_role": "此前讨论提及；本轮核验具体机制",
+      "locator": "§2 生成模型；§3 前向/后向推断；§4 学习；§5.3 线性特例；§6.1 实现",
+      "relation": "潜状态、观测掩码与部分观测时序预测的强相关先行框架",
+      "shift_evidence": "已读部分未确认 P↔B 源目标错配实验",
+      "boundary": "通用方法是非线性状态空间、可学习生成式推断与 energy-score 训练；不能概括成和 OCPE 一样的静态高斯闭式编码。"
+    },
+    {
+      "id": "R10",
+      "history_role": "原计划引用 S4 官方实现；本轮补全论文条目",
+      "locator": "§2–3 SSM 与 S4 参数化；官方实现说明",
+      "relation": "当前普通 S4 DPLR 主干的出处",
+      "shift_evidence": "本引用不构成缺失错配方法证据",
+      "boundary": "S4、S4D 与 S4M 不可混写；主干引用与 OCPE 概率前端依据分开。"
+    },
+    {
+      "id": "R11",
+      "history_role": "此前场景讨论提及；不是 OCPE 设计来源",
+      "locator": "§4.4 IGOP；§5.5；附录 B.4.3 与 C.3 表12",
+      "relation": "确有跨散点/时空块缺失的 source→target 实验，适合场景比较",
+      "shift_evidence": "附录 C.3 表12：30% 缺失 PEMS04/08，RM→CM 与 CM→RM",
+      "boundary": "2016步历史/12步预测、时空块、IGOP 和指标掩码等与当前 L96/H96 每通道 B24 不一致，不能直接横比数值。"
+    }
+  ],
+  "open_checks": [
+    "Additional conditional Gaussian/set-aggregation/GP latent encoders",
+    "Covariance inputs versus ordinary mask-conditioned encodings",
+    "Official implementations and training augmentation parity",
+    "Common source-target protocol comparisons"
+  ],
+  "not_authorized_experiments": "These are evidence gaps, not a newly approved experiment schedule."
+}

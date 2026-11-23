@@ -1,0 +1,263 @@
+{
+  "aux_weight": 0.1,
+  "batch_size": 64,
+  "effective_batch": 64,
+  "epochs": 30,
+  "gpus": [
+    "0",
+    "1",
+    "7"
+  ],
+  "jobs": [
+    {
+      "dataset": "Weather",
+      "family": "P",
+      "id": "Weather_F0_P_s2024",
+      "seed": 2024,
+      "variant": "F0"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "P",
+      "id": "Electricity_F0_P_s2024",
+      "seed": 2024,
+      "variant": "F0"
+    },
+    {
+      "dataset": "Weather",
+      "family": "P",
+      "id": "Weather_F1_P_s2024",
+      "seed": 2024,
+      "variant": "F1"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "P",
+      "id": "Electricity_F1_P_s2024",
+      "seed": 2024,
+      "variant": "F1"
+    },
+    {
+      "dataset": "Weather",
+      "family": "P",
+      "id": "Weather_F2_P_s2024",
+      "seed": 2024,
+      "variant": "F2"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "P",
+      "id": "Electricity_F2_P_s2024",
+      "seed": 2024,
+      "variant": "F2"
+    },
+    {
+      "dataset": "Weather",
+      "family": "P",
+      "id": "Weather_F3_P_s2024",
+      "seed": 2024,
+      "variant": "F3"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "P",
+      "id": "Electricity_F3_P_s2024",
+      "seed": 2024,
+      "variant": "F3"
+    },
+    {
+      "dataset": "Weather",
+      "family": "Bu",
+      "id": "Weather_F0_Bu_s2024",
+      "seed": 2024,
+      "variant": "F0"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "Bu",
+      "id": "Electricity_F0_Bu_s2024",
+      "seed": 2024,
+      "variant": "F0"
+    },
+    {
+      "dataset": "Weather",
+      "family": "Bu",
+      "id": "Weather_F1_Bu_s2024",
+      "seed": 2024,
+      "variant": "F1"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "Bu",
+      "id": "Electricity_F1_Bu_s2024",
+      "seed": 2024,
+      "variant": "F1"
+    },
+    {
+      "dataset": "Weather",
+      "family": "Bu",
+      "id": "Weather_F2_Bu_s2024",
+      "seed": 2024,
+      "variant": "F2"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "Bu",
+      "id": "Electricity_F2_Bu_s2024",
+      "seed": 2024,
+      "variant": "F2"
+    },
+    {
+      "dataset": "Weather",
+      "family": "Bu",
+      "id": "Weather_F3_Bu_s2024",
+      "seed": 2024,
+      "variant": "F3"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "Bu",
+      "id": "Electricity_F3_Bu_s2024",
+      "seed": 2024,
+      "variant": "F3"
+    },
+    {
+      "dataset": "Weather",
+      "family": "P",
+      "id": "Weather_F0_P_s2025",
+      "seed": 2025,
+      "variant": "F0"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "P",
+      "id": "Electricity_F0_P_s2025",
+      "seed": 2025,
+      "variant": "F0"
+    },
+    {
+      "dataset": "Weather",
+      "family": "P",
+      "id": "Weather_F1_P_s2025",
+      "seed": 2025,
+      "variant": "F1"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "P",
+      "id": "Electricity_F1_P_s2025",
+      "seed": 2025,
+      "variant": "F1"
+    },
+    {
+      "dataset": "Weather",
+      "family": "P",
+      "id": "Weather_F2_P_s2025",
+      "seed": 2025,
+      "variant": "F2"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "P",
+      "id": "Electricity_F2_P_s2025",
+      "seed": 2025,
+      "variant": "F2"
+    },
+    {
+      "dataset": "Weather",
+      "family": "P",
+      "id": "Weather_F3_P_s2025",
+      "seed": 2025,
+      "variant": "F3"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "P",
+      "id": "Electricity_F3_P_s2025",
+      "seed": 2025,
+      "variant": "F3"
+    },
+    {
+      "dataset": "Weather",
+      "family": "Bu",
+      "id": "Weather_F0_Bu_s2025",
+      "seed": 2025,
+      "variant": "F0"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "Bu",
+      "id": "Electricity_F0_Bu_s2025",
+      "seed": 2025,
+      "variant": "F0"
+    },
+    {
+      "dataset": "Weather",
+      "family": "Bu",
+      "id": "Weather_F1_Bu_s2025",
+      "seed": 2025,
+      "variant": "F1"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "Bu",
+      "id": "Electricity_F1_Bu_s2025",
+      "seed": 2025,
+      "variant": "F1"
+    },
+    {
+      "dataset": "Weather",
+      "family": "Bu",
+      "id": "Weather_F2_Bu_s2025",
+      "seed": 2025,
+      "variant": "F2"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "Bu",
+      "id": "Electricity_F2_Bu_s2025",
+      "seed": 2025,
+      "variant": "F2"
+    },
+    {
+      "dataset": "Weather",
+      "family": "Bu",
+      "id": "Weather_F3_Bu_s2025",
+      "seed": 2025,
+      "variant": "F3"
+    },
+    {
+      "dataset": "Electricity",
+      "family": "Bu",
+      "id": "Electricity_F3_Bu_s2025",
+      "seed": 2025,
+      "variant": "F3"
+    }
+  ],
+  "patience": 5,
+  "protocol": "ocpe_fusion_valid_weather_B_uniform_sep24_v2",
+  "slots_per_gpu": 3,
+  "source": {
+    "baselines/S4M/s4m/model/S4/s4/models/s4/s4.py": "64cb677c669fb61f0ec8397a76d6736ab955dca99f7a68b196ec3173d22e18da",
+    "models/ocpe_fusion_s4.py": "506d8bca205fbdd0ec1f74a289abe4d288f31dd05183aabffcd95780aeac3b4a",
+    "models/posterior_s4.py": "8a1f93ac1a08e474395b96c86876aaec89dfa55e0242b0a92529bec3487b9752",
+    "scripts/ocpe_fusion_common.py": "0784f8098b5081a24c4bd4a6aa9176bb3ce3e1f1d715e29fccb80fc43f3ff746",
+    "scripts/posterior_s4_common.py": "b3498bebe9ad5555c903edbcbe8999424c302a12f97710f351d35ced9c50e5d4",
+    "scripts/protocol.py": "ea06e9d673bc3c4f9245984dde07711f066f21871eca296ccd86d0de5f42ed45",
+    "scripts/run_ocpe_fusion_s4.py": "a4bcf59028788486e5a3fb4b5e1187ed5b502916d6eba7ab1ce554b8c1fb09ad"
+  },
+  "stage": "E2 core only; no automatic candidate selection or ETTh1/S4M launch",
+  "suite": "ocpe_fusion_uniform_r50_l96_h96_1120",
+  "test_families": [
+    "P",
+    "Bu"
+  ],
+  "test_seeds": [
+    9101,
+    9102
+  ],
+  "threads": 2,
+  "total_evaluations": 128,
+  "total_training_jobs": 32,
+  "workers": 6
+}

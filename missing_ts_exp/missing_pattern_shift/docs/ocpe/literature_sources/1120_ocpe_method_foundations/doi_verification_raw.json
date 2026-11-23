@@ -1,0 +1,58 @@
+[
+  {
+    "id": "R01",
+    "doi": "10.1111/1467-9868.00196",
+    "handle_resolved": true,
+    "metadata": {
+      "title": "Probabilistic Principal Component Analysis",
+      "authors": "Tipping, M., Bishop, C.",
+      "year": "1999",
+      "journal": "Journal of the Royal Statistical Society Series B: Statistical Methodology",
+      "volume": "61",
+      "pages": "611-622",
+      "doi": "10.1111/1467-9868.00196"
+    }
+  },
+  {
+    "id": "R02",
+    "doi": "10.1162/089976699300016674",
+    "handle_resolved": true,
+    "metadata": {
+      "title": "A Unifying Review of Linear Gaussian Models",
+      "authors": "Roweis, S., Ghahramani, Z.",
+      "year": "1999",
+      "journal": "Neural Computation",
+      "volume": "11",
+      "pages": "305-345",
+      "doi": "10.1162/089976699300016674"
+    }
+  },
+  {
+    "id": "R03",
+    "doi": "10.1002/jae.2306",
+    "handle_resolved": true,
+    "metadata": {
+      "title": "MAXIMUM LIKELIHOOD ESTIMATION OF FACTOR MODELS ON DATASETS WITH ARBITRARY PATTERN OF MISSING DATA",
+      "authors": "Bańbura, M., Modugno, M.",
+      "year": "2014",
+      "journal": "Journal of Applied Econometrics",
+      "volume": "29",
+      "pages": "133-160",
+      "doi": "10.1002/jae.2306"
+    }
+  },
+  {
+    "id": "R06",
+    "doi": "10.1109/TPAMI.2021.3066551",
+    "handle_resolved": true,
+    "metadata": {
+      "title": "Bayesian Temporal Factorization for Multidimensional Time Series Prediction",
+      "authors": "Chen, X., Sun, L.",
+      "year": "2021",
+      "journal": "IEEE Transactions on Pattern Analysis and Machine Intelligence",
+      "volume": "",
+      "pages": "1-1",
+      "doi": "10.1109/TPAMI.2021.3066551"
+    }
+  }
+]

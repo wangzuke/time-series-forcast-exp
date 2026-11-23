@@ -1,0 +1,7 @@
+{
+  "date": "2026-11-20",
+  "name": "R03_paper_system_ca_retry",
+  "url": "https://www.ecb.europa.eu/pub/pdf/scpwps/ecbwp1189.pdf",
+  "verification": "system CA trust store; TLS verification enabled",
+  "error": "HTTPSConnectionPool(host='www.ecb.europa.eu', port=443): Max retries exceeded with url: /pub/pdf/scpwps/ecbwp1189.pdf (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1007)')))"
+}
